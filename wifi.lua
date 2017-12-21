@@ -39,7 +39,7 @@ wifi.eventmon.register(
             "\n\tSTA - GOT IP" ..
                 "\n\tStation IP: " .. T.IP .. "\n\tSubnet mask: " .. T.netmask .. "\n\tGateway IP: " .. T.gateway
         )
-
+        dofile("createHttpServer.lua")
         --dofile("wifi2uart.lua")
     end
 )
