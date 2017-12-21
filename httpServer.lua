@@ -1,6 +1,36 @@
 --------------------
 -- helper
 --------------------
+local function getRequestData(payload)
+    local requestData
+
+    --print("Getting Request Data")
+    -- for backward compatibility before v2.1
+    if (sjson == nil) then
+        sjson = cjson
+    end
+    if requestData then
+        return requestData
+    else
+        --print("payload = [" .. payload .. "]")
+        local mimeType = string.match(payload, "Content%-Type: ([%w/-]+)")
+        local bodyStart = payload:find("\r\n\r\n", 1, true)
+        local body = payload:sub(bodyStart, #payload)
+        payload = nil
+        collectgarbage()
+        print("mimeType = [" .. mimeType .. "]")
+        --print("bodyStart = [" .. bodyStart .. "]")
+        --print("body = [" .. body .. "]")
+        if mimeType == "application/json" then
+            --print("JSON: " .. body)
+            requestData = sjson.decode(body)
+        else
+            requestData = body
+        end
+        return requestData
+    end
+end
+
 function urlDecode(url)
     return url:gsub(
         "%%(%x%x)",
@@ -151,10 +181,26 @@ end
 -- Middleware
 --------------------
 function parseHeader(req, res)
-    local _, _, method, path, vars = string.find(req.source, "([A-Z]+) (.+)?(.+) HTTP")
-    if method == nil then
-        _, _, method, path = string.find(req.source, "([A-Z]+) (.+) HTTP")
+    --print("header=>", req.source)
+    local e = req.source:find("\r\n", 1, true)
+    if not e then
+        return nil
     end
+    local line = req.source:sub(1, e - 1)
+    local r = {}
+    _, i, r.method, r.request = line:find("^([A-Z]+) (.-) HTTP/[1-9]+.[0-9]+$")
+
+    if not (r.method and r.request) then
+        --print("invalid request: ")
+        --print(request)
+        return false
+    end
+    print("header=>request", r.request)
+    print("header=>method", r.method)
+
+    local _, _, path, vars = string.find(r.request, "(.+)?(.+)")
+    print("header=>path", path)
+    print("header=>vars", vars)
     local _GET = {}
     if vars ~= nil then
         vars = urlDecode(vars)
@@ -166,6 +212,12 @@ function parseHeader(req, res)
     req.method = method
     req.query = _GET
     req.path = path
+
+    if (r.method == "POST") then
+        req.body = getRequestData(req.source)
+        print("header=>body", req.body)
+    end
+    --print("req.path=>", req.path)
 
     return true
 end
