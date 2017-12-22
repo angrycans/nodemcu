@@ -18,14 +18,14 @@ local function getRequestData(payload)
         local body = payload:sub(bodyStart, #payload)
         payload = nil
         collectgarbage()
-        print("mimeType = [" .. mimeType .. "]")
+        --print("mimeType = [" .. mimeType .. "]")
         --print("bodyStart = [" .. bodyStart .. "]")
         --print("body = [" .. body .. "]")
         if mimeType == "application/json" then
             --print("JSON: " .. body)
             requestData = sjson.decode(body)
         else
-            requestData = body
+            requestData = string.gsub(body, "^%s*(.-)%s*$", "%1")
         end
         return requestData
     end
@@ -181,7 +181,6 @@ end
 -- Middleware
 --------------------
 function parseHeader(req, res)
-    --print("header=>", req.source)
     local e = req.source:find("\r\n", 1, true)
     if not e then
         return nil
@@ -189,18 +188,15 @@ function parseHeader(req, res)
     local line = req.source:sub(1, e - 1)
     local r = {}
     _, i, r.method, r.request = line:find("^([A-Z]+) (.-) HTTP/[1-9]+.[0-9]+$")
-
     if not (r.method and r.request) then
         --print("invalid request: ")
         --print(request)
         return false
     end
-    print("header=>request", r.request)
-    print("header=>method", r.method)
-
     local _, _, path, vars = string.find(r.request, "(.+)?(.+)")
-    print("header=>path", path)
-    print("header=>vars", vars)
+    if path == nil then
+        path = r.request
+    end
     local _GET = {}
     if vars ~= nil then
         vars = urlDecode(vars)
@@ -209,16 +205,13 @@ function parseHeader(req, res)
         end
     end
 
-    req.method = method
+    req.method = r.method
     req.query = _GET
     req.path = path
-
+    --print("req.method" .. req.method)
     if (r.method == "POST") then
         req.body = getRequestData(req.source)
-        print("header=>body", req.body)
     end
-    --print("req.path=>", req.path)
-
     return true
 end
 
