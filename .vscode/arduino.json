@@ -1,6 +1,10 @@
 {
-    "port": "/dev/cu.wchusbserial1410",
+    "port": "/dev/cu.usbserial-1410",
     "board": "esp8266:esp8266:nodemcuv2",
     "configuration": "CpuFrequency=80,UploadTool=esptool,UploadSpeed=115200,FlashSize=4M3M",
-    "sketch": "t1.ino"
+    "sketch": "example-5/racelap/racelap.ino",
+    "arduino.path": "/Applications/Arduino.app/",
+    "arduino.commandPath": "Contents/MacOS/Arduino",
+    "arduino.skipHeaderProvider": true,
+    "C_Cpp.intelliSenseEngine": "Tag Parser"
 }
