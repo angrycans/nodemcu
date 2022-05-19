@@ -1,0 +1,379 @@
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+#include <FS.h>       // File System for Web Server Files
+#include <LittleFS.h> // This file system is used.
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <SPI.h>
+#include <SD.h>
+#include <SoftwareSerial.h>
+#include <TinyGPS++.h>
+
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+#define SCREEN_ADDRESS 0x3C
+
+#define TRACE(...) Serial.println(__VA_ARGS__)
+
+// SD Reader CS pin
+const int chipSelect = 15;
+
+ESP8266WebServer server(80);
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+TinyGPSPlus gps;
+SoftwareSerial ss(D3, D4); // RX, TX
+char buffer[100];
+
+// This custom version of delay() ensures that the gps object
+// is being "fed".
+static void smartDelay(unsigned long ms)
+{
+  unsigned long start = millis();
+  do
+  {
+    while (ss.available())
+      gps.encode(ss.read());
+  } while (millis() - start < ms);
+}
+
+static void printFloat(float val, bool valid, int len, int prec)
+{
+  if (!valid)
+  {
+    while (len-- > 1)
+      Serial.print('*');
+    Serial.print(' ');
+  }
+  else
+  {
+    Serial.print(val, prec);
+    int vi = abs((int)val);
+    int flen = prec + (val < 0.0 ? 2 : 1); // . and -
+    flen += vi >= 1000 ? 4 : vi >= 100 ? 3
+                         : vi >= 10    ? 2
+                                       : 1;
+    for (int i = flen; i < len; ++i)
+      Serial.print(' ');
+  }
+  smartDelay(0);
+}
+
+static void printInt(unsigned long val, bool valid, int len)
+{
+  char sz[32] = "*****************";
+  if (valid)
+    sprintf(sz, "%ld", val);
+  sz[len] = 0;
+  for (int i = strlen(sz); i < len; ++i)
+    sz[i] = ' ';
+  if (len > 0)
+    sz[len - 1] = ' ';
+  Serial.print(sz);
+  smartDelay(0);
+}
+
+static void printDateTime(TinyGPSDate &d, TinyGPSTime &t)
+{
+  if (!d.isValid())
+  {
+    Serial.print(F("********** "));
+  }
+  else
+  {
+    char sz[32];
+    sprintf(sz, "%02d/%02d/%02d ", d.month(), d.day(), d.year());
+    Serial.print(sz);
+  }
+
+  if (!t.isValid())
+  {
+    Serial.print(F("******** "));
+  }
+  else
+  {
+    char sz[36];
+    sprintf(sz, "%02d:%02d:%02d.%06d ", t.hour(), t.minute(), t.second(), t.centisecond());
+    Serial.print(sz);
+  }
+
+  printInt(d.age(), d.isValid(), 5);
+  smartDelay(0);
+}
+
+static void printStr(const char *str, int len)
+{
+  int slen = strlen(str);
+  for (int i = 0; i < len; ++i)
+    Serial.print(i < slen ? str[i] : ' ');
+  smartDelay(0);
+}
+
+void handleRedirect()
+{
+  TRACE("Redirect...");
+  String url = "/index.html";
+
+  if (!LittleFS.exists(url))
+  {
+    server.send(404, "text/plain", "Not found");
+  }
+  else
+  {
+    server.sendHeader("Location", url, true);
+    server.send(302);
+  }
+
+} // handleRedirect()
+
+// This function is called when the WebServer was requested to list all existing files in the filesystem.
+// a JSON array with file information is returned.
+void handleListFiles()
+{
+  Dir dir = LittleFS.openDir("/");
+  String result;
+
+  result += "[\n";
+  while (dir.next())
+  {
+    if (result.length() > 4)
+    {
+      result += ",";
+    }
+    result += "  {";
+    result += " \"name\": \"" + dir.fileName() + "\", ";
+    result += " \"size\": " + String(dir.fileSize()) + ", ";
+    result += " \"time\": " + String(dir.fileTime());
+    result += " }\n";
+    // jc.addProperty("size", dir.fileSize());
+  } // while
+  result += "]";
+  server.sendHeader("Cache-Control", "no-cache");
+  server.send(200, "text/javascript; charset=utf-8", result);
+} // handleListFiles()
+
+void handleSysInfo()
+{
+  String result;
+
+  FSInfo fs_info;
+  LittleFS.info(fs_info);
+
+  result += "{\n";
+  result += "  \"flashSize\": " + String(ESP.getFlashChipSize()) + ",\n";
+  result += "  \"freeHeap\": " + String(ESP.getFreeHeap()) + ",\n";
+  result += "  \"fsTotalBytes\": " + String(fs_info.totalBytes) + ",\n";
+  result += "  \"fsUsedBytes\": " + String(fs_info.usedBytes) + ",\n";
+  result += "}";
+
+  server.sendHeader("Cache-Control", "no-cache");
+  server.send(200, "text/javascript; charset=utf-8", result);
+} // handleSysInfo()
+
+void handle_NotFound()
+{ // routine for missing webpage
+  server.send(404, "text/plain", "Not found");
+}
+
+void initwifi()
+{
+  const char *ssid = "RaceLap";      // Enter SSID here
+  const char *password = "88888888"; // Enter Password here
+
+  // IPAddress local_ip(192, 168, 2, 1);
+  // IPAddress gateway(192, 168, 2, 1);
+  // IPAddress subnet(255, 255, 255, 0);
+
+  WiFi.softAP(ssid, password);
+  // WiFi.softAPConfig(local_ip, gateway, subnet);
+  delay(500);
+  Serial.println(WiFi.softAPIP());
+
+  server.on("/", HTTP_GET, handleRedirect);
+
+  server.onNotFound(handle_NotFound); // if webpage not found run handle_notfound routine
+
+  server.on("/$sysinfo", HTTP_GET, handleSysInfo);
+
+  server.on("/$list", HTTP_GET, handleListFiles);
+
+  server.enableCORS(true);
+  server.serveStatic("/", LittleFS, "/");
+
+  server.begin();
+}
+
+void initSD()
+{
+  // // keep checking the SD reader for valid SD card/format
+  TRACE("init SD Card\n");
+  while (!SD.begin(chipSelect))
+  {
+    TRACE("SD Card Failed, Will Retry...");
+  }
+
+  TRACE("open file");
+  File myFile = SD.open("test.txt", FILE_WRITE);
+
+  TRACE("write file");
+
+  // if the file opened okay, write to it:
+  if (myFile)
+  {
+    Serial.print("Writing to test.txt...");
+    myFile.println("testing 1, 2, 3.4");
+    // close the file:
+    myFile.close();
+    TRACE("done.");
+  }
+  else
+  {
+    // if the file didn't open, print an error:
+    TRACE("error opening test.txt");
+  }
+
+  // re-open the file for reading:
+  myFile = SD.open("test.txt");
+  if (myFile)
+  {
+    Serial.println("test.txt:");
+
+    // read from the file until there's nothing else in it:
+    while (myFile.available())
+    {
+      Serial.write(myFile.read());
+    }
+    // close the file:
+    myFile.close();
+  }
+  else
+  {
+    // if the file didn't open, print an error:
+    Serial.println("error opening test.txt");
+  }
+}
+
+void initDisplay()
+{
+
+  TRACE("initDisplay");
+  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
+  {
+    TRACE("initDisplay error");
+  }
+
+  // Clear the buffer.
+  display.clearDisplay();
+
+  // Display Text
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(0, 0);
+  display.println("Hello world!");
+  display.setCursor(0, 16);
+  display.println("test");
+  display.display();
+}
+
+void initGps()
+{
+  TRACE("init GPS\n");
+  ss.begin(9600);
+
+  // ss.print(F("$PMTK251,115200*27\r\n")); // set 115200 baud rate
+  // ss.flush();                            // wait for the command to go out
+  // delay(100);                            // wait for the GPS device to change speeds
+  // ss.end();                              // empty the input buffer, too
+
+  // ss.begin(115200);                   // use the new baud rate
+  // ss.print(F("$PMTK220,100*1F\r\n")); // set 10Hz update rate
+
+  Serial.println(F("racelap"));
+  Serial.println(F("An extensive example of many interesting TinyGPSPlus features"));
+  Serial.print(F("Testing TinyGPSPlus library v. "));
+  Serial.println(TinyGPSPlus::libraryVersion());
+  Serial.println(F("by Mikal Hart"));
+  Serial.println();
+  Serial.println(F("Sats HDOP  Latitude   Longitude   Fix  Date       Time         Date Alt    Course Speed Card  Distance Course Card  Chars Sentences Checksum"));
+  Serial.println(F("           (deg)      (deg)       Age                          Age  (m)    --- from GPS ----  ---- to London  ----  RX    RX        Fail"));
+  Serial.println(F("--------------------------------------------------------------------------------------------------------------------------------------------"));
+}
+
+void setup()
+{
+  Serial.begin(9600);
+  Serial.setDebugOutput(false);
+
+  // put your setup code here, to run once:
+  TRACE("\nsetup...\n");
+  TRACE("Mounting the filesystem...\n");
+  if (!LittleFS.begin())
+  {
+    TRACE("could not mount the filesystem...\n");
+    delay(2000);
+    ESP.restart();
+  }
+
+  initDisplay();
+  initSD();
+  initwifi();
+  initGps();
+  TRACE("init ok\n");
+}
+
+void loop()
+{
+  server.handleClient();
+  // while (gpsSerial.available() > 0)
+  // {
+  //   if (gps.encode(gpsSerial.read()))
+  //   {
+  //     printData();
+  //   }
+  // }
+
+  static const double LONDON_LAT = 51.508131, LONDON_LON = -0.128002;
+
+  printInt(gps.satellites.value(), gps.satellites.isValid(), 5);
+  printFloat(gps.hdop.hdop(), gps.hdop.isValid(), 6, 1);
+  printFloat(gps.location.lat(), gps.location.isValid(), 11, 6);
+  printFloat(gps.location.lng(), gps.location.isValid(), 12, 6);
+  printInt(gps.location.age(), gps.location.isValid(), 5);
+  printDateTime(gps.date, gps.time);
+  printFloat(gps.altitude.meters(), gps.altitude.isValid(), 7, 2);
+  printFloat(gps.course.deg(), gps.course.isValid(), 7, 2);
+  printFloat(gps.speed.kmph(), gps.speed.isValid(), 6, 2);
+  printStr(gps.course.isValid() ? TinyGPSPlus::cardinal(gps.course.deg()) : "*** ", 6);
+
+  unsigned long distanceKmToLondon =
+      (unsigned long)TinyGPSPlus::distanceBetween(
+          gps.location.lat(),
+          gps.location.lng(),
+          LONDON_LAT,
+          LONDON_LON) /
+      1000;
+  printInt(distanceKmToLondon, gps.location.isValid(), 9);
+
+  double courseToLondon =
+      TinyGPSPlus::courseTo(
+          gps.location.lat(),
+          gps.location.lng(),
+          LONDON_LAT,
+          LONDON_LON);
+
+  printFloat(courseToLondon, gps.location.isValid(), 7, 2);
+
+  const char *cardinalToLondon = TinyGPSPlus::cardinal(courseToLondon);
+
+  printStr(gps.location.isValid() ? cardinalToLondon : "*** ", 6);
+
+  printInt(gps.charsProcessed(), true, 6);
+  printInt(gps.sentencesWithFix(), true, 10);
+  printInt(gps.failedChecksum(), true, 9);
+  Serial.println();
+
+  smartDelay(1000);
+
+  if (millis() > 5000 && gps.charsProcessed() < 10)
+    Serial.println(F("No GPS data received: check wiring"));
+}
