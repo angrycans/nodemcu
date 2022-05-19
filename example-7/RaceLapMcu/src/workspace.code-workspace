@@ -31,7 +31,13 @@
 			"__locale": "cpp",
 			"locale": "cpp",
 			"functional": "cpp",
-			"chrono": "cpp"
+			"chrono": "cpp",
+			"bitset": "cpp",
+			"queue": "cpp",
+			"random": "cpp",
+			"utility": "cpp",
+			"complex": "cpp",
+			"cmath": "cpp"
 		}
 	}
 }

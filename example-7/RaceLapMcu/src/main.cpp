@@ -9,6 +9,7 @@
 #include <SD.h>
 #include <SoftwareSerial.h>
 
+#include <ArduinoLog.h>
 #include <TinyGPS++.h>
 
 #define LED D0 // Led in NodeMCU at pin GPIO16 (D0).
@@ -39,6 +40,18 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 SoftwareSerial ss(D3, D4); // RX, TX
 
 char buffer[100];
+
+struct TDisplayInfo
+{
+  char title[30];
+  char gps[100];
+  char time[32];
+  char log[100];
+};
+
+typedef struct TDisplayInfo DisplayInfo;
+
+DisplayInfo displayInfo;
 
 void handleRedirect()
 {
@@ -168,18 +181,69 @@ void initDisplay()
 
     // File dataFile = SD.open(DataFileName, FILE_WRITE);
   }
+  delay(250);
 
   // // Clear the buffer.
-  // display.clearDisplay();
-
-  // // Display Text
-  // display.setTextSize(1);
-  // display.setTextColor(WHITE);
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
   // display.setCursor(0, 0);
   // display.println("Hello world!");
   // display.setCursor(0, 16);
   // display.println("test");
   // display.display();
+
+  sprintf(displayInfo.title, "RaceLap verion 0.04");
+}
+
+void showDisplay()
+{
+
+  // TRACE("showDisplay");
+  if (B_SSD1306)
+  {
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 0);
+    display.println(displayInfo.title);
+    if (gps.location.isValid())
+    {
+      sprintf(displayInfo.gps, "lat:%.8f,lng:%.8f", gps.location.lat(), gps.location.lng());
+    }
+    else
+    {
+      sprintf(displayInfo.gps, "lat:NaN,lng:NaN");
+    }
+
+    // if (gps.date.isValid())
+    // {
+    //   int year = gps.date.year();
+    //   int month = gps.date.month();
+    //   int day = gps.date.day();
+
+    //   int hour = gps.time.hour();
+    //   int minute = gps.time.minute();
+    //   int second = gps.time.second();
+    //   sprintf(displayInfo.time,
+    //           "%d/%02d/%02d %02d:%02d:%02d",
+    //           year,
+    //           month, day, hour, minute, second);
+    // }
+    // else
+    // {
+    //   sprintf(displayInfo.time, "Datetime INVALID");
+    // }
+
+    display.setCursor(0, 8);
+    display.println(buffer);
+    display.setCursor(0, 32);
+    // display.println(displayInfo.time);
+    // display.setCursor(0, 48);
+    display.println(displayInfo.log);
+    display.display();
+  }
+  // displayInfo.logo = "RaceLap verion 0.01";
 }
 
 void initGps()
@@ -207,7 +271,7 @@ void initGps()
 
 void recordGps()
 {
-  TRACE("recordGps");
+
   //
   if (gps.location.isUpdated())
   {
@@ -215,6 +279,7 @@ void recordGps()
     double lng = gps.location.lng();
 
     double altitude = gps.altitude.meters();
+    double kmph = gps.speed.kmph();
 
     int year = gps.date.year();
     int month = gps.date.month();
@@ -223,35 +288,26 @@ void recordGps()
     int hour = gps.time.hour();
     int minute = gps.time.minute();
     int second = gps.time.second();
+    int csecond = gps.time.centisecond();
+
+    // snprintf(buffer, sizeof(buffer),
+    //              "Latitude: %.8f, Longitude: %.8f, Altitude: %.2f m, "
+    //              "Date/Time: %d-%02d-%02d %02d:%02d:%02d",
+    //              lat, lng, altitude, year, month, day, hour, minute, second);
 
     snprintf(buffer, sizeof(buffer),
-             "Latitude: %.8f, Longitude: %.8f, Altitude: %.2f m, "
-             "Date/Time: %d-%02d-%02d %02d:%02d:%02d",
-             lat, lng, altitude, year, month, day, hour, minute, second);
+             "%d-%02d-%02d %02d:%02d:%02d.%04d,%.8f, %.8f, %.2f,%.2f",
+             year,
+             month, day, hour, minute, second, csecond, lat, lng, altitude, kmph);
 
-    Serial.println(buffer);
+    // TRACE(buffer);
 
-    sprintf(DataFileName_Last, "RL%04d-%02d-%02d_%02d.txt", gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour());
+    sprintf(DataFileName_Last, "RL%04d-%02d-%02d_%02d.txt", year, month, day, hour);
 
-    TRACE(DataFileName);
-    TRACE(DataFileName_Last);
+    // TRACE(DataFileName);
+    // TRACE(DataFileName_Last);
 
     // sprintf(Gpsbuff, "", fix.valid.locationfix.latitude(), fix.longitude(), fix.altitude());
-
-    gps_str = "";
-    gps_str += String(gps.date.year());
-    gps_str += String(gps.date.month());
-    gps_str += String(gps.date.day());
-    gps_str += String(gps.time.value());
-
-    gps_str += "," + String(gps.location.lat()) + "," + String(gps.location.lng());
-
-    gps_str += "," + String(gps.altitude.meters());
-    gps_str += "," + String(gps.speed.mph());
-
-    // TRACE(gps.satellites.value());
-
-    TRACE(gps_str);
 
     if (B_SD)
     {
@@ -268,8 +324,13 @@ void recordGps()
         dataFile.close();
         dataFile = SD.open(DataFileName, FILE_WRITE);
       }
-      dataFile.println(gps_str);
+      dataFile.println(buffer);
     }
+  }
+  else
+  {
+
+    // Log.traceln("gps.location.isUpdated()= %T", gps.location.isUpdated());
   }
 }
 
@@ -295,6 +356,8 @@ void setup()
 {
   initLed();
   Serial.begin(9600);
+  Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+
   // Serial.setDebugOutput(false);
 
   // put your setup code here, to run once:
@@ -307,7 +370,7 @@ void setup()
     ESP.restart();
   }
 
-  // initDisplay();
+  initDisplay();
   initSD();
   // initwifi();
   initGps();
@@ -317,13 +380,7 @@ void setup()
 void loop()
 {
 
-  TRACE("loop start");
-  digitalWrite(LED, HIGH); // turn the LED off.(Note that LOW is the voltage level but actually
-                           // the LED is on; this is because it is acive low on the ESP8266.
-  delay(5000);             // wait for 1 second.
-  TRACE("loop led 5 s");
-  // digitalWrite(LED, LOW);  // turn the LED on.
-  // delay(1000);             // wait for 1 second.
+  digitalWrite(LED, (millis() / 1000) % 2);
   server.handleClient();
 
   while (ss.available() > 0)
@@ -333,4 +390,5 @@ void loop()
       recordGps();
     }
   }
+  showDisplay();
 }
