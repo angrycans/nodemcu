@@ -30,7 +30,9 @@
         .then(function (e) {
           console.log(e);
 
-          ret = JSON.stringify(e);
+          ret = JSON.parse(e);
+
+          console.log(ret)
           if (ret.e.code > 0) {
             document.getElementById("lat").value = ret.data.lat;
             document.getElementById("lng").value = ret.data.lng;

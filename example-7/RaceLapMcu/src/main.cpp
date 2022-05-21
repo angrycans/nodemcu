@@ -114,7 +114,9 @@ void ListDirectory(File dir)
       tree += F("\"><a class=\"icon file\" draggable=\"true\" href=\"");
       tree += entry.name();
       tree += F("\">");
-      tree += dir.name() + "/" + entryName;
+      tree += dir.name();
+      tree += F("/");
+      tree += entryName;
       tree += F("</a></td>");
       tree += F("<td class=\"detailsColumn\" data-value=\")");
       tree += file_size(entry.size());
@@ -175,8 +177,7 @@ void initWebServer()
               tree="<table>";
               root = SD.open("/RLDATA");
               ListDirectory(root);
-            tree=+"</table>";
-              tree="{data:"+tree+"}";
+            tree+="</table>";
               request->send(200, "text/plain", tree); });
 
   server.on("/getlocation", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -187,6 +188,8 @@ void initWebServer()
 
              char buf[64];
              sprintf(buf,"%.8f,%.8f",gps.location.lat(),gps.location.lng());
+
+             SD.remove("/RLDATA/track.txt");
               trackfile = SD.open("/RLDATA/track.txt", FILE_WRITE);
               trackfile.println(buf);
               trackfile.close();
@@ -199,7 +202,7 @@ void initWebServer()
             }
             else
             {
-              request->send(200, "text/plain", "{e:{code:-1,msg:'Gps not valid'}}");
+              request->send(200, "text/plain", "{e:{code:-1,msg:\"Gps not valid\"}}");
             } });
 
   server.begin();
