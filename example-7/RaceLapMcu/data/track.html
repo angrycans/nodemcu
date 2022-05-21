@@ -29,8 +29,8 @@
         .then(function (result) { return result.text(); })
         .then(function (e) {
           console.log(e);
-
-          ret = JSON.parse(e);
+          eval(`let ret=${e}`);
+          // ret = JSON.parse(e);
 
           console.log(ret)
           if (ret.e.code > 0) {

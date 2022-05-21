@@ -202,7 +202,7 @@ void initWebServer()
             }
             else
             {
-              request->send(200, "text/plain", "{e:{code:-1,msg:\"Gps not valid\"}}");
+              request->send(200, "text/plain", "{\"e\":{code:-1,msg:\"Gps not valid\"}}");
             } });
 
   server.begin();
