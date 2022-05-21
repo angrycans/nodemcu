@@ -27,6 +27,8 @@ File root;
 File dataFile;
 File trackfile;
 
+String tree = "";
+
 char DataFileName[48] = "RL2022-05-18_14.txt";
 char DataFileDir[24] = "RL20220518";
 
@@ -69,25 +71,23 @@ String file_size(int bytes)
   return fsize;
 }
 
-String ListDirectory()
+void ListDirectory(File dir)
 {
 
-  File dir = SD.open("/RLDATA");
+  // dir = SD.open("/RLDATA");
   String entryName = "";
-  String tree = "";
-  // String directory = "urldecode(server.uri())";
+
   while (true)
   {
-    File entry = dir.openNextFile();
-    entryName = entry.name();
-    // entryName.replace(directory + "/", "");
 
+    File entry = dir.openNextFile();
     if (!entry)
     {
       // no more files
       break;
     }
 
+    entryName = entry.name();
     if (entry.isDirectory())
     {
       tree += F("<tr>");
@@ -104,6 +104,7 @@ String ListDirectory()
       tree += entry.name();
       tree += F("';\">show</button></td>");
       tree += F("</tr>");
+      ListDirectory(entry);
     }
     else
     {
@@ -113,7 +114,7 @@ String ListDirectory()
       tree += F("\"><a class=\"icon file\" draggable=\"true\" href=\"");
       tree += entry.name();
       tree += F("\">");
-      tree += entryName;
+      tree += dir.name() + "/" + entryName;
       tree += F("</a></td>");
       tree += F("<td class=\"detailsColumn\" data-value=\")");
       tree += file_size(entry.size());
@@ -128,8 +129,6 @@ String ListDirectory()
     }
     entry.close();
   }
-
-  return tree;
 }
 
 void notFound(AsyncWebServerRequest *request)
@@ -172,7 +171,13 @@ void initWebServer()
   server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
 
   server.on("/listsd", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(200, "text/plain", ListDirectory()); });
+            { 
+              tree="<table>";
+              root = SD.open("/RLDATA");
+              ListDirectory(root);
+            tree=+"</table>";
+              tree="{data:"+tree+"}";
+              request->send(200, "text/plain", tree); });
 
   server.on("/getlocation", HTTP_GET, [](AsyncWebServerRequest *request)
             {

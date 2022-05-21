@@ -20,15 +20,23 @@
     <li><a href="#" onclick="listsd()">/listsdcard</a> - Array of all files</a></li>
     <li><a href="/track.html">/track</a> - Track setting</a></li>
   </ul>
+
+  <div>
+    <div id="files">
+
+    </div>
+  </div>
+
 </body>
 
 <script>
   // load and display all files after page loading has finished
   function listsd() {
     fetch('/listsd')
-      .then(function (result) { return result; })
+      .then(function (result) { return result.text(); })
       .then(function (e) {
-        console.log("listsd", e)
+        console.log("listsd", e);
+        document.getElementById("files").innerHTML = e;
       });
 
   };

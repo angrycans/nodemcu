@@ -22,14 +22,24 @@
 
   </div>
 
+
   <script>
     function refresh() {
-      fetch('http://192.168.4.1/getlocation')
-        .then(function (result) { return result.json; })
+      fetch('/getlocation')
+        .then(function (result) { return result.text(); })
         .then(function (e) {
           console.log(e);
-          document.getElementById("lat").value = "111"
-          document.getElementById("lng").value = "222"
+
+          ret = JSON.stringify(e);
+          if (ret.e.code > 0) {
+            document.getElementById("lat").value = ret.data.lat;
+            document.getElementById("lng").value = ret.data.lng;
+
+          } else {
+            document.getElementById("lat").value = "NULL"
+            document.getElementById("lng").value = "NULL"
+          }
+
         });
 
     };
