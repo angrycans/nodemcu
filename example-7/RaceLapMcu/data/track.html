@@ -1,0 +1,60 @@
+<html>
+
+<head>
+  <title>Track</title>
+  <link Content-Type="text/css" href="/style.css" rel="stylesheet" />
+</head>
+
+<body>
+  <h1>Track</h1>
+
+  <div id="track">
+    <label for="name">Track Name </label>
+    <br />
+    <input type="text" id="trackname" name="name" required minlength="4" maxlength="32" size="32">
+    <br />
+    lat<br /><input type="text" id="lat" readonly size="16">
+    <br />
+    lng<br /><input type="text" id="lng" readonly size="16">
+    <br />
+    <input type="button" value="refresh" onclick="refresh()"> <input type="button" value="submit"
+      onclick="submittrack()">
+
+  </div>
+
+  <script>
+    function refresh() {
+      fetch('http://192.168.4.1/getlocation')
+        .then(function (result) { return result.json; })
+        .then(function (e) {
+          console.log(e);
+          document.getElementById("lat").value = "111"
+          document.getElementById("lng").value = "222"
+        });
+
+    };
+
+    function submittrack() {
+
+      if (document.getElementById("trackname").value.length == 0) {
+        alert("Please input track name");
+        return;
+      }
+      if (document.getElementById("lat").value.length > 0 && document.getElementById("lng").value.length > 0) {
+        fetch('/settrack')
+          .then(function (result) { return result; })
+          .then(function (e) {
+            console.log("listsd", e)
+          });
+
+      } else {
+        alert("Please refresh location lat,lng");
+      }
+
+
+    };
+
+  </script>
+</body>
+
+</html>

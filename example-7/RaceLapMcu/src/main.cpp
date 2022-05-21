@@ -1,5 +1,4 @@
 #include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
 #include <FS.h>       // File System for Web Server Files
 #include <LittleFS.h> // This file system is used.
 #include <Wire.h>
@@ -8,7 +7,8 @@
 #include <SPI.h>
 #include <SD.h>
 #include <SoftwareSerial.h>
-
+#include <ESPAsyncTCP.h>
+#include <ESPAsyncWebServer.h>
 #include <ArduinoLog.h>
 #include <TinyGPS++.h>
 
@@ -23,10 +23,12 @@
 TinyGPSPlus gps;
 // gps_fix fix;
 
+File root;
 File dataFile;
-char DataFileName[24] = "RL2022-05-18_14.txt";
-char DataFileName_Last[24] = "RL2022-05-18_14.txt";
-String gps_str;
+File trackfile;
+
+char DataFileName[48] = "RL2022-05-18_14.txt";
+char DataFileDir[24] = "RL20220518";
 
 bool B_SD = false;      // SD Card status
 bool B_SSD1306 = false; // 0.96 OLED display status
@@ -34,7 +36,7 @@ bool B_SSD1306 = false; // 0.96 OLED display status
 // SD Reader CS pin
 const int chipSelect = 15;
 
-ESP8266WebServer server(80);
+AsyncWebServer server(80);
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 SoftwareSerial ss(D3, D4); // RX, TX
@@ -53,74 +55,92 @@ typedef struct TDisplayInfo DisplayInfo;
 
 DisplayInfo displayInfo;
 
-void handleRedirect()
+String file_size(int bytes)
 {
-  TRACE("Redirect...");
-  String url = "/index.html";
-
-  if (!LittleFS.exists(url))
-  {
-    server.send(404, "text/plain", "Not found");
-  }
+  String fsize = "";
+  if (bytes < 1024)
+    fsize = String(bytes) + " B";
+  else if (bytes < (1024 * 1024))
+    fsize = String(bytes / 1024.0, 3) + " KB";
+  else if (bytes < (1024 * 1024 * 1024))
+    fsize = String(bytes / 1024.0 / 1024.0, 3) + " MB";
   else
-  {
-    server.sendHeader("Location", url, true);
-    server.send(302);
-  }
-
-} // handleRedirect()
-
-// This function is called when the WebServer was requested to list all existing files in the filesystem.
-// a JSON array with file information is returned.
-void handleListFiles()
-{
-  Dir dir = LittleFS.openDir("/");
-  String result;
-
-  result += "[\n";
-  while (dir.next())
-  {
-    if (result.length() > 4)
-    {
-      result += ",";
-    }
-    result += "  {";
-    result += " \"name\": \"" + dir.fileName() + "\", ";
-    result += " \"size\": " + String(dir.fileSize()) + ", ";
-    result += " \"time\": " + String(dir.fileTime());
-    result += " }\n";
-    // jc.addProperty("size", dir.fileSize());
-  } // while
-  result += "]";
-  server.sendHeader("Cache-Control", "no-cache");
-  server.send(200, "text/javascript; charset=utf-8", result);
-} // handleListFiles()
-
-void handleSysInfo()
-{
-  String result;
-
-  FSInfo fs_info;
-  LittleFS.info(fs_info);
-
-  result += "{\n";
-  result += "  \"flashSize\": " + String(ESP.getFlashChipSize()) + ",\n";
-  result += "  \"freeHeap\": " + String(ESP.getFreeHeap()) + ",\n";
-  result += "  \"fsTotalBytes\": " + String(fs_info.totalBytes) + ",\n";
-  result += "  \"fsUsedBytes\": " + String(fs_info.usedBytes) + ",\n";
-  result += "}";
-
-  server.sendHeader("Cache-Control", "no-cache");
-  server.send(200, "text/javascript; charset=utf-8", result);
-} // handleSysInfo()
-
-void handle_NotFound()
-{ // routine for missing webpage
-  server.send(404, "text/plain", "Not found");
+    fsize = String(bytes / 1024.0 / 1024.0 / 1024.0, 3) + " GB";
+  return fsize;
 }
 
-void initwifi()
+String ListDirectory()
 {
+
+  File dir = SD.open("/RLDATA");
+  String entryName = "";
+  String tree = "";
+  // String directory = "urldecode(server.uri())";
+  while (true)
+  {
+    File entry = dir.openNextFile();
+    entryName = entry.name();
+    // entryName.replace(directory + "/", "");
+
+    if (!entry)
+    {
+      // no more files
+      break;
+    }
+
+    if (entry.isDirectory())
+    {
+      tree += F("<tr>");
+      tree += F("<td data-value=\"");
+      tree += entryName;
+      tree += F("/\"><a class=\"icon dir\" href=\"");
+      tree += entry.name();
+      tree += F("\">");
+      tree += entryName;
+      tree += F("/</a></td>");
+      tree += F("<td class=\"detailsColumn\" data-value=\"0\">-</td>");
+      tree += F("<td class=\"detailsColumn\" data-value=\"0\">");
+      tree += F("<button class='buttons' onclick=\"location.href='");
+      tree += entry.name();
+      tree += F("';\">show</button></td>");
+      tree += F("</tr>");
+    }
+    else
+    {
+      tree += F("<tr>");
+      tree += F("<td data-value=\"");
+      tree += entry.name();
+      tree += F("\"><a class=\"icon file\" draggable=\"true\" href=\"");
+      tree += entry.name();
+      tree += F("\">");
+      tree += entryName;
+      tree += F("</a></td>");
+      tree += F("<td class=\"detailsColumn\" data-value=\")");
+      tree += file_size(entry.size());
+      tree += F("\">");
+      tree += file_size(entry.size());
+      tree += F("</td>");
+      tree += F("<td class=\"detailsColumn\" data-value=\"0\">");
+      tree += F("<button class='buttons' onclick=\"location.href='/downfile?file=");
+      tree += entry.name();
+      tree += F("';\">down</button></td>");
+      tree += F("</tr>");
+    }
+    entry.close();
+  }
+
+  return tree;
+}
+
+void notFound(AsyncWebServerRequest *request)
+{
+  request->send(404, "text/plain", "Not found");
+}
+
+void initWifi()
+{
+
+  Log.traceln("initWifi");
   const char *ssid = "RaceLap";      // Enter SSID here
   const char *password = "88888888"; // Enter Password here
 
@@ -130,49 +150,130 @@ void initwifi()
 
   WiFi.softAP(ssid, password);
   // WiFi.softAPConfig(local_ip, gateway, subnet);
-  delay(500);
-  Serial.println(WiFi.softAPIP());
+  delay(250);
+}
 
-  server.on("/", HTTP_GET, handleRedirect);
+void initWebServer()
+{
 
-  server.onNotFound(handle_NotFound); // if webpage not found run handle_notfound routine
+  // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+  //           { request->send(200, "text/plain", "Hello, world"); });
 
-  server.on("/$sysinfo", HTTP_GET, handleSysInfo);
+  Log.traceln("initWebServer");
+  server.onNotFound(notFound);
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+  server.onNotFound([](AsyncWebServerRequest *request)
+                    {
+  if (request->method() == HTTP_OPTIONS) {
+    request->send(200);
+  } else {
+    request->send(404);
+  } });
+  server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
 
-  server.on("/$list", HTTP_GET, handleListFiles);
+  server.on("/listsd", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(200, "text/plain", ListDirectory()); });
 
-  server.enableCORS(true);
-  server.serveStatic("/", LittleFS, "/");
+  server.on("/getlocation", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+            if (gps.location.isValid())
+            {
+              
+
+             char buf[64];
+             sprintf(buf,"%.8f,%.8f",gps.location.lat(),gps.location.lng());
+              trackfile = SD.open("/RLDATA/track.txt", FILE_WRITE);
+              trackfile.println(buf);
+              trackfile.close();
+              sprintf(buf,"{e:{code:1},data:{lat:%.8f,lng:%.8f}}",gps.location.lat(),gps.location.lng());
+
+            
+
+        
+              request->send(200, "text/plain", buf);
+            }
+            else
+            {
+              request->send(200, "text/plain", "{e:{code:-1,msg:'Gps not valid'}}");
+            } });
 
   server.begin();
+}
+
+void printDirectory(File dir, int numTabs)
+{
+  while (true)
+  {
+
+    File entry = dir.openNextFile();
+    if (!entry)
+    {
+      // no more files
+      break;
+    }
+    for (uint8_t i = 0; i < numTabs; i++)
+    {
+      Serial.print('\t');
+    }
+    Serial.print(entry.name());
+    if (entry.isDirectory())
+    {
+      Serial.println("/");
+      printDirectory(entry, numTabs + 1);
+    }
+    else
+    {
+      // files have sizes, directories do not
+      Serial.print("\t\t");
+      Serial.print(entry.size(), DEC);
+      time_t cr = entry.getCreationTime();
+      time_t lw = entry.getLastWrite();
+      struct tm *tmstruct = localtime(&cr);
+      Serial.printf("\tCREATION: %d-%02d-%02d %02d:%02d:%02d", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
+      tmstruct = localtime(&lw);
+      Serial.printf("\tLAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
+    }
+    entry.close();
+  }
 }
 
 void initSD()
 {
   // // keep checking the SD reader for valid SD card/format
-  TRACE("init SD Card\n");
+  Log.traceln("init SD Card");
   // while (!SD.begin(chipSelect))
   // {
   //   TRACE("SD Card Failed, Will Retry...");
   // }
   if (!SD.begin(chipSelect))
   {
-    TRACE("init SD Card Failed");
+    Log.traceln("init SD Card Failed");
     B_SD = false;
   }
   else
   {
     B_SD = true;
+
+    if (SD.mkdir("RLDATA"))
+    {
+      Log.traceln("dir is created.");
+    }
+
+    root = SD.open("/RLDATA");
+
+    printDirectory(root, 0);
+
+    Log.traceln("print RLDATA Directory done!");
   }
 }
 
 void initDisplay()
 {
 
-  TRACE("init Display");
+  Log.traceln("init Display");
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
   {
-    TRACE("init Display Failed");
+    Log.traceln("init Display Failed");
     B_SSD1306 = false;
   }
   else
@@ -187,11 +288,6 @@ void initDisplay()
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(WHITE);
-  // display.setCursor(0, 0);
-  // display.println("Hello world!");
-  // display.setCursor(0, 16);
-  // display.println("test");
-  // display.display();
 
   sprintf(displayInfo.title, "RaceLap verion 0.04");
 }
@@ -207,32 +303,13 @@ void showDisplay()
     display.setTextColor(WHITE);
     display.setCursor(0, 0);
     display.println(displayInfo.title);
-    if (gps.location.isValid())
-    {
-      sprintf(displayInfo.gps, "lat:%.8f,lng:%.8f", gps.location.lat(), gps.location.lng());
-    }
-    else
-    {
-      sprintf(displayInfo.gps, "lat:NaN,lng:NaN");
-    }
-
-    // if (gps.date.isValid())
+    // if (gps.location.isValid())
     // {
-    //   int year = gps.date.year();
-    //   int month = gps.date.month();
-    //   int day = gps.date.day();
-
-    //   int hour = gps.time.hour();
-    //   int minute = gps.time.minute();
-    //   int second = gps.time.second();
-    //   sprintf(displayInfo.time,
-    //           "%d/%02d/%02d %02d:%02d:%02d",
-    //           year,
-    //           month, day, hour, minute, second);
+    //   sprintf(displayInfo.gps, "lat:%.8f,lng:%.8f", gps.location.lat(), gps.location.lng());
     // }
     // else
     // {
-    //   sprintf(displayInfo.time, "Datetime INVALID");
+    //   sprintf(displayInfo.gps, "lat:NaN,lng:NaN");
     // }
 
     display.setCursor(0, 8);
@@ -248,7 +325,7 @@ void showDisplay()
 
 void initGps()
 {
-  TRACE("init GPS");
+  Log.traceln("init GPS");
 
   ss.begin(9600);
   delay(250);
@@ -296,42 +373,32 @@ void recordGps()
     //              lat, lng, altitude, year, month, day, hour, minute, second);
 
     snprintf(buffer, sizeof(buffer),
-             "%d-%02d-%02d %02d:%02d:%02d.%04d,%.8f, %.8f, %.2f,%.2f",
+             "%d-%02d-%02d %02d:%02d:%02d.%04d,%.8f,%.8f,%.2f,%.2f",
              year,
              month, day, hour, minute, second, csecond, lat, lng, altitude, kmph);
 
-    // TRACE(buffer);
+    sprintf(DataFileDir, "/RLDATA/%04d%02d%02d/", year, month, day);
 
-    sprintf(DataFileName_Last, "RL%04d-%02d-%02d_%02d.txt", year, month, day, hour);
+    if (!SD.exists(DataFileDir))
+    {
+      SD.mkdir(DataFileDir);
+      Log.traceln("create dir %s", DataFileDir);
+    }
 
-    // TRACE(DataFileName);
-    // TRACE(DataFileName_Last);
-
-    // sprintf(Gpsbuff, "", fix.valid.locationfix.latitude(), fix.longitude(), fix.altitude());
+    sprintf(DataFileName, "%sRL%04d%02d%02d%02d.txt", DataFileDir, year, month, day, hour);
 
     if (B_SD)
     {
-      if (strcmp(DataFileName_Last, DataFileName) == 0)
-      {
-        if (!dataFile)
-        {
-          dataFile = SD.open(DataFileName, FILE_WRITE);
-        }
-      }
-      else
-      {
-        sprintf(DataFileName, DataFileName_Last);
-        dataFile.close();
-        dataFile = SD.open(DataFileName, FILE_WRITE);
-      }
+      dataFile = SD.open(DataFileName, FILE_WRITE);
       dataFile.println(buffer);
+      dataFile.close();
     }
   }
-  else
-  {
+  // else
+  // {
 
-    // Log.traceln("gps.location.isUpdated()= %T", gps.location.isUpdated());
-  }
+  //   // Log.traceln("gps.location.isUpdated()= %T", gps.location.isUpdated());
+  // }
 }
 
 // void GpsLoop()
@@ -354,34 +421,39 @@ void initLed()
 
 void setup()
 {
-  initLed();
   Serial.begin(9600);
+  initLed();
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
   // Serial.setDebugOutput(false);
 
   // put your setup code here, to run once:
-  TRACE("\nsetup...\n");
-  TRACE("Mounting the filesystem...\n");
+  Log.traceln("setup...");
+  Log.traceln("Mounting the filesystem...\n");
   if (!LittleFS.begin())
   {
-    TRACE("could not mount the filesystem...\n");
+    Log.traceln("could not mount the filesystem...\n");
     delay(2000);
     ESP.restart();
   }
 
   initDisplay();
   initSD();
-  // initwifi();
+  initWifi();
+  initWebServer();
   initGps();
-  TRACE("init ok\n");
+  Log.traceln("init ok\n");
 }
 
 void loop()
 {
 
   digitalWrite(LED, (millis() / 1000) % 2);
-  server.handleClient();
+  // dataFile = SD.open("DataFileName.txt", FILE_WRITE);
+  // Log.traceln("gps.location.isUpdated()= %T %d", gps.location.isUpdated(), repeat++);
+  // dataFile.print("buffer");
+  // dataFile.println(repeat);
+  // dataFile.close();
 
   while (ss.available() > 0)
   {

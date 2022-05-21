@@ -37,7 +37,8 @@
 			"random": "cpp",
 			"utility": "cpp",
 			"complex": "cpp",
-			"cmath": "cpp"
+			"cmath": "cpp",
+			"system_error": "cpp"
 		}
 	}
 }
