@@ -38,7 +38,12 @@
 			"utility": "cpp",
 			"complex": "cpp",
 			"cmath": "cpp",
-			"system_error": "cpp"
+			"system_error": "cpp",
+			"__node_handle": "cpp",
+			"optional": "cpp",
+			"regex": "cpp",
+			"*.tcc": "cpp",
+			"stdexcept": "cpp"
 		}
 	}
 }

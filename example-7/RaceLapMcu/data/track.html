@@ -17,8 +17,7 @@
     <br />
     lng<br /><input type="text" id="lng" readonly size="16">
     <br />
-    <input type="button" value="refresh" onclick="refresh()"> <input type="button" value="submit"
-      onclick="submittrack()">
+    <input type="button" value="refresh" onclick="refresh()">
 
   </div>
 
@@ -29,8 +28,9 @@
         .then(function (result) { return result.text(); })
         .then(function (e) {
           console.log(e);
-          eval(`let ret=${e}`);
-          // ret = JSON.parse(e);
+          ret = e.replaceAll("'", "\"");
+          console.log(ret);
+          ret = JSON.parse(ret);
 
           console.log(ret)
           if (ret.e.code > 0) {
@@ -46,25 +46,7 @@
 
     };
 
-    function submittrack() {
 
-      if (document.getElementById("trackname").value.length == 0) {
-        alert("Please input track name");
-        return;
-      }
-      if (document.getElementById("lat").value.length > 0 && document.getElementById("lng").value.length > 0) {
-        fetch('/settrack')
-          .then(function (result) { return result; })
-          .then(function (e) {
-            console.log("listsd", e)
-          });
-
-      } else {
-        alert("Please refresh location lat,lng");
-      }
-
-
-    };
 
   </script>
 </body>

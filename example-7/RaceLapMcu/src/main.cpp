@@ -91,40 +91,36 @@ void ListDirectory(File dir)
     if (entry.isDirectory())
     {
       tree += F("<tr>");
-      tree += F("<td data-value=\"");
+      tree += F("<td>");
       tree += entryName;
-      tree += F("/\"><a class=\"icon dir\" href=\"");
-      tree += entry.name();
-      tree += F("\">");
-      tree += entryName;
-      tree += F("/</a></td>");
+      tree += F("/</td><td></td>");
       tree += F("<td class=\"detailsColumn\" data-value=\"0\">-</td>");
       tree += F("<td class=\"detailsColumn\" data-value=\"0\">");
-      tree += F("<button class='buttons' onclick=\"location.href='");
+      tree += F("<button class='buttons' onclick=\"location.href='/deldir?dir=");
       tree += entry.name();
-      tree += F("';\">show</button></td>");
+      tree += F("';\">del</button></td>");
       tree += F("</tr>");
       ListDirectory(entry);
     }
     else
     {
-      tree += F("<tr>");
+      tree += F("<tr><td></td>");
       tree += F("<td data-value=\"");
       tree += entry.name();
       tree += F("\"><a class=\"icon file\" draggable=\"true\" href=\"");
       tree += entry.name();
       tree += F("\">");
-      tree += dir.name();
-      tree += F("/");
+      // tree += dir.name();
+      // tree += F("/");
       tree += entryName;
       tree += F("</a></td>");
-      tree += F("<td class=\"detailsColumn\" data-value=\")");
-      tree += file_size(entry.size());
-      tree += F("\">");
+      tree += F("<td class=\"detailsColumn\">");
       tree += file_size(entry.size());
       tree += F("</td>");
       tree += F("<td class=\"detailsColumn\" data-value=\"0\">");
-      tree += F("<button class='buttons' onclick=\"location.href='/downfile?file=");
+      tree += F("<button class='buttons' onclick=\"location.href='/down?file=/");
+      tree += dir.name();
+      tree += F("/");
       tree += entry.name();
       tree += F("';\">down</button></td>");
       tree += F("</tr>");
@@ -141,17 +137,34 @@ void notFound(AsyncWebServerRequest *request)
 void initWifi()
 {
 
-  Log.traceln("initWifi");
-  const char *ssid = "RaceLap";      // Enter SSID here
-  const char *password = "88888888"; // Enter Password here
+  // Log.traceln("initWifi");
+  // WiFi.mode(WIFI_AP);
+  // const char *ssid = "RaceLap2";     // Enter SSID here
+  // const char *password = "88888888"; // Enter Password here
 
-  // IPAddress local_ip(192, 168, 2, 1);
-  // IPAddress gateway(192, 168, 2, 1);
+  // IPAddress local_ip(192, 168, 4, 1);
+  // IPAddress gateway(192, 168, 4, 1);
   // IPAddress subnet(255, 255, 255, 0);
 
-  WiFi.softAP(ssid, password);
   // WiFi.softAPConfig(local_ip, gateway, subnet);
-  delay(250);
+  // delay(50);
+  // WiFi.softAP(ssid, password);
+  // delay(50);
+
+  // Log.trace("Soft-AP IP address = ");
+  // Log.traceln(WiFi.softAPIP());
+
+  WiFi.begin("qianmi-mobile", "qianmi123");
+
+  Log.traceln("Connecting");
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Log.traceln(".");
+  }
+
+  Log.trace("Connected, IP address: ");
+  Log.traceln(WiFi.localIP());
 }
 
 void initWebServer()
@@ -180,6 +193,25 @@ void initWebServer()
             tree+="</table>";
               request->send(200, "text/plain", tree); });
 
+  server.on("/down", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+              if (request->hasParam("file"))
+              {
+                String message = "/RLDATA"+request->getParam("file")->value();
+                Log.traceln("downfile %s",message.c_str());
+                //request->send(200, "text/plain", "Params ok");
+               // root = SD.open("/RLDATA");
+               File sfile = SD.open(message, FILE_READ);
+
+               if (sfile){
+                  request->send(sfile, message.c_str(), "text/xhr");
+               }else{
+                  request->send(200, "text/plain", "file no Exists ");
+               }
+              }else{
+                request->send(200, "text/plain", "Params error");
+              } });
+
   server.on("/getlocation", HTTP_GET, [](AsyncWebServerRequest *request)
             {
             if (gps.location.isValid())
@@ -195,14 +227,12 @@ void initWebServer()
               trackfile.close();
               sprintf(buf,"{e:{code:1},data:{lat:%.8f,lng:%.8f}}",gps.location.lat(),gps.location.lng());
 
-            
-
         
               request->send(200, "text/plain", buf);
             }
             else
             {
-              request->send(200, "text/plain", "{\"e\":{code:-1,msg:\"Gps not valid\"}}");
+              request->send(200, "text/plain", "{e:{code:-1,msg:'Gps not valid'}}");
             } });
 
   server.begin();
