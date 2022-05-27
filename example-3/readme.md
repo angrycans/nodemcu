@@ -16,12 +16,19 @@ https://codeantenna.com/a/HI9HMh3BPN
 
 ## 接线
 
-| OLED模块 | NodeMCU | 
+| OLED模块 | NodeMCU Lua| 
 | :----: | :----:  |
 | VCC ->| VCC | 
 | GND ->| GND | 
 | SDA ->| D3 | 
 | SCL ->| D4 | 
+
+| OLED模块 | NodeMCU arduino| 
+| :----: | :----:  |
+| VCC ->| VCC | 
+| GND ->| GND | 
+| SDA ->| D2 | 
+| SCL ->| D1 | 
 
 
 ## 代码

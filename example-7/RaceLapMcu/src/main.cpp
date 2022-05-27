@@ -18,8 +18,6 @@
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define SCREEN_ADDRESS 0x3C
 
-#define TRACE(...) Serial.println(__VA_ARGS__)
-
 TinyGPSPlus gps;
 // gps_fix fix;
 
@@ -38,11 +36,14 @@ bool B_SSD1306 = false; // 0.96 OLED display status
 // SD Reader CS pin
 const int chipSelect = 15;
 
+uint32_t last_satellites = 0;
+
 AsyncWebServer server(80);
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 SoftwareSerial ss(D3, D4); // RX, TX
 
+static unsigned long lastTime = 0;
 char buffer[100];
 
 struct TDisplayInfo
@@ -137,10 +138,10 @@ void notFound(AsyncWebServerRequest *request)
 void initWifi()
 {
 
-  // Log.traceln("initWifi");
-  // WiFi.mode(WIFI_AP);
-  // const char *ssid = "RaceLap2";     // Enter SSID here
-  // const char *password = "88888888"; // Enter Password here
+  Log.traceln("initWifi");
+  WiFi.mode(WIFI_AP);
+  const char *ssid = "RaceLap";      // Enter SSID here
+  const char *password = "88888888"; // Enter Password here
 
   // IPAddress local_ip(192, 168, 4, 1);
   // IPAddress gateway(192, 168, 4, 1);
@@ -148,23 +149,26 @@ void initWifi()
 
   // WiFi.softAPConfig(local_ip, gateway, subnet);
   // delay(50);
-  // WiFi.softAP(ssid, password);
-  // delay(50);
+  WiFi.softAP(ssid, password);
+  delay(50);
 
-  // Log.trace("Soft-AP IP address = ");
-  // Log.traceln(WiFi.softAPIP());
+  Log.trace("Soft-AP IP address = ");
+  Log.traceln(WiFi.softAPIP());
 
-  WiFi.begin("qianmi-mobile", "qianmi123");
+  Serial.print("DHCP status:");
+  Serial.println(wifi_softap_dhcps_status());
 
-  Log.traceln("Connecting");
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Log.traceln(".");
-  }
+  // WiFi.begin("qianmi-mobile", "qianmi123");
 
-  Log.trace("Connected, IP address: ");
-  Log.traceln(WiFi.localIP());
+  // Log.traceln("Connecting");
+  // while (WiFi.status() != WL_CONNECTED)
+  // {
+  //   delay(500);
+  //   Log.traceln(".");
+  // }
+
+  // Log.trace("Connected, IP address: ");
+  // Log.traceln(WiFi.localIP());
 }
 
 void initWebServer()
@@ -309,6 +313,11 @@ void initDisplay()
 {
 
   Log.traceln("init Display");
+  Wire.begin();
+
+  Log.traceln("wire %T", Wire.status());
+  //  Log.traceln("wire %T", Wire.available());
+
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
   {
     Log.traceln("init Display Failed");
@@ -316,18 +325,25 @@ void initDisplay()
   }
   else
   {
+
     B_SSD1306 = true;
 
-    // File dataFile = SD.open(DataFileName, FILE_WRITE);
+    // if (!Wire.status())
+    // {
+    //   B_SSD1306 = false;
+    //   return;
+    // }
+
+    delay(250);
+
+    // // Clear the buffer.
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+
+    sprintf(displayInfo.title, "RaceLap verion 0.04");
+    Log.traceln("init Display ok");
   }
-  delay(250);
-
-  // // Clear the buffer.
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-
-  sprintf(displayInfo.title, "RaceLap verion 0.04");
 }
 
 void showDisplay()
@@ -336,6 +352,7 @@ void showDisplay()
   // TRACE("showDisplay");
   if (B_SSD1306)
   {
+    // delay(10);
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(WHITE);
@@ -352,10 +369,10 @@ void showDisplay()
 
     display.setCursor(0, 8);
     display.println(buffer);
-    display.setCursor(0, 32);
+    // display.setCursor(0, 32);
     // display.println(displayInfo.time);
     // display.setCursor(0, 48);
-    display.println(displayInfo.log);
+    // display.println(displayInfo.log);
     display.display();
   }
   // displayInfo.logo = "RaceLap verion 0.01";
@@ -365,35 +382,35 @@ void initGps()
 {
   Log.traceln("init GPS");
 
-  ss.begin(9600);
+  // ss.begin(9600);
+  ss.begin(57600);
   delay(250);
 
-  // TRACE(ss.available());
-  //  // gps.send_P(&ss, F("PMTK251,115200")); // set baud rate
-  //  gps.send_P(&ss, F("PUBX,41,1,3,3,115200,0"));
-  //  delay(250);
-  //  ss.flush(); // wait for the command to go out
-
-  // ss.end(); // empty the input buffer, too
-
-  // delay(500); // wait for the GPS device to change speeds
-  // ss.begin(9600);
-  // ss.begin(115200); // use the new baud rate
-  //  gps.send_P(&ss, F("PMTK220,100")); // set 10Hz update rate
-
-  // TRACE("init GPS ok\n");
+  while (!ss.available())
+  {
+    Log.traceln("GPS invaild");
+  }
+  Log.traceln("GPS init OK");
 }
 
 void recordGps()
 {
-
+  //
+  // Log.traceln("recordGps %T %T %T", gps.location.isValid(), gps.location.isUpdated()), gps.satellites.isValid();
+  if (gps.satellites.isValid() && last_satellites != gps.satellites.value())
+  {
+    last_satellites = gps.satellites.value();
+    Log.traceln("satellites=%d", gps.satellites.value());
+  }
   //
   if (gps.location.isUpdated())
+  // if (gps.location.isValid())
   {
     double lat = gps.location.lat();
     double lng = gps.location.lng();
 
     double altitude = gps.altitude.meters();
+
     double kmph = gps.speed.kmph();
 
     int year = gps.date.year();
@@ -415,28 +432,26 @@ void recordGps()
              year,
              month, day, hour, minute, second, csecond, lat, lng, altitude, kmph);
 
-    sprintf(DataFileDir, "/RLDATA/%04d%02d%02d/", year, month, day);
-
-    if (!SD.exists(DataFileDir))
-    {
-      SD.mkdir(DataFileDir);
-      Log.traceln("create dir %s", DataFileDir);
-    }
-
-    sprintf(DataFileName, "%sRL%04d%02d%02d%02d.txt", DataFileDir, year, month, day, hour);
+    Log.traceln(buffer);
 
     if (B_SD)
     {
+      sprintf(DataFileDir, "/RLDATA/%04d%02d%02d/", year, month, day);
+      if (!SD.exists(DataFileDir))
+      {
+        SD.mkdir(DataFileDir);
+        Log.traceln("create dir %s", DataFileDir);
+      }
+
+      sprintf(DataFileName, "%sRL%04d%02d%02d%02d.txt", DataFileDir, year, month, day, hour);
+      // sprintf(DataFileName, "%sRL%04d%02d%02d.txt", DataFileDir, year, month, day);
       dataFile = SD.open(DataFileName, FILE_WRITE);
       dataFile.println(buffer);
-      dataFile.close();
+      dataFile.flush();
+      //  dataFile.println(buffer);
+      // dataFile.close();
     }
   }
-  // else
-  // {
-
-  //   // Log.traceln("gps.location.isUpdated()= %T", gps.location.isUpdated());
-  // }
 }
 
 // void GpsLoop()
@@ -487,12 +502,6 @@ void loop()
 {
 
   digitalWrite(LED, (millis() / 1000) % 2);
-  // dataFile = SD.open("DataFileName.txt", FILE_WRITE);
-  // Log.traceln("gps.location.isUpdated()= %T %d", gps.location.isUpdated(), repeat++);
-  // dataFile.print("buffer");
-  // dataFile.println(repeat);
-  // dataFile.close();
-
   while (ss.available() > 0)
   {
     if (gps.encode(ss.read()))
@@ -500,5 +509,10 @@ void loop()
       recordGps();
     }
   }
-  showDisplay();
+
+  if (millis() - lastTime > 1000)
+  {
+    showDisplay();
+  }
+  lastTime = millis();
 }

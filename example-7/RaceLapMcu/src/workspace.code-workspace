@@ -43,7 +43,8 @@
 			"optional": "cpp",
 			"regex": "cpp",
 			"*.tcc": "cpp",
-			"stdexcept": "cpp"
+			"stdexcept": "cpp",
+			"ostream": "cpp"
 		}
 	}
 }

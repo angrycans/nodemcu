@@ -9,6 +9,7 @@ char buffer[100];
 void printData() 
 {
     if (gps.location.isUpdated()) {
+    //  if (gps.location.isValid()){
         double lat = gps.location.lat();
         double lng = gps.location.lng();
  
@@ -35,12 +36,13 @@ void printData()
 void setup() 
 {
     Serial.begin(9600);
-    gpsSerial.begin(9600);
+    gpsSerial.begin(57600);
 }
  
 void loop() 
 {
     while (gpsSerial.available() > 0) {
+      //Serial.println(gpsSerial.read());
         if (gps.encode(gpsSerial.read())) {
             printData();
         }
