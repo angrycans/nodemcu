@@ -44,6 +44,9 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 SoftwareSerial ss(D3, D4); // RX, TX
 
 static unsigned long lastTime = 0;
+
+static unsigned long lastSpeedTime = 0;
+static unsigned long lastStartTime = 0;
 char buffer[100];
 
 struct TDisplayInfo
@@ -129,7 +132,7 @@ void ListDirectory(File dir)
       tree += F("/</td><td></td>");
       tree += F("<td class=\"detailsColumn\" data-value=\"0\">-</td>");
       tree += F("<td class=\"detailsColumn\" data-value=\"0\">");
-      tree += F("<button class='buttons' onclick=\"location.href='/deldir?dir=");
+      tree += F("<button class='buttons' onclick=\"location.href='/del?file=");
       tree += entry.name();
       tree += F("';\">del</button></td>");
       tree += F("</tr>");
@@ -169,13 +172,13 @@ void initWifi()
 {
 
   Log.traceln("initWifi");
-  WiFi.mode(WIFI_AP);
-  const char *ssid = "RaceLap";      // Enter SSID here
-  const char *password = "88888888"; // Enter Password here
-  WiFi.softAP(ssid, password);
-  delay(50);
-  Log.trace("Soft-AP IP address = ");
-  Log.traceln(WiFi.softAPIP());
+  // WiFi.mode(WIFI_AP);
+  // const char *ssid = "RaceLap";      // Enter SSID here
+  // const char *password = "88888888"; // Enter Password here
+  // WiFi.softAP(ssid, password);
+  // delay(50);
+  // Log.trace("Soft-AP IP address = ");
+  // Log.traceln(WiFi.softAPIP());
 
   // Serial.print("DHCP status:");
   // Serial.println(wifi_softap_dhcps_status());
@@ -187,16 +190,17 @@ void initWifi()
   // WiFi.softAPConfig(local_ip, gateway, subnet);
   // delay(50);
 
-  // WiFi.begin("wifi-acans", "85750218");
-  // Log.traceln("Connecting");
-  // while (WiFi.status() != WL_CONNECTED)
-  // {
-  //   delay(500);
-  //   Log.traceln(".");
-  // }
+  WiFi.begin("yunweizu", "yunweizubangbangda");
 
-  // Log.trace("Connected, IP address: ");
-  // Log.traceln(WiFi.localIP());
+  Log.traceln("Connecting");
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Log.traceln(".");
+  }
+
+  Log.trace("Connected, IP address: ");
+  Log.traceln(WiFi.localIP());
 }
 
 void initWebServer()
@@ -419,7 +423,7 @@ void showDisplay()
     // display.setTextSize(2);
     // display.setCursor(50, 48);
     // display.println(displayInfo.speed);
-    // display.display();
+    display.display();
   }
   // displayInfo.logo = "RaceLap verion 0.01";
 }
