@@ -17,7 +17,8 @@
   <p>The following REST services are available:</p>
   <ul>
     <li><a href="/sysinfo">/sysinfo</a> - Some system level information</a></li>
-    <li><a href="#" onclick="listsd()">/listsdcard</a> - Array of all files</a></li>
+    <li><a href="#" onclick="listsd()">/listsdcard</a> - all files</a></li>
+    <li><a href="#" onclick="listsdJSON()">/listsdcardjson</a> - Json Array of all files</a></li>
     <li><a href="/track.html">/track</a> - Track setting</a></li>
   </ul>
 
@@ -36,6 +37,17 @@
       .then(function (result) { return result.text(); })
       .then(function (e) {
         console.log("listsd", e);
+        document.getElementById("files").innerHTML = e;
+      });
+
+  };
+
+  function listsdJSON() {
+    fetch('/listsdjson')
+      .then(function (result) { return result.text(); })
+      .then(function (e) {
+        console.log(e);
+
         document.getElementById("files").innerHTML = e;
       });
 

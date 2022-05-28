@@ -52,6 +52,7 @@ struct TDisplayInfo
   char gps[100];
   char time[32];
   char log[100];
+  char speed[10];
 };
 
 typedef struct TDisplayInfo DisplayInfo;
@@ -70,6 +71,37 @@ String file_size(int bytes)
   else
     fsize = String(bytes / 1024.0 / 1024.0 / 1024.0, 3) + " GB";
   return fsize;
+}
+
+void ListDirectoryJSON(File dir)
+{
+
+  // dir = SD.open("/RLDATA");
+  String entryName = "";
+
+  while (true)
+  {
+
+    File entry = dir.openNextFile();
+    if (!entry)
+    {
+      // no more files
+      break;
+    }
+
+    entryName = entry.name();
+    if (entry.isDirectory())
+    {
+
+      ListDirectoryJSON(entry);
+    }
+    else
+    {
+
+      tree = tree + "/" + dir.name() + "/" + entry.name() + ",";
+    }
+    entry.close();
+  }
 }
 
 void ListDirectory(File dir)
@@ -108,11 +140,7 @@ void ListDirectory(File dir)
       tree += F("<tr><td></td>");
       tree += F("<td data-value=\"");
       tree += entry.name();
-      tree += F("\"><a class=\"icon file\" draggable=\"true\" href=\"");
-      tree += entry.name();
       tree += F("\">");
-      // tree += dir.name();
-      // tree += F("/");
       tree += entryName;
       tree += F("</a></td>");
       tree += F("<td class=\"detailsColumn\">");
@@ -120,10 +148,12 @@ void ListDirectory(File dir)
       tree += F("</td>");
       tree += F("<td class=\"detailsColumn\" data-value=\"0\">");
       tree += F("<button class='buttons' onclick=\"location.href='/down?file=/");
-      tree += dir.name();
-      tree += F("/");
-      tree += entry.name();
-      tree += F("';\">down</button></td>");
+      tree = tree + dir.name() + "/" + entry.name();
+      tree += F("'\">down</button></td>");
+      tree += F("<td class=\"detailsColumn\" data-value=\"0\">");
+      tree += F("<button class='buttons' onclick=\"location.href='/del?file=/");
+      tree = tree + dir.name() + "/" + entry.name();
+      tree += F("'\">del</button></td>");
       tree += F("</tr>");
     }
     entry.close();
@@ -142,6 +172,13 @@ void initWifi()
   WiFi.mode(WIFI_AP);
   const char *ssid = "RaceLap";      // Enter SSID here
   const char *password = "88888888"; // Enter Password here
+  WiFi.softAP(ssid, password);
+  delay(50);
+  Log.trace("Soft-AP IP address = ");
+  Log.traceln(WiFi.softAPIP());
+
+  // Serial.print("DHCP status:");
+  // Serial.println(wifi_softap_dhcps_status());
 
   // IPAddress local_ip(192, 168, 4, 1);
   // IPAddress gateway(192, 168, 4, 1);
@@ -149,17 +186,8 @@ void initWifi()
 
   // WiFi.softAPConfig(local_ip, gateway, subnet);
   // delay(50);
-  WiFi.softAP(ssid, password);
-  delay(50);
 
-  Log.trace("Soft-AP IP address = ");
-  Log.traceln(WiFi.softAPIP());
-
-  Serial.print("DHCP status:");
-  Serial.println(wifi_softap_dhcps_status());
-
-  // WiFi.begin("qianmi-mobile", "qianmi123");
-
+  // WiFi.begin("wifi-acans", "85750218");
   // Log.traceln("Connecting");
   // while (WiFi.status() != WL_CONNECTED)
   // {
@@ -197,6 +225,15 @@ void initWebServer()
             tree+="</table>";
               request->send(200, "text/plain", tree); });
 
+  server.on("/listsdjson", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+              tree = "";
+              root = SD.open("/RLDATA");
+              ListDirectoryJSON(root);
+
+
+              request->send(200, "text/plain", tree); });
+
   server.on("/down", HTTP_GET, [](AsyncWebServerRequest *request)
             {
               if (request->hasParam("file"))
@@ -212,6 +249,23 @@ void initWebServer()
                }else{
                   request->send(200, "text/plain", "file no Exists ");
                }
+              }else{
+                request->send(200, "text/plain", "Params error");
+              } });
+
+  server.on("/del", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+              if (request->hasParam("file"))
+              {
+                String message = "/RLDATA"+request->getParam("file")->value();
+                Log.traceln("delfile %s",message.c_str());
+                //request->send(200, "text/plain", "Params ok");
+               // root = SD.open("/RLDATA");
+                SD.remove(message);
+
+               
+                  request->send(200, "text/plain", "file del  ok ");
+              
               }else{
                 request->send(200, "text/plain", "Params error");
               } });
@@ -341,7 +395,7 @@ void initDisplay()
     display.setTextSize(1);
     display.setTextColor(WHITE);
 
-    sprintf(displayInfo.title, "RaceLap verion 0.04");
+    sprintf(displayInfo.title, "RaceLap verion 0.1");
     Log.traceln("init Display ok");
   }
 }
@@ -352,28 +406,20 @@ void showDisplay()
   // TRACE("showDisplay");
   if (B_SSD1306)
   {
-    // delay(10);
+
     display.clearDisplay();
-    display.setTextSize(1);
     display.setTextColor(WHITE);
+
+    display.setTextSize(1);
     display.setCursor(0, 0);
     display.println(displayInfo.title);
-    // if (gps.location.isValid())
-    // {
-    //   sprintf(displayInfo.gps, "lat:%.8f,lng:%.8f", gps.location.lat(), gps.location.lng());
-    // }
-    // else
-    // {
-    //   sprintf(displayInfo.gps, "lat:NaN,lng:NaN");
-    // }
-
     display.setCursor(0, 8);
     display.println(buffer);
-    // display.setCursor(0, 32);
-    // display.println(displayInfo.time);
-    // display.setCursor(0, 48);
-    // display.println(displayInfo.log);
-    display.display();
+
+    // display.setTextSize(2);
+    // display.setCursor(50, 48);
+    // display.println(displayInfo.speed);
+    // display.display();
   }
   // displayInfo.logo = "RaceLap verion 0.01";
 }
@@ -428,7 +474,7 @@ void recordGps()
     //              lat, lng, altitude, year, month, day, hour, minute, second);
 
     snprintf(buffer, sizeof(buffer),
-             "%d-%02d-%02d %02d:%02d:%02d.%04d,%.8f,%.8f,%.2f,%.2f",
+             "%d-%02d-%02d%02d:%02d:%02d.%03d,%.8f,%.8f,%.2f,%.2f",
              year,
              month, day, hour, minute, second, csecond, lat, lng, altitude, kmph);
 
@@ -502,6 +548,13 @@ void loop()
 {
 
   digitalWrite(LED, (millis() / 1000) % 2);
+
+  if (millis() - lastTime > 1000)
+  {
+    showDisplay();
+    lastTime = millis();
+  }
+
   while (ss.available() > 0)
   {
     if (gps.encode(ss.read()))
@@ -509,10 +562,4 @@ void loop()
       recordGps();
     }
   }
-
-  if (millis() - lastTime > 1000)
-  {
-    showDisplay();
-  }
-  lastTime = millis();
 }
