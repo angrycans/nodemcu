@@ -43,25 +43,38 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 SoftwareSerial ss(D3, D4); // RX, TX
 
-static unsigned long lastTime = 0;
+static unsigned long lastDisplayTime = 0;
 
 static unsigned long lastSpeedLimitTime = 0;
 unsigned long lastSpeedZeroTime = 0;
 
-unsigned long lastStartTime = 0;
+unsigned long StartTime = 0;
 char buffer[100];
-double kmph = 0;
+double RecordKmph = 5;
+double KMPH = 0;
 
 double lastkmph = 0;
 
-struct TDisplayInfo
+double TRACK_LAT = 0, TRACK_LNG = 0;
+char TRACKNAME[30];
+
+class TDisplayInfo
 {
+public:
   char title[30];
+  char log[100];
+
+  // void showlog(String _log)
+  // {
+  //   if (_log != log)
+  //   {
+  //   }
+  // }
 };
 
-typedef struct TDisplayInfo DisplayInfo;
+// typedef struct TDisplayInfo DisplayInfo;
 
-DisplayInfo displayInfo;
+TDisplayInfo displayInfo;
 
 String file_size(int bytes)
 {
@@ -75,6 +88,147 @@ String file_size(int bytes)
   else
     fsize = String(bytes / 1024.0 / 1024.0 / 1024.0, 3) + " GB";
   return fsize;
+}
+
+bool readLine(File &f, char *line, size_t maxLen)
+{
+  for (size_t n = 0; n < maxLen; n++)
+  {
+    int c = f.read();
+    if (c < 0 && n == 0)
+      return false; // EOF
+    if (c < 0 || c == '\n')
+    {
+      line[n] = 0;
+      return true;
+    }
+    line[n] = c;
+  }
+  return false; // line too long
+}
+
+int csvReadText(File *file, char *str, size_t size, char delim)
+{
+  uint8_t ch;
+  int rtn;
+  size_t n = 0;
+  while (true)
+  {
+    // check for EOF
+    if (!file->available())
+    {
+      rtn = 0;
+      break;
+    }
+    if (file->read(&ch, 1) != 1)
+    {
+      // read error
+      rtn = -1;
+      break;
+    }
+    // Delete CR.
+    if (ch == '\r')
+    {
+      continue;
+    }
+    if (ch == delim || ch == '\n')
+    {
+      rtn = ch;
+      break;
+    }
+    if ((n + 1) >= size)
+    {
+      // string too long
+      rtn = -2;
+      n--;
+      break;
+    }
+    str[n++] = ch;
+  }
+  str[n] = '\0';
+
+  Log.traceln("readText %s", str);
+  return rtn;
+}
+//------------------------------------------------------------------------------
+int csvReadInt32(File *file, int32_t *num, char delim)
+{
+  char buf[20];
+  char *ptr;
+  int rtn = csvReadText(file, buf, sizeof(buf), delim);
+  if (rtn < 0)
+    return rtn;
+  *num = strtol(buf, &ptr, 10);
+  if (buf == ptr)
+    return -3;
+  while (isspace(*ptr))
+    ptr++;
+  return *ptr == 0 ? rtn : -4;
+}
+//------------------------------------------------------------------------------
+int csvReadInt16(File *file, int16_t *num, char delim)
+{
+  int32_t tmp;
+  int rtn = csvReadInt32(file, &tmp, delim);
+  if (rtn < 0)
+    return rtn;
+  if (tmp < INT_MIN || tmp > INT_MAX)
+    return -5;
+  *num = tmp;
+  return rtn;
+}
+//------------------------------------------------------------------------------
+int csvReadUint32(File *file, uint32_t *num, char delim)
+{
+  char buf[20];
+  char *ptr;
+  int rtn = csvReadText(file, buf, sizeof(buf), delim);
+  if (rtn < 0)
+    return rtn;
+  *num = strtoul(buf, &ptr, 10);
+  if (buf == ptr)
+    return -3;
+  while (isspace(*ptr))
+    ptr++;
+  return *ptr == 0 ? rtn : -4;
+}
+//------------------------------------------------------------------------------
+int csvReadUint16(File *file, uint16_t *num, char delim)
+{
+  uint32_t tmp;
+  int rtn = csvReadUint32(file, &tmp, delim);
+  if (rtn < 0)
+    return rtn;
+  if (tmp > UINT_MAX)
+    return -5;
+  *num = tmp;
+  return rtn;
+}
+//------------------------------------------------------------------------------
+int csvReadDouble(File *file, double *num, char delim)
+{
+  char buf[20];
+  char *ptr;
+  int rtn = csvReadText(file, buf, sizeof(buf), delim);
+  if (rtn < 0)
+    return rtn;
+  *num = strtod(buf, &ptr);
+  if (buf == ptr)
+    return -3;
+  while (isspace(*ptr))
+    ptr++;
+  return *ptr == 0 ? rtn : -4;
+}
+//------------------------------------------------------------------------------
+int csvReadFloat(File *file, float *num, char delim)
+{
+  double tmp;
+  int rtn = csvReadDouble(file, &tmp, delim);
+  if (rtn < 0)
+    return rtn;
+  // could test for too large.
+  *num = tmp;
+  return rtn;
 }
 
 void ListDirectoryJSON(File dir)
@@ -173,11 +327,11 @@ void initWifi()
 {
 
   Log.traceln("initWifi");
-  WiFi.mode(WIFI_AP);
+
   const char *ssid = "RaceLap";      // Enter SSID here
   const char *password = "88888888"; // Enter Password here
   WiFi.softAP(ssid, password);
-  delay(50);
+  delay(250);
   Log.trace("Soft-AP IP address = ");
   Log.traceln(WiFi.softAPIP());
 
@@ -192,6 +346,7 @@ void initWifi()
   // delay(50);
 
   // WiFi.begin("yunweizu", "yunweizubangbangda");
+  // WiFi.begin("wifi-acans", "85750218");
   // Log.traceln("Connecting");
   // while (WiFi.status() != WL_CONNECTED)
   // {
@@ -284,12 +439,34 @@ void initWebServer()
 
   server.on("/getlocation", HTTP_GET, [](AsyncWebServerRequest *request)
             {
+           
+
+             char buf[64]="";
+             
+             trackfile = SD.open("/RLDATA/track.txt", FILE_READ);
+              if (trackfile){
+                if (!readLine(trackfile, buf, sizeof(buf)))
+                {
+                // request->send(200, "text/plain", "");
+                  Log.traceln("tract.txt readline error");
+                }
+               trackfile.close();
+               Log.traceln("tract.txt %s",buf);
+
+        
+              request->send(200, "text/plain", buf);
+            }else{
+              request->send(200, "text/plain", "");
+            } });
+
+  server.on("/setlocation", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
             if (gps.location.isValid())
             {
               
 
              char buf[64];
-             sprintf(buf,"%.8f,%.8f",gps.location.lat(),gps.location.lng());
+             sprintf(buf,"%.8f,%.8f,track",gps.location.lat(),gps.location.lng());
 
              SD.remove("/RLDATA/track.txt");
               trackfile = SD.open("/RLDATA/track.txt", FILE_WRITE);
@@ -372,6 +549,20 @@ void initSD()
     printDirectory(root, 0);
 
     Log.traceln("print RLDATA Directory done!");
+
+    // read track.txt
+    trackfile = SD.open("/RLDATA/track.txt", FILE_READ);
+
+    while (trackfile.available())
+    {
+      if (csvReadDouble(&trackfile, &TRACK_LAT, ',') != ',' || csvReadDouble(&trackfile, &TRACK_LNG, ',') != ',' || csvReadText(&trackfile, TRACKNAME, sizeof(TRACKNAME), ',') != '\n')
+      {
+        Log.traceln("track.txt read error");
+      }
+
+      Log.traceln("track.txt %D %D %s", TRACK_LAT, TRACK_LNG, TRACKNAME);
+    }
+    trackfile.close();
   }
 }
 
@@ -394,12 +585,8 @@ void initDisplay()
     B_SSD1306 = true;
     delay(250);
 
-    // // Clear the buffer.
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(WHITE);
+    sprintf(displayInfo.title, "RaceLap  0.4");
 
-    sprintf(displayInfo.title, "RaceLap  0.2");
     Log.traceln("init Display ok");
   }
 }
@@ -413,19 +600,29 @@ void showDisplay()
     display.clearDisplay();
     display.setTextColor(WHITE);
 
-    if (kmph > 20)
+    if (KMPH - RecordKmph > 0)
     {
       display.setTextSize(7);
       display.setCursor(30, 0);
-      display.println((int)kmph);
+      display.println((int)KMPH);
     }
     else
     {
       display.setTextSize(1);
       display.setCursor(0, 0);
       display.println(displayInfo.title);
-      display.setCursor(0, 8);
-      display.println(buffer);
+      if (strcmp(buffer, "") != 0)
+      {
+
+        display.setCursor(0, 8);
+        display.println(buffer);
+      }
+
+      if (strcmp(displayInfo.log, "") != 0)
+      {
+        display.setCursor(0, 48);
+        display.println(displayInfo.log);
+      }
     }
 
     // display.setTextSize(2);
@@ -454,12 +651,25 @@ void initGps()
 void recordGps()
 {
   //
+  // power 45 second no record
+  if ((millis() - StartTime) < 45 * 1000)
+  {
+    sprintf(displayInfo.log, "%ld", 45 - (millis() - StartTime) / 1000);
+    return;
+  }
+
+  if (!gps.location.isValid())
+  {
+    sprintf(displayInfo.log, "GPS isValid False");
+    return;
+  }
   // Log.traceln("recordGps %T %T %T", gps.location.isValid(), gps.location.isUpdated()), gps.satellites.isValid();
   if (gps.satellites.isValid() && last_satellites != gps.satellites.value())
   {
     last_satellites = gps.satellites.value();
     // Log.traceln("satellites=%d", gps.satellites.value());
   }
+
   //
   if (gps.location.isUpdated())
   // if (gps.location.isValid())
@@ -469,7 +679,7 @@ void recordGps()
 
     double altitude = gps.altitude.meters();
 
-    kmph = gps.speed.kmph();
+    KMPH = gps.speed.kmph();
 
     int year = gps.date.year();
     int month = gps.date.month();
@@ -480,15 +690,26 @@ void recordGps()
     int second = gps.time.second();
     int csecond = gps.time.centisecond();
 
+    double distanceMToTrack = 0;
+    if (TRACK_LAT != 0)
+    {
+      distanceMToTrack =
+          TinyGPSPlus::distanceBetween(
+              lat,
+              lng,
+              TRACK_LAT,
+              TRACK_LNG);
+    }
+
     // snprintf(buffer, sizeof(buffer),
     //              "Latitude: %.8f, Longitude: %.8f, Altitude: %.2f m, "
     //              "Date/Time: %d-%02d-%02d %02d:%02d:%02d",
     //              lat, lng, altitude, year, month, day, hour, minute, second);
 
     snprintf(buffer, sizeof(buffer),
-             "%d-%02d-%02d%02d:%02d:%02d.%03d,%.8f,%.8f,%.2f,%.2f",
+             "%d-%02d-%02d%02d:%02d:%02d.%03d,%.8f,%.8f,%.2f,%.2f,%9.7f",
              year,
-             month, day, hour, minute, second, csecond, lat, lng, altitude, kmph);
+             month, day, hour, minute, second, csecond, lat, lng, altitude, KMPH, distanceMToTrack);
 
     // Log.traceln(buffer);
 
@@ -508,35 +729,35 @@ void recordGps()
 
         if (diff > 0 && diff < 20000)
         {
-          kmph = 21.0;
+          KMPH = 21.0;
         }
         else if (diff > 20000 && diff < 35000)
         {
-          kmph = 0.5;
+          KMPH = 0.5;
         }
         else if (diff > 35000 && diff < 50000)
         {
-          kmph = 30;
+          KMPH = 30;
         }
         else if (diff > 50000 && diff < 65000)
         {
-          kmph = 7;
+          KMPH = 7;
         }
         else if (diff > 65000)
         {
-          kmph = 5;
+          KMPH = 5;
         }
 
-        if (lastkmph != kmph)
+        if (lastkmph != KMPH)
         {
-          Log.traceln("kmph %D %D", kmph, lastkmph);
-          lastkmph = kmph;
+          Log.traceln("kmph %D %D", KMPH, lastkmph);
+          lastkmph = KMPH;
         }
     */
     if (B_SD)
     {
 
-      if (kmph > 20)
+      if (KMPH - RecordKmph > 0)
       {
 
         lastSpeedLimitTime = millis();
@@ -545,29 +766,46 @@ void recordGps()
           sprintf(DataFileName, "%sRL%04d%02d%02d%02d%02d%02d.txt", DataFileDir, year, month, day, hour, minute, second);
           Log.traceln("new DataFileName %s", DataFileName);
         }
+        if (!dataFile)
+        {
+          dataFile = SD.open(DataFileName, FILE_WRITE);
+        }
 
-        dataFile = SD.open(DataFileName, FILE_WRITE);
         dataFile.println(buffer);
         dataFile.flush();
         Log.traceln(buffer);
       }
       else
       {
-        if ((millis() - lastSpeedLimitTime) > 10 * 1000)
+        if ((millis() - lastSpeedLimitTime) > 30 * 1000)
         {
 
           if (dataFile)
           {
             Log.traceln("close DataFileName %s", DataFileName);
             dataFile.close();
+            strcpy(DataFileName, "");
           }
           else
           {
-            // Log.traceln("close DataFileName false %s", DataFileName);
+            Log.traceln("Sleep ,speed= %D", KMPH);
+
+            sprintf(displayInfo.log, "Sleep ,speed=%0.2f", KMPH);
           }
 
-          strcpy(DataFileName, "");
-          lastSpeedLimitTime = 0;
+          // lastSpeedLimitTime = 0;
+        }
+        else
+        {
+          if (dataFile)
+          {
+            dataFile.println(buffer);
+            dataFile.flush();
+            // Log.traceln(buffer);
+          }
+          Log.traceln("speed = %D cd=%d", KMPH, (millis() - lastSpeedLimitTime) / 1000);
+
+          sprintf(displayInfo.log, "speed = %0.2f cd= %ld", KMPH, (millis() - lastSpeedLimitTime) / 1000);
         }
       }
     }
@@ -616,6 +854,7 @@ void setup()
   initWebServer();
   initGps();
 
+  StartTime = millis();
   Log.traceln("init ok\n");
 }
 
@@ -623,10 +862,10 @@ void loop()
 {
   digitalWrite(LED, (millis() / 1000) % 2);
 
-  if (millis() - lastTime > 1000)
+  if (millis() - lastDisplayTime > 1000)
   {
     showDisplay();
-    lastTime = millis();
+    lastDisplayTime = millis();
   }
 
   while (ss.available() > 0)

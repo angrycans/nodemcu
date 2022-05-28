@@ -24,12 +24,12 @@
 
   <script>
     function refresh() {
-      fetch('/getlocation')
+      fetch('/setlocation')
         .then(function (result) { return result.text(); })
         .then(function (e) {
           console.log(e);
 
-          eval(`let ret=${e}`);
+          eval(`var ret=${e}`);
           console.log(ret)
           if (ret.e.code > 0) {
             document.getElementById("lat").value = ret.data.lat;
@@ -45,7 +45,34 @@
     };
 
 
+    function getlocation() {
+      fetch('/getlocation')
+        .then(function (result) { return result.text(); })
+        .then(function (e) {
+          console.log(e);
 
+
+          if (e != "") {
+            ret = e.split(",");
+            document.getElementById("lat").value = ret[0];
+            document.getElementById("lng").value = ret[1];
+            document.getElementById("trackname").value = ret[2];
+
+
+          } else {
+            document.getElementById("lat").value = "NULL"
+            document.getElementById("lng").value = "NULL"
+          }
+
+        });
+
+    };
+
+
+    window.onload = function () {
+      console.log("onlaod=>")
+      getlocation();
+    }
   </script>
 </body>
 

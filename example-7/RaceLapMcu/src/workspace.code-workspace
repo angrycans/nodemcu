@@ -44,7 +44,8 @@
 			"regex": "cpp",
 			"*.tcc": "cpp",
 			"stdexcept": "cpp",
-			"ostream": "cpp"
+			"ostream": "cpp",
+			"istream": "cpp"
 		}
 	}
 }
