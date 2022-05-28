@@ -132,7 +132,7 @@ void ListDirectory(File dir)
       tree += F("/</td><td></td>");
       tree += F("<td class=\"detailsColumn\" data-value=\"0\">-</td>");
       tree += F("<td class=\"detailsColumn\" data-value=\"0\">");
-      tree += F("<button class='buttons' onclick=\"location.href='/del?file=");
+      tree += F("<button class='buttons' onclick=\"location.href='/del?dir=/");
       tree += entry.name();
       tree += F("';\">del</button></td>");
       tree += F("</tr>");
@@ -259,20 +259,28 @@ void initWebServer()
 
   server.on("/del", HTTP_GET, [](AsyncWebServerRequest *request)
             {
-              if (request->hasParam("file"))
-              {
-                String message = "/RLDATA"+request->getParam("file")->value();
-                Log.traceln("delfile %s",message.c_str());
-                //request->send(200, "text/plain", "Params ok");
-               // root = SD.open("/RLDATA");
-                SD.remove(message);
+    if (request->hasParam("file"))
+    {
+      String message = "/RLDATA" + request->getParam("file")->value();
+      Log.traceln("delfile %s", message.c_str());
+      // request->send(200, "text/plain", "Params ok");
+      // root = SD.open("/RLDATA");
+      SD.remove(message);
 
-               
-                  request->send(200, "text/plain", "file del  ok ");
-              
-              }else{
-                request->send(200, "text/plain", "Params error");
-              } });
+      request->send(200, "text/plain", "file del  ok ");
+    }
+    else if (request->hasParam("dir"))
+    {
+      String message = "/RLDATA" + request->getParam("dir")->value();
+      Log.traceln("deldir %s", message.c_str());
+
+      SD.rmdir(message);
+      request->send(200, "text/plain", "dir del  ok ");
+
+    }else
+      {
+        request->send(200, "text/plain", "Params error");
+      } });
 
   server.on("/getlocation", HTTP_GET, [](AsyncWebServerRequest *request)
             {
@@ -369,7 +377,6 @@ void initSD()
 
 void initDisplay()
 {
-
   Log.traceln("init Display");
   Wire.begin();
 
@@ -406,7 +413,6 @@ void initDisplay()
 
 void showDisplay()
 {
-
   // TRACE("showDisplay");
   if (B_SSD1306)
   {
@@ -550,7 +556,6 @@ void setup()
 
 void loop()
 {
-
   digitalWrite(LED, (millis() / 1000) % 2);
 
   if (millis() - lastTime > 1000)
