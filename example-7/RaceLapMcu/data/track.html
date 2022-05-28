@@ -28,10 +28,8 @@
         .then(function (result) { return result.text(); })
         .then(function (e) {
           console.log(e);
-          ret = e.replaceAll("'", "\"");
-          console.log(ret);
-          ret = JSON.parse(ret);
 
+          eval(`let ret=${e}`);
           console.log(ret)
           if (ret.e.code > 0) {
             document.getElementById("lat").value = ret.data.lat;

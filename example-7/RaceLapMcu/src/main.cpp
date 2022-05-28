@@ -27,8 +27,8 @@ File trackfile;
 
 String tree = "";
 
-char DataFileName[48] = "RL2022-05-18_14.txt";
-char DataFileDir[24] = "RL20220518";
+char DataFileName[64] = ""; //"RL2022-05-18_14.txt";
+char DataFileDir[24] = "/RLDATA/";
 
 bool B_SD = false;      // SD Card status
 bool B_SSD1306 = false; // 0.96 OLED display status
@@ -45,17 +45,18 @@ SoftwareSerial ss(D3, D4); // RX, TX
 
 static unsigned long lastTime = 0;
 
-static unsigned long lastSpeedTime = 0;
-static unsigned long lastStartTime = 0;
+static unsigned long lastSpeedLimitTime = 0;
+unsigned long lastSpeedZeroTime = 0;
+
+unsigned long lastStartTime = 0;
 char buffer[100];
+double kmph = 0;
+
+double lastkmph = 0;
 
 struct TDisplayInfo
 {
   char title[30];
-  char gps[100];
-  char time[32];
-  char log[100];
-  char speed[10];
 };
 
 typedef struct TDisplayInfo DisplayInfo;
@@ -133,7 +134,7 @@ void ListDirectory(File dir)
       tree += F("<td class=\"detailsColumn\" data-value=\"0\">-</td>");
       tree += F("<td class=\"detailsColumn\" data-value=\"0\">");
       tree += F("<button class='buttons' onclick=\"location.href='/del?dir=/");
-      tree += entry.name();
+      tree = tree + dir.name() + "/" + entry.name();
       tree += F("';\">del</button></td>");
       tree += F("</tr>");
       ListDirectory(entry);
@@ -172,13 +173,13 @@ void initWifi()
 {
 
   Log.traceln("initWifi");
-  // WiFi.mode(WIFI_AP);
-  // const char *ssid = "RaceLap";      // Enter SSID here
-  // const char *password = "88888888"; // Enter Password here
-  // WiFi.softAP(ssid, password);
-  // delay(50);
-  // Log.trace("Soft-AP IP address = ");
-  // Log.traceln(WiFi.softAPIP());
+  WiFi.mode(WIFI_AP);
+  const char *ssid = "RaceLap";      // Enter SSID here
+  const char *password = "88888888"; // Enter Password here
+  WiFi.softAP(ssid, password);
+  delay(50);
+  Log.trace("Soft-AP IP address = ");
+  Log.traceln(WiFi.softAPIP());
 
   // Serial.print("DHCP status:");
   // Serial.println(wifi_softap_dhcps_status());
@@ -190,17 +191,16 @@ void initWifi()
   // WiFi.softAPConfig(local_ip, gateway, subnet);
   // delay(50);
 
-  WiFi.begin("yunweizu", "yunweizubangbangda");
+  // WiFi.begin("yunweizu", "yunweizubangbangda");
+  // Log.traceln("Connecting");
+  // while (WiFi.status() != WL_CONNECTED)
+  // {
+  //   delay(500);
+  //   Log.traceln(".");
+  // }
 
-  Log.traceln("Connecting");
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Log.traceln(".");
-  }
-
-  Log.trace("Connected, IP address: ");
-  Log.traceln(WiFi.localIP());
+  // Log.trace("Connected, IP address: ");
+  // Log.traceln(WiFi.localIP());
 }
 
 void initWebServer()
@@ -242,7 +242,7 @@ void initWebServer()
             {
               if (request->hasParam("file"))
               {
-                String message = "/RLDATA"+request->getParam("file")->value();
+                String message = request->getParam("file")->value();
                 Log.traceln("downfile %s",message.c_str());
                 //request->send(200, "text/plain", "Params ok");
                // root = SD.open("/RLDATA");
@@ -261,7 +261,7 @@ void initWebServer()
             {
     if (request->hasParam("file"))
     {
-      String message = "/RLDATA" + request->getParam("file")->value();
+      String message =  request->getParam("file")->value();
       Log.traceln("delfile %s", message.c_str());
       // request->send(200, "text/plain", "Params ok");
       // root = SD.open("/RLDATA");
@@ -271,7 +271,7 @@ void initWebServer()
     }
     else if (request->hasParam("dir"))
     {
-      String message = "/RLDATA" + request->getParam("dir")->value();
+      String message =  request->getParam("dir")->value();
       Log.traceln("deldir %s", message.c_str());
 
       SD.rmdir(message);
@@ -392,13 +392,6 @@ void initDisplay()
   {
 
     B_SSD1306 = true;
-
-    // if (!Wire.status())
-    // {
-    //   B_SSD1306 = false;
-    //   return;
-    // }
-
     delay(250);
 
     // // Clear the buffer.
@@ -406,7 +399,7 @@ void initDisplay()
     display.setTextSize(1);
     display.setTextColor(WHITE);
 
-    sprintf(displayInfo.title, "RaceLap verion 0.1");
+    sprintf(displayInfo.title, "RaceLap  0.2");
     Log.traceln("init Display ok");
   }
 }
@@ -420,11 +413,20 @@ void showDisplay()
     display.clearDisplay();
     display.setTextColor(WHITE);
 
-    display.setTextSize(1);
-    display.setCursor(0, 0);
-    display.println(displayInfo.title);
-    display.setCursor(0, 8);
-    display.println(buffer);
+    if (kmph > 20)
+    {
+      display.setTextSize(7);
+      display.setCursor(30, 0);
+      display.println((int)kmph);
+    }
+    else
+    {
+      display.setTextSize(1);
+      display.setCursor(0, 0);
+      display.println(displayInfo.title);
+      display.setCursor(0, 8);
+      display.println(buffer);
+    }
 
     // display.setTextSize(2);
     // display.setCursor(50, 48);
@@ -456,7 +458,7 @@ void recordGps()
   if (gps.satellites.isValid() && last_satellites != gps.satellites.value())
   {
     last_satellites = gps.satellites.value();
-    Log.traceln("satellites=%d", gps.satellites.value());
+    // Log.traceln("satellites=%d", gps.satellites.value());
   }
   //
   if (gps.location.isUpdated())
@@ -467,7 +469,7 @@ void recordGps()
 
     double altitude = gps.altitude.meters();
 
-    double kmph = gps.speed.kmph();
+    kmph = gps.speed.kmph();
 
     int year = gps.date.year();
     int month = gps.date.month();
@@ -488,24 +490,86 @@ void recordGps()
              year,
              month, day, hour, minute, second, csecond, lat, lng, altitude, kmph);
 
-    Log.traceln(buffer);
+    // Log.traceln(buffer);
 
+    // gps init datetime not correct
+    if (year < 2022)
+    {
+      return;
+    }
+
+    /*
+        if (lastStartTime == 0)
+        {
+          lastStartTime = millis();
+        }
+
+        long diff = millis() - lastStartTime;
+
+        if (diff > 0 && diff < 20000)
+        {
+          kmph = 21.0;
+        }
+        else if (diff > 20000 && diff < 35000)
+        {
+          kmph = 0.5;
+        }
+        else if (diff > 35000 && diff < 50000)
+        {
+          kmph = 30;
+        }
+        else if (diff > 50000 && diff < 65000)
+        {
+          kmph = 7;
+        }
+        else if (diff > 65000)
+        {
+          kmph = 5;
+        }
+
+        if (lastkmph != kmph)
+        {
+          Log.traceln("kmph %D %D", kmph, lastkmph);
+          lastkmph = kmph;
+        }
+    */
     if (B_SD)
     {
-      sprintf(DataFileDir, "/RLDATA/%04d%02d%02d/", year, month, day);
-      if (!SD.exists(DataFileDir))
-      {
-        SD.mkdir(DataFileDir);
-        Log.traceln("create dir %s", DataFileDir);
-      }
 
-      sprintf(DataFileName, "%sRL%04d%02d%02d%02d.txt", DataFileDir, year, month, day, hour);
-      // sprintf(DataFileName, "%sRL%04d%02d%02d.txt", DataFileDir, year, month, day);
-      dataFile = SD.open(DataFileName, FILE_WRITE);
-      dataFile.println(buffer);
-      dataFile.flush();
-      //  dataFile.println(buffer);
-      // dataFile.close();
+      if (kmph > 20)
+      {
+
+        lastSpeedLimitTime = millis();
+        if (strcmp(DataFileName, "") == 0)
+        {
+          sprintf(DataFileName, "%sRL%04d%02d%02d%02d%02d%02d.txt", DataFileDir, year, month, day, hour, minute, second);
+          Log.traceln("new DataFileName %s", DataFileName);
+        }
+
+        dataFile = SD.open(DataFileName, FILE_WRITE);
+        dataFile.println(buffer);
+        dataFile.flush();
+        Log.traceln(buffer);
+      }
+      else
+      {
+        if ((millis() - lastSpeedLimitTime) > 10 * 1000)
+        {
+
+          if (dataFile)
+          {
+            Log.traceln("close DataFileName %s", DataFileName);
+            dataFile.close();
+          }
+          else
+          {
+            // Log.traceln("close DataFileName false %s", DataFileName);
+          }
+
+          strcpy(DataFileName, "");
+          lastSpeedLimitTime = 0;
+        }
+      }
     }
   }
 }
@@ -551,6 +615,7 @@ void setup()
   initWifi();
   initWebServer();
   initGps();
+
   Log.traceln("init ok\n");
 }
 
