@@ -11,6 +11,7 @@
 #include <ESPAsyncWebServer.h>
 #include <ArduinoLog.h>
 #include <TinyGPS++.h>
+#include <ArduinoJson.h>
 
 #define LED D0 // Led in NodeMCU at pin GPIO16 (D0).
 
@@ -50,7 +51,7 @@ unsigned long lastSpeedZeroTime = 0;
 
 unsigned long StartTime = 0;
 char buffer[100];
-double RecordKmph = 5;
+double RecordKmph = 20;
 double KMPH = 0;
 
 double lastkmph = 0;
@@ -323,6 +324,81 @@ void notFound(AsyncWebServerRequest *request)
   request->send(404, "text/plain", "Not found");
 }
 
+void handleGetLocation(AsyncWebServerRequest *request)
+{
+  char buf[64];
+
+  if (gps.location.isValid())
+  {
+
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    StaticJsonDocument<200> doc;
+
+    JsonObject e = doc.createNestedObject("e");
+    e["code"] = 1;
+    JsonObject data = doc.createNestedObject("data");
+    data["lat1"] = gps.location.lat();
+    data["lng1"] = gps.location.lng();
+
+    serializeJson(doc, *response);
+    request->send(response);
+  }
+  else
+  {
+
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    StaticJsonDocument<200> doc;
+
+    JsonObject e = doc.createNestedObject("e");
+    e["code"] = 1;
+    e["msg"] = "Gps not valid";
+
+    serializeJson(doc, *response);
+    request->send(response);
+  }
+}
+
+void handleSetLocation(AsyncWebServerRequest *request)
+{
+  char buf[64];
+
+  if (request->hasParam("start"))
+  {
+    if (gps.location.isValid())
+    {
+
+      sprintf(buf, "%.8f,%.8f,track", gps.location.lat(), gps.location.lng());
+
+      SD.remove("/RLDATA/track.txt");
+      trackfile = SD.open("/RLDATA/track.txt", FILE_WRITE);
+      trackfile.println(buf);
+      trackfile.close();
+      sprintf(buf, "{e:{code:1},data:{lat:%.8f,lng:%.8f}}", gps.location.lat(), gps.location.lng());
+      request->send(200, "text/plain", buf);
+
+      AsyncResponseStream *response = request->beginResponseStream("application/json");
+      StaticJsonDocument<200> doc;
+
+      JsonObject e = doc.createNestedObject("e");
+      e["code"] = 1;
+      JsonObject data = doc.createNestedObject("data");
+      data["lat1"] = gps.location.lat();
+      data["lng1"] = gps.location.lng();
+
+      serializeJson(doc, *response);
+      request->send(response);
+    }
+    else
+    {
+      request->send(200, "text/plain", "{e:{code:-1,msg:'Gps not valid'}}");
+    }
+  }
+  else
+  {
+    request->send(200, "text/plain", "{e:{code:-1,msg:'params error'}}");
+  }
+}
+
 void initWifi()
 {
 
@@ -440,7 +516,7 @@ void initWebServer()
   server.on("/getlocation", HTTP_GET, [](AsyncWebServerRequest *request)
             {
            
-
+          
              char buf[64]="";
              
              trackfile = SD.open("/RLDATA/track.txt", FILE_READ);
@@ -452,35 +528,14 @@ void initWebServer()
                 }
                trackfile.close();
                Log.traceln("tract.txt %s",buf);
-
+            
         
               request->send(200, "text/plain", buf);
             }else{
               request->send(200, "text/plain", "");
             } });
 
-  server.on("/setlocation", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-            if (gps.location.isValid())
-            {
-              
-
-             char buf[64];
-             sprintf(buf,"%.8f,%.8f,track",gps.location.lat(),gps.location.lng());
-
-             SD.remove("/RLDATA/track.txt");
-              trackfile = SD.open("/RLDATA/track.txt", FILE_WRITE);
-              trackfile.println(buf);
-              trackfile.close();
-              sprintf(buf,"{e:{code:1},data:{lat:%.8f,lng:%.8f}}",gps.location.lat(),gps.location.lng());
-
-        
-              request->send(200, "text/plain", buf);
-            }
-            else
-            {
-              request->send(200, "text/plain", "{e:{code:-1,msg:'Gps not valid'}}");
-            } });
+  server.on("/setlocation", HTTP_GET, handleSetLocation);
 
   server.begin();
 }
