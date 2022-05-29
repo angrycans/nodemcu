@@ -22,11 +22,18 @@
 TinyGPSPlus gps;
 // gps_fix fix;
 
-File root;
 File dataFile;
-File trackfile;
 
-String tree = "";
+enum RACESTATUS
+{
+  _Setup,
+  _Starting,
+  _Recording,
+  _RecordToSleep,
+  _Sleep,
+};
+
+RACESTATUS RaceStatus = _Setup;
 
 char DataFileName[64] = ""; //"RL2022-05-18_14.txt";
 char DataFileDir[24] = "/RLDATA/";
@@ -47,17 +54,16 @@ SoftwareSerial ss(D3, D4); // RX, TX
 static unsigned long lastDisplayTime = 0;
 
 static unsigned long lastSpeedLimitTime = 0;
-unsigned long lastSpeedZeroTime = 0;
 
 unsigned long StartTime = 0;
+unsigned long lastStartTime = 0;
 char buffer[100];
 double RecordKmph = 20;
+int SleepCD = 60;
+
 double KMPH = 0;
 
 double lastkmph = 0;
-
-double TRACK_LAT = 0, TRACK_LNG = 0;
-char TRACKNAME[30];
 
 class TDisplayInfo
 {
@@ -108,136 +114,11 @@ bool readLine(File &f, char *line, size_t maxLen)
   return false; // line too long
 }
 
-int csvReadText(File *file, char *str, size_t size, char delim)
-{
-  uint8_t ch;
-  int rtn;
-  size_t n = 0;
-  while (true)
-  {
-    // check for EOF
-    if (!file->available())
-    {
-      rtn = 0;
-      break;
-    }
-    if (file->read(&ch, 1) != 1)
-    {
-      // read error
-      rtn = -1;
-      break;
-    }
-    // Delete CR.
-    if (ch == '\r')
-    {
-      continue;
-    }
-    if (ch == delim || ch == '\n')
-    {
-      rtn = ch;
-      break;
-    }
-    if ((n + 1) >= size)
-    {
-      // string too long
-      rtn = -2;
-      n--;
-      break;
-    }
-    str[n++] = ch;
-  }
-  str[n] = '\0';
-
-  Log.traceln("readText %s", str);
-  return rtn;
-}
-//------------------------------------------------------------------------------
-int csvReadInt32(File *file, int32_t *num, char delim)
-{
-  char buf[20];
-  char *ptr;
-  int rtn = csvReadText(file, buf, sizeof(buf), delim);
-  if (rtn < 0)
-    return rtn;
-  *num = strtol(buf, &ptr, 10);
-  if (buf == ptr)
-    return -3;
-  while (isspace(*ptr))
-    ptr++;
-  return *ptr == 0 ? rtn : -4;
-}
-//------------------------------------------------------------------------------
-int csvReadInt16(File *file, int16_t *num, char delim)
-{
-  int32_t tmp;
-  int rtn = csvReadInt32(file, &tmp, delim);
-  if (rtn < 0)
-    return rtn;
-  if (tmp < INT_MIN || tmp > INT_MAX)
-    return -5;
-  *num = tmp;
-  return rtn;
-}
-//------------------------------------------------------------------------------
-int csvReadUint32(File *file, uint32_t *num, char delim)
-{
-  char buf[20];
-  char *ptr;
-  int rtn = csvReadText(file, buf, sizeof(buf), delim);
-  if (rtn < 0)
-    return rtn;
-  *num = strtoul(buf, &ptr, 10);
-  if (buf == ptr)
-    return -3;
-  while (isspace(*ptr))
-    ptr++;
-  return *ptr == 0 ? rtn : -4;
-}
-//------------------------------------------------------------------------------
-int csvReadUint16(File *file, uint16_t *num, char delim)
-{
-  uint32_t tmp;
-  int rtn = csvReadUint32(file, &tmp, delim);
-  if (rtn < 0)
-    return rtn;
-  if (tmp > UINT_MAX)
-    return -5;
-  *num = tmp;
-  return rtn;
-}
-//------------------------------------------------------------------------------
-int csvReadDouble(File *file, double *num, char delim)
-{
-  char buf[20];
-  char *ptr;
-  int rtn = csvReadText(file, buf, sizeof(buf), delim);
-  if (rtn < 0)
-    return rtn;
-  *num = strtod(buf, &ptr);
-  if (buf == ptr)
-    return -3;
-  while (isspace(*ptr))
-    ptr++;
-  return *ptr == 0 ? rtn : -4;
-}
-//------------------------------------------------------------------------------
-int csvReadFloat(File *file, float *num, char delim)
-{
-  double tmp;
-  int rtn = csvReadDouble(file, &tmp, delim);
-  if (rtn < 0)
-    return rtn;
-  // could test for too large.
-  *num = tmp;
-  return rtn;
-}
-
-void ListDirectoryJSON(File dir)
+String ListDirectoryJSON()
 {
 
-  // dir = SD.open("/RLDATA");
-  String entryName = "";
-
+  File dir = SD.open("/RLDATA");
+  String tree = "";
   while (true)
   {
 
@@ -248,25 +129,24 @@ void ListDirectoryJSON(File dir)
       break;
     }
 
-    entryName = entry.name();
-    if (entry.isDirectory())
-    {
-
-      ListDirectoryJSON(entry);
-    }
-    else
+    if (!entry.isDirectory())
     {
 
       tree = tree + "/" + dir.name() + "/" + entry.name() + ",";
     }
     entry.close();
   }
+
+  dir.close();
+
+  return tree;
 }
 
-void ListDirectory(File dir)
+String ListDirectory()
 {
 
-  // dir = SD.open("/RLDATA");
+  File dir = SD.open("/RLDATA");
+  String tree = "<table>";
   String entryName = "";
 
   while (true)
@@ -279,12 +159,11 @@ void ListDirectory(File dir)
       break;
     }
 
-    entryName = entry.name();
     if (entry.isDirectory())
     {
       tree += F("<tr>");
       tree += F("<td>");
-      tree += entryName;
+      tree += entry.name();
       tree += F("/</td><td></td>");
       tree += F("<td class=\"detailsColumn\" data-value=\"0\">-</td>");
       tree += F("<td class=\"detailsColumn\" data-value=\"0\">");
@@ -292,24 +171,21 @@ void ListDirectory(File dir)
       tree = tree + dir.name() + "/" + entry.name();
       tree += F("';\">del</button></td>");
       tree += F("</tr>");
-      ListDirectory(entry);
     }
     else
     {
       tree += F("<tr><td></td>");
-      tree += F("<td data-value=\"");
+      tree += F("<td>");
       tree += entry.name();
-      tree += F("\">");
-      tree += entryName;
-      tree += F("</a></td>");
+      tree += F("</td>");
       tree += F("<td class=\"detailsColumn\">");
       tree += file_size(entry.size());
       tree += F("</td>");
-      tree += F("<td class=\"detailsColumn\" data-value=\"0\">");
+      tree += F("<td class=\"detailsColumn\">");
       tree += F("<button class='buttons' onclick=\"location.href='/down?file=/");
       tree = tree + dir.name() + "/" + entry.name();
       tree += F("'\">down</button></td>");
-      tree += F("<td class=\"detailsColumn\" data-value=\"0\">");
+      tree += F("<td class=\"detailsColumn\">");
       tree += F("<button class='buttons' onclick=\"location.href='/del?file=/");
       tree = tree + dir.name() + "/" + entry.name();
       tree += F("'\">del</button></td>");
@@ -317,16 +193,61 @@ void ListDirectory(File dir)
     }
     entry.close();
   }
+
+  tree += F("</table>");
+
+  return tree;
 }
 
 void notFound(AsyncWebServerRequest *request)
 {
-  request->send(404, "text/plain", "Not found");
+  if (request->method() == HTTP_OPTIONS)
+  {
+    request->send(200);
+  }
+  else
+  {
+    request->send(404);
+  }
+}
+
+void handleGetMcuCfg(AsyncWebServerRequest *request)
+{
+  File file = SD.open("/RLDATA/track.txt");
+
+  StaticJsonDocument<200> doc;
+
+  DeserializationError error = deserializeJson(doc, file);
+  if (!error)
+  {
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    StaticJsonDocument<512> ret;
+
+    JsonObject e = ret.createNestedObject("e");
+    e["code"] = 1;
+    ret["data"] = doc.as<JsonObject>();
+
+    serializeJson(ret, *response);
+    request->send(response);
+  }
+  else
+  {
+    Log.traceln(F("Failed to read track.txt"));
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    StaticJsonDocument<200> ret;
+
+    JsonObject e = ret.createNestedObject("e");
+    e["code"] = -1;
+    e["msg"] = "Failed to read track.txt";
+
+    serializeJson(ret, *response);
+    request->send(response);
+  }
+  file.close();
 }
 
 void handleGetLocation(AsyncWebServerRequest *request)
 {
-  char buf[64];
 
   if (gps.location.isValid())
   {
@@ -337,8 +258,8 @@ void handleGetLocation(AsyncWebServerRequest *request)
     JsonObject e = doc.createNestedObject("e");
     e["code"] = 1;
     JsonObject data = doc.createNestedObject("data");
-    data["lat1"] = gps.location.lat();
-    data["lng1"] = gps.location.lng();
+    data["lat"] = gps.location.lat();
+    data["lng"] = gps.location.lng();
 
     serializeJson(doc, *response);
     request->send(response);
@@ -350,7 +271,7 @@ void handleGetLocation(AsyncWebServerRequest *request)
     StaticJsonDocument<200> doc;
 
     JsonObject e = doc.createNestedObject("e");
-    e["code"] = 1;
+    e["code"] = 0;
     e["msg"] = "Gps not valid";
 
     serializeJson(doc, *response);
@@ -360,43 +281,55 @@ void handleGetLocation(AsyncWebServerRequest *request)
 
 void handleSetLocation(AsyncWebServerRequest *request)
 {
-  char buf[64];
+  StaticJsonDocument<512> params;
+  params["lat1"] = request->getParam("lat1")->value();
+  params["lng1"] = request->getParam("lng1")->value();
+  params["lat2"] = request->getParam("lat2")->value();
+  params["lng2"] = request->getParam("lng2")->value();
+  params["trackname"] = request->getParam("trackname")->value();
 
-  if (request->hasParam("start"))
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  StaticJsonDocument<200> doc;
+
+  JsonObject e = doc.createNestedObject("e");
+
+  SD.remove("/RLDATA/track.txt");
+
+  File file = SD.open("/RLDATA/track.txt", FILE_WRITE);
+  if (!file)
   {
-    if (gps.location.isValid())
-    {
+    e["code"] = 1;
+    e["msg"] = "file open error";
+    serializeJson(doc, *response);
+    request->send(response);
+    file.close();
+    return;
+  }
 
-      sprintf(buf, "%.8f,%.8f,track", gps.location.lat(), gps.location.lng());
+  // Serialize JSON to file
+  String output;
+  serializeJson(doc, output);
+  Log.traceln("params %s", output.c_str());
 
-      SD.remove("/RLDATA/track.txt");
-      trackfile = SD.open("/RLDATA/track.txt", FILE_WRITE);
-      trackfile.println(buf);
-      trackfile.close();
-      sprintf(buf, "{e:{code:1},data:{lat:%.8f,lng:%.8f}}", gps.location.lat(), gps.location.lng());
-      request->send(200, "text/plain", buf);
+  if (serializeJson(params, file) == 0)
+  {
+    e["code"] = 1;
+    e["msg"] = "serializeJson error";
+    file.close();
+    serializeJson(doc, *response);
 
-      AsyncResponseStream *response = request->beginResponseStream("application/json");
-      StaticJsonDocument<200> doc;
-
-      JsonObject e = doc.createNestedObject("e");
-      e["code"] = 1;
-      JsonObject data = doc.createNestedObject("data");
-      data["lat1"] = gps.location.lat();
-      data["lng1"] = gps.location.lng();
-
-      serializeJson(doc, *response);
-      request->send(response);
-    }
-    else
-    {
-      request->send(200, "text/plain", "{e:{code:-1,msg:'Gps not valid'}}");
-    }
+    request->send(response);
   }
   else
   {
-    request->send(200, "text/plain", "{e:{code:-1,msg:'params error'}}");
+    e["code"] = 1;
+    e["msg"] = "set ok";
+    file.close();
+    serializeJson(doc, *response);
+    request->send(response);
   }
+
+  // Close the file
 }
 
 void initWifi()
@@ -437,37 +370,17 @@ void initWifi()
 void initWebServer()
 {
 
-  // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-  //           { request->send(200, "text/plain", "Hello, world"); });
-
   Log.traceln("initWebServer");
   server.onNotFound(notFound);
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
-  server.onNotFound([](AsyncWebServerRequest *request)
-                    {
-  if (request->method() == HTTP_OPTIONS) {
-    request->send(200);
-  } else {
-    request->send(404);
-  } });
+
   server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
 
   server.on("/listsd", HTTP_GET, [](AsyncWebServerRequest *request)
-            { 
-              tree="<table>";
-              root = SD.open("/RLDATA");
-              ListDirectory(root);
-            tree+="</table>";
-              request->send(200, "text/plain", tree); });
+            { request->send(200, "text/plain", ListDirectory()); });
 
   server.on("/listsdjson", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-              tree = "";
-              root = SD.open("/RLDATA");
-              ListDirectoryJSON(root);
-
-
-              request->send(200, "text/plain", tree); });
+            { request->send(200, "text/plain", ListDirectoryJSON()); });
 
   server.on("/down", HTTP_GET, [](AsyncWebServerRequest *request)
             {
@@ -513,27 +426,8 @@ void initWebServer()
         request->send(200, "text/plain", "Params error");
       } });
 
-  server.on("/getlocation", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-           
-          
-             char buf[64]="";
-             
-             trackfile = SD.open("/RLDATA/track.txt", FILE_READ);
-              if (trackfile){
-                if (!readLine(trackfile, buf, sizeof(buf)))
-                {
-                // request->send(200, "text/plain", "");
-                  Log.traceln("tract.txt readline error");
-                }
-               trackfile.close();
-               Log.traceln("tract.txt %s",buf);
-            
-        
-              request->send(200, "text/plain", buf);
-            }else{
-              request->send(200, "text/plain", "");
-            } });
+  server.on("/getlocation", HTTP_GET, handleGetLocation);
+  server.on("/getmcucfg", HTTP_GET, handleGetMcuCfg);
 
   server.on("/setlocation", HTTP_GET, handleSetLocation);
 
@@ -599,25 +493,26 @@ void initSD()
       Log.traceln("dir is created.");
     }
 
-    root = SD.open("/RLDATA");
+    File root = SD.open("/RLDATA");
 
     printDirectory(root, 0);
 
+    root.close();
+
     Log.traceln("print RLDATA Directory done!");
 
-    // read track.txt
-    trackfile = SD.open("/RLDATA/track.txt", FILE_READ);
+    File file = SD.open("/RLDATA/track.txt");
 
-    while (trackfile.available())
+    StaticJsonDocument<512> doc;
+    DeserializationError error = deserializeJson(doc, file);
+    if (!error)
     {
-      if (csvReadDouble(&trackfile, &TRACK_LAT, ',') != ',' || csvReadDouble(&trackfile, &TRACK_LNG, ',') != ',' || csvReadText(&trackfile, TRACKNAME, sizeof(TRACKNAME), ',') != '\n')
-      {
-        Log.traceln("track.txt read error");
-      }
-
-      Log.traceln("track.txt %D %D %s", TRACK_LAT, TRACK_LNG, TRACKNAME);
+      String output;
+      serializeJson(doc, output);
+      Log.traceln("track.txt %s", output.c_str());
     }
-    trackfile.close();
+
+    file.close();
   }
 }
 
@@ -640,7 +535,7 @@ void initDisplay()
     B_SSD1306 = true;
     delay(250);
 
-    sprintf(displayInfo.title, "RaceLap  0.4");
+    sprintf(displayInfo.title, "RaceLap  0.5");
 
     Log.traceln("init Display ok");
   }
@@ -665,7 +560,10 @@ void showDisplay()
     {
       display.setTextSize(1);
       display.setCursor(0, 0);
-      display.println(displayInfo.title);
+
+      display.print(displayInfo.title);
+      display.print(F("   "));
+      display.println(RaceStatus);
       if (strcmp(buffer, "") != 0)
       {
 
@@ -707,15 +605,48 @@ void recordGps()
 {
   //
   // power 45 second no record
-  if ((millis() - StartTime) < 45 * 1000)
+  if ((millis() - StartTime) < 30 * 1000)
   {
-    sprintf(displayInfo.log, "%ld", 45 - (millis() - StartTime) / 1000);
+    RaceStatus = _Starting;
+    sprintf(displayInfo.log, "%ld", 30 - (millis() - StartTime) / 1000);
     return;
   }
 
-  if (!gps.location.isValid())
+  // sleep cd time
+  if (RaceStatus == _RecordToSleep)
+  {
+    int sleep_t = (millis() - lastSpeedLimitTime) - SleepCD * 1000;
+    // Log.traceln("..%u..%d..%T..%d", (millis() - lastSpeedLimitTime), (millis() - lastSpeedLimitTime) - SleepCD * 1000, (millis() - lastSpeedLimitTime) - SleepCD * 1000 > 0, sleep_t);
+    if (sleep_t > 0)
+    {
+
+      if (dataFile)
+      {
+        Log.traceln("close DataFileName %s", DataFileName);
+        dataFile.close();
+        strcpy(DataFileName, "");
+      }
+
+      sprintf(displayInfo.log, "Sleep ,speed=%0.2f", KMPH);
+      RaceStatus = _Sleep;
+    }
+    else
+    {
+
+      Log.traceln("speed = %D cd=%d", KMPH, (millis() - lastSpeedLimitTime) / 1000);
+
+      sprintf(displayInfo.log, "speed = %0.2f cd= %ld", KMPH, (millis() - lastSpeedLimitTime) / 1000);
+    }
+  }
+
+  if (!gps.location.isValid() || !gps.date.isValid() || !gps.time.isValid())
   {
     sprintf(displayInfo.log, "GPS isValid False");
+    KMPH = 0;
+    if (RaceStatus == _Recording)
+    {
+      RaceStatus = _RecordToSleep;
+    }
     return;
   }
   // Log.traceln("recordGps %T %T %T", gps.location.isValid(), gps.location.isUpdated()), gps.satellites.isValid();
@@ -745,26 +676,10 @@ void recordGps()
     int second = gps.time.second();
     int csecond = gps.time.centisecond();
 
-    double distanceMToTrack = 0;
-    if (TRACK_LAT != 0)
-    {
-      distanceMToTrack =
-          TinyGPSPlus::distanceBetween(
-              lat,
-              lng,
-              TRACK_LAT,
-              TRACK_LNG);
-    }
-
-    // snprintf(buffer, sizeof(buffer),
-    //              "Latitude: %.8f, Longitude: %.8f, Altitude: %.2f m, "
-    //              "Date/Time: %d-%02d-%02d %02d:%02d:%02d",
-    //              lat, lng, altitude, year, month, day, hour, minute, second);
-
     snprintf(buffer, sizeof(buffer),
-             "%d-%02d-%02d%02d:%02d:%02d.%03d,%.8f,%.8f,%.2f,%.2f,%9.7f",
+             "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f",
              year,
-             month, day, hour, minute, second, csecond, lat, lng, altitude, KMPH, distanceMToTrack);
+             month, day, hour, minute, second, csecond, lat, lng, altitude, KMPH);
 
     // Log.traceln(buffer);
 
@@ -773,7 +688,6 @@ void recordGps()
     {
       return;
     }
-
     /*
         if (lastStartTime == 0)
         {
@@ -782,7 +696,7 @@ void recordGps()
 
         long diff = millis() - lastStartTime;
 
-        if (diff > 0 && diff < 20000)
+        if (diff >= 0 && diff < 20000)
         {
           KMPH = 21.0;
         }
@@ -790,13 +704,13 @@ void recordGps()
         {
           KMPH = 0.5;
         }
-        else if (diff > 35000 && diff < 50000)
+        else if (diff > 35000 && diff < 58000)
         {
           KMPH = 30;
         }
-        else if (diff > 50000 && diff < 65000)
+        else if (diff > 58000 && diff < 65000)
         {
-          KMPH = 7;
+          KMPH = 2;
         }
         else if (diff > 65000)
         {
@@ -805,7 +719,7 @@ void recordGps()
 
         if (lastkmph != KMPH)
         {
-          Log.traceln("kmph %D %D", KMPH, lastkmph);
+          Log.traceln("kmph from %D to %D", lastkmph, KMPH);
           lastkmph = KMPH;
         }
     */
@@ -814,71 +728,36 @@ void recordGps()
 
       if (KMPH - RecordKmph > 0)
       {
-
+        RaceStatus = _Recording;
         lastSpeedLimitTime = millis();
-        if (strcmp(DataFileName, "") == 0)
-        {
-          sprintf(DataFileName, "%sRL%04d%02d%02d%02d%02d%02d.txt", DataFileDir, year, month, day, hour, minute, second);
-          Log.traceln("new DataFileName %s", DataFileName);
-        }
+
         if (!dataFile)
         {
+          if (strcmp(DataFileName, "") == 0)
+          {
+            sprintf(DataFileName, "%sRL%04d%02d%02d%02d%02d%02d.txt", DataFileDir, year, month, day, hour, minute, second);
+          }
+          Log.traceln("new DataFileName recording %s", DataFileName);
           dataFile = SD.open(DataFileName, FILE_WRITE);
         }
 
         dataFile.println(buffer);
         dataFile.flush();
-        Log.traceln(buffer);
+        // Log.traceln(buffer);
       }
       else
       {
-        if ((millis() - lastSpeedLimitTime) > 30 * 1000)
+
+        if (RaceStatus == _Recording)
         {
-
-          if (dataFile)
-          {
-            Log.traceln("close DataFileName %s", DataFileName);
-            dataFile.close();
-            strcpy(DataFileName, "");
-          }
-          else
-          {
-            Log.traceln("Sleep ,speed= %D", KMPH);
-
-            sprintf(displayInfo.log, "Sleep ,speed=%0.2f", KMPH);
-          }
-
-          // lastSpeedLimitTime = 0;
+          RaceStatus = _RecordToSleep;
         }
-        else
-        {
-          if (dataFile)
-          {
-            dataFile.println(buffer);
-            dataFile.flush();
-            // Log.traceln(buffer);
-          }
-          Log.traceln("speed = %D cd=%d", KMPH, (millis() - lastSpeedLimitTime) / 1000);
-
-          sprintf(displayInfo.log, "speed = %0.2f cd= %ld", KMPH, (millis() - lastSpeedLimitTime) / 1000);
-        }
+        dataFile.println(buffer);
+        dataFile.flush();
       }
     }
   }
 }
-
-// void GpsLoop()
-// {
-
-//   while (ss.available() > 0)
-//   {
-//     if (gps.encode(ss.read()))
-//     {
-//       printData();
-//       recordGps();
-//     }
-//   }
-// }
 
 void initLed()
 {
@@ -887,6 +766,8 @@ void initLed()
 
 void setup()
 {
+
+  RaceStatus = _Setup;
   Serial.begin(9600);
   initLed();
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);

@@ -13,31 +13,47 @@
     <br />
     <input type="text" id="trackname" name="name" required minlength="4" maxlength="32" size="32">
     <br />
-    lat<br /><input type="text" id="lat" readonly size="16">
+    lat1<br /><input type="text" id="lat1" readonly size="16">
     <br />
-    lng<br /><input type="text" id="lng" readonly size="16">
+    lng2<br /><input type="text" id="lng1" readonly size="16">
     <br />
-    <input type="button" value="refresh" onclick="refresh()">
+
+    lat1<br /><input type="text" id="lat2" readonly size="16">
+    <br />
+    lng2<br /><input type="text" id="lng2" readonly size="16">
+    <br />
+    <input type="button" value="get1" onclick="getlocation(1)">
+    <input type="button" value="get2" onclick="getlocation(2)">
+    <input type="button" value="gettrack" onclick="getMcuCfg()">
+    <input type="button" value="refresh" onclick="setlocation()">
 
   </div>
 
 
   <script>
-    function refresh() {
-      fetch('/setlocation')
-        .then(function (result) { return result.text(); })
-        .then(function (e) {
-          console.log(e);
+    function setlocation() {
 
-          eval(`var ret=${e}`);
-          console.log(ret)
+      let params = `?lat1=${document.getElementById("lat1").value}`;
+      params += `&lng1=${document.getElementById("lng1").value}`;
+      params += `&lat2=${document.getElementById("lat2").value}`;
+      params += `&lng2=${document.getElementById("lng2").value}`;
+      params += `&trackname=${document.getElementById("trackname").value}`;
+
+
+      fetch('/setlocation' + params)
+        .then(function (result) { return result.json(); })
+        .then(function (ret) {
+          console.log(ret);
+
+
           if (ret.e.code > 0) {
-            document.getElementById("lat").value = ret.data.lat;
-            document.getElementById("lng").value = ret.data.lng;
-
+            // document.getElementById("lat").value = ret.data.lat;
+            // document.getElementById("lng").value = ret.data.lng;
+            alert("set ok")
           } else {
-            document.getElementById("lat").value = "NULL"
-            document.getElementById("lng").value = "NULL"
+            // document.getElementById("lat").value = "NULL"
+            // document.getElementById("lng").value = "NULL"
+            alert("set error" + ret.e.msg)
           }
 
         });
@@ -45,23 +61,58 @@
     };
 
 
-    function getlocation() {
+    function getlocation(p) {
+
       fetch('/getlocation')
-        .then(function (result) { return result.text(); })
-        .then(function (e) {
-          console.log(e);
+        .then(function (result) { return result.json(); })
+        .then(function (ret) {
+          console.log(ret);
+
+          if (ret.e.code > 0) {
+            if (p == 1) {
+              document.getElementById("lat1").value = ret.data.lat;
+              document.getElementById("lng1").value = ret.data.lng;
+            } else if (p == 2) {
+              document.getElementById("lat2").value = ret.data.lat;
+              document.getElementById("lng2").value = ret.data.lng;
+            }
+          } else {
+            alert("get location error " + ret.e.msg)
+          }
+          // if (e != "") {
+          //   ret = e.split(",");
+          //   document.getElementById("lat").value = ret[0];
+          //   document.getElementById("lng").value = ret[1];
+          //   document.getElementById("trackname").value = ret[2];
 
 
-          if (e != "") {
-            ret = e.split(",");
-            document.getElementById("lat").value = ret[0];
-            document.getElementById("lng").value = ret[1];
-            document.getElementById("trackname").value = ret[2];
+          // } else {
+          //   document.getElementById("lat").value = "NULL"
+          //   document.getElementById("lng").value = "NULL"
+          // }
 
+        });
+
+    };
+
+    function getMcuCfg() {
+      fetch('/getmcucfg')
+        .then(function (result) { return result.json(); })
+        .then(function (ret) {
+          console.log(ret);
+
+
+          if (ret.e.code > 0) {
+            document.getElementById("trackname").value = ret.data.trackname;
+
+            document.getElementById("lat1").value = ret.data.lat1;
+            document.getElementById("lng1").value = ret.data.lng1;
+
+            document.getElementById("lat2").value = ret.data.lat2;
+            document.getElementById("lng2").value = ret.data.lng2;
 
           } else {
-            document.getElementById("lat").value = "NULL"
-            document.getElementById("lng").value = "NULL"
+            alert("get mcu cfg error " + ret.e.msg)
           }
 
         });
@@ -71,7 +122,7 @@
 
     window.onload = function () {
       console.log("onlaod=>")
-      getlocation();
+      //getlocation();
     }
   </script>
 </body>
