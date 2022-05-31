@@ -58,12 +58,25 @@ static unsigned long lastSpeedLimitTime = 0;
 unsigned long StartTime = 0;
 unsigned long lastStartTime = 0;
 char buffer[100];
-double RecordKmph = 20;
-int SleepCD = 60;
+char lastbuffer[100];
+double RecordKmph = 4;
+int SleepCD = 10;
 
 double KMPH = 0;
 
 double lastkmph = 0;
+
+double last_lat = 0;
+double last_lng = 0;
+double last_altitude = 0;
+double last_KMPH = 0;
+int last_year = 0;
+int last_month = 0;
+int last_day = 0;
+int last_hour = 0;
+int last_minute = 0;
+int last_second = 0;
+int last_csecond = 0;
 
 class TDisplayInfo
 {
@@ -353,9 +366,10 @@ void initWifi()
 
   // WiFi.softAPConfig(local_ip, gateway, subnet);
   // delay(50);
+  // WiFi.begin("wifi-acans", "85750218");
 
   // WiFi.begin("yunweizu", "yunweizubangbangda");
-  // WiFi.begin("wifi-acans", "85750218");
+
   // Log.traceln("Connecting");
   // while (WiFi.status() != WL_CONNECTED)
   // {
@@ -474,14 +488,14 @@ void printDirectory(File dir, int numTabs)
 void initSD()
 {
   // // keep checking the SD reader for valid SD card/format
-  Log.traceln("init SD Card");
+  Serial.println("init SD Card");
   // while (!SD.begin(chipSelect))
   // {
   //   TRACE("SD Card Failed, Will Retry...");
   // }
   if (!SD.begin(chipSelect))
   {
-    Log.traceln("init SD Card Failed");
+    Serial.println("init SD Card Failed");
     B_SD = false;
   }
   else
@@ -490,8 +504,11 @@ void initSD()
 
     if (SD.mkdir("RLDATA"))
     {
-      Log.traceln("dir is created.");
+      Serial.println("dir is created.");
     }
+
+    // File logfile = SD.open("/RLDATA/racelap.log");
+    Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
     File root = SD.open("/RLDATA");
 
@@ -513,6 +530,11 @@ void initSD()
     }
 
     file.close();
+
+    if (dataFile)
+    {
+      dataFile.close();
+    }
   }
 }
 
@@ -628,32 +650,37 @@ void recordGps()
       }
 
       sprintf(displayInfo.log, "Sleep ,speed=%0.2f", KMPH);
+
       RaceStatus = _Sleep;
+      Log.traceln("CD ok,form _RecordToSleep to _Sleep");
     }
     else
     {
 
-      Log.traceln("speed = %D cd=%d", KMPH, (millis() - lastSpeedLimitTime) / 1000);
+      // Log.traceln("speed = %D cd=%d", KMPH, (millis() - lastSpeedLimitTime) / 1000);
 
       sprintf(displayInfo.log, "speed = %0.2f cd= %ld", KMPH, (millis() - lastSpeedLimitTime) / 1000);
     }
   }
-
-  if (!gps.location.isValid() || !gps.date.isValid() || !gps.time.isValid())
-  {
-    sprintf(displayInfo.log, "GPS isValid False");
-    KMPH = 0;
-    if (RaceStatus == _Recording)
+  /*
+    if (!gps.location.isValid() || !gps.date.isValid() || !gps.time.isValid())
     {
-      RaceStatus = _RecordToSleep;
+      sprintf(displayInfo.log, "GPS notValid %d %d");
+      KMPH = 0;
+      if (RaceStatus == _Recording)
+      {
+
+        RaceStatus = _RecordToSleep;
+        Log.traceln("GPS not valid form _Recording to _RecordToSleep");
+      }
+      return;
     }
-    return;
-  }
+    */
   // Log.traceln("recordGps %T %T %T", gps.location.isValid(), gps.location.isUpdated()), gps.satellites.isValid();
   if (gps.satellites.isValid() && last_satellites != gps.satellites.value())
   {
     last_satellites = gps.satellites.value();
-    // Log.traceln("satellites=%d", gps.satellites.value());
+    Log.traceln("satellites=%d", gps.satellites.value());
   }
 
   //
@@ -662,24 +689,20 @@ void recordGps()
   {
     double lat = gps.location.lat();
     double lng = gps.location.lng();
-
     double altitude = gps.altitude.meters();
-
     KMPH = gps.speed.kmph();
-
     int year = gps.date.year();
     int month = gps.date.month();
     int day = gps.date.day();
-
     int hour = gps.time.hour();
     int minute = gps.time.minute();
     int second = gps.time.second();
     int csecond = gps.time.centisecond();
 
     snprintf(buffer, sizeof(buffer),
-             "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f",
+             "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%lu",
              year,
-             month, day, hour, minute, second, csecond, lat, lng, altitude, KMPH);
+             month, day, hour, minute, second, csecond, lat, lng, altitude, KMPH, millis());
 
     // Log.traceln(buffer);
 
@@ -689,46 +712,53 @@ void recordGps()
       return;
     }
     /*
-        if (lastStartTime == 0)
-        {
-          lastStartTime = millis();
-        }
 
-        long diff = millis() - lastStartTime;
+    if (lastStartTime == 0)
+    {
+      lastStartTime = millis();
+    }
 
-        if (diff >= 0 && diff < 20000)
-        {
-          KMPH = 21.0;
-        }
-        else if (diff > 20000 && diff < 35000)
-        {
-          KMPH = 0.5;
-        }
-        else if (diff > 35000 && diff < 58000)
-        {
-          KMPH = 30;
-        }
-        else if (diff > 58000 && diff < 65000)
-        {
-          KMPH = 2;
-        }
-        else if (diff > 65000)
-        {
-          KMPH = 5;
-        }
+    long diff = millis() - lastStartTime;
 
-        if (lastkmph != KMPH)
-        {
-          Log.traceln("kmph from %D to %D", lastkmph, KMPH);
-          lastkmph = KMPH;
-        }
-    */
+    if (diff >= 0 && diff < 20000)
+    {
+      KMPH = 21.0;
+    }
+    else if (diff > 20000 && diff < 35000)
+    {
+      KMPH = 0.5;
+    }
+    else if (diff > 35000 && diff < 58000)
+    {
+      KMPH = 30;
+    }
+    else if (diff > 58000 && diff < 65000)
+    {
+      KMPH = 2;
+    }
+    else if (diff > 65000)
+    {
+      KMPH = 5;
+      lastStartTime = millis();
+    }
+
+    if (lastkmph != KMPH)
+    {
+      Log.traceln("kmph from %D to %D", lastkmph, KMPH);
+      lastkmph = KMPH;
+    }
+*/
     if (B_SD)
     {
 
       if (KMPH - RecordKmph > 0)
       {
-        RaceStatus = _Recording;
+        if (RaceStatus != _Recording)
+        {
+          Log.traceln("from %d into _Recording", RaceStatus);
+          RaceStatus = _Recording;
+        }
+
         lastSpeedLimitTime = millis();
 
         if (!dataFile)
@@ -740,9 +770,12 @@ void recordGps()
           Log.traceln("new DataFileName recording %s", DataFileName);
           dataFile = SD.open(DataFileName, FILE_WRITE);
         }
+        if (dataFile)
+        {
+          dataFile.println(buffer);
+          dataFile.flush();
+        }
 
-        dataFile.println(buffer);
-        dataFile.flush();
         // Log.traceln(buffer);
       }
       else
@@ -751,9 +784,13 @@ void recordGps()
         if (RaceStatus == _Recording)
         {
           RaceStatus = _RecordToSleep;
+          Log.traceln("speed <limit form _RecordToSleep to _Sleep");
         }
-        dataFile.println(buffer);
-        dataFile.flush();
+        if (dataFile && RaceStatus == _RecordToSleep)
+        {
+          dataFile.println(buffer);
+          dataFile.flush();
+        }
       }
     }
   }
@@ -769,8 +806,9 @@ void setup()
 
   RaceStatus = _Setup;
   Serial.begin(9600);
+  initSD();
+
   initLed();
-  Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
   // Serial.setDebugOutput(false);
 
@@ -785,7 +823,7 @@ void setup()
   }
 
   initDisplay();
-  initSD();
+
   initWifi();
   initWebServer();
   initGps();
