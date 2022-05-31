@@ -45,7 +45,8 @@
 			"*.tcc": "cpp",
 			"stdexcept": "cpp",
 			"ostream": "cpp",
-			"istream": "cpp"
+			"istream": "cpp",
+			"typeinfo": "cpp"
 		}
 	}
 }

@@ -12,6 +12,7 @@
 #include <ArduinoLog.h>
 #include <TinyGPS++.h>
 #include <ArduinoJson.h>
+#include "SDLogger.h"
 
 #define LED D0 // Led in NodeMCU at pin GPIO16 (D0).
 
@@ -19,6 +20,7 @@
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define SCREEN_ADDRESS 0x3C
 
+SDLogger logger;
 TinyGPSPlus gps;
 // gps_fix fix;
 
@@ -59,8 +61,10 @@ unsigned long StartTime = 0;
 unsigned long lastStartTime = 0;
 char buffer[100];
 char lastbuffer[100];
-double RecordKmph = 4;
-int SleepCD = 10;
+char logbuff[100];
+
+double RecordKmph = 30;
+int SleepCD = 60;
 
 double KMPH = 0;
 
@@ -108,23 +112,6 @@ String file_size(int bytes)
   else
     fsize = String(bytes / 1024.0 / 1024.0 / 1024.0, 3) + " GB";
   return fsize;
-}
-
-bool readLine(File &f, char *line, size_t maxLen)
-{
-  for (size_t n = 0; n < maxLen; n++)
-  {
-    int c = f.read();
-    if (c < 0 && n == 0)
-      return false; // EOF
-    if (c < 0 || c == '\n')
-    {
-      line[n] = 0;
-      return true;
-    }
-    line[n] = c;
-  }
-  return false; // line too long
 }
 
 String ListDirectoryJSON()
@@ -245,7 +232,7 @@ void handleGetMcuCfg(AsyncWebServerRequest *request)
   }
   else
   {
-    Log.traceln(F("Failed to read track.txt"));
+    logger.LogInfo(F("Failed to read track.txt"));
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     StaticJsonDocument<200> ret;
 
@@ -322,7 +309,6 @@ void handleSetLocation(AsyncWebServerRequest *request)
   // Serialize JSON to file
   String output;
   serializeJson(doc, output);
-  Log.traceln("params %s", output.c_str());
 
   if (serializeJson(params, file) == 0)
   {
@@ -330,7 +316,6 @@ void handleSetLocation(AsyncWebServerRequest *request)
     e["msg"] = "serializeJson error";
     file.close();
     serializeJson(doc, *response);
-
     request->send(response);
   }
   else
@@ -348,14 +333,14 @@ void handleSetLocation(AsyncWebServerRequest *request)
 void initWifi()
 {
 
-  Log.traceln("initWifi");
+  logger.LogInfo("initWifi");
 
-  const char *ssid = "RaceLap";      // Enter SSID here
-  const char *password = "88888888"; // Enter Password here
-  WiFi.softAP(ssid, password);
-  delay(250);
-  Log.trace("Soft-AP IP address = ");
-  Log.traceln(WiFi.softAPIP());
+  // const char *ssid = "RaceLap";      // Enter SSID here
+  // const char *password = "88888888"; // Enter Password here
+  // WiFi.softAP(ssid, password);
+  // delay(250);
+  // logger.LogInfo("Soft-AP IP address = ");
+  // logger.LogInfo(WiFi.softAPIP().toString().c_str());
 
   // Serial.print("DHCP status:");
   // Serial.println(wifi_softap_dhcps_status());
@@ -368,23 +353,23 @@ void initWifi()
   // delay(50);
   // WiFi.begin("wifi-acans", "85750218");
 
-  // WiFi.begin("yunweizu", "yunweizubangbangda");
+  WiFi.begin("yunweizu", "yunweizubangbangda");
 
-  // Log.traceln("Connecting");
-  // while (WiFi.status() != WL_CONNECTED)
-  // {
-  //   delay(500);
-  //   Log.traceln(".");
-  // }
+  logger.LogInfo("Connecting");
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    logger.LogInfo(".");
+  }
 
-  // Log.trace("Connected, IP address: ");
-  // Log.traceln(WiFi.localIP());
+  logger.LogInfo("Connected, IP address: ");
+  logger.LogInfo(WiFi.localIP().toString().c_str());
 }
 
 void initWebServer()
 {
 
-  Log.traceln("initWebServer");
+  logger.LogInfo("initWebServer");
   server.onNotFound(notFound);
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 
@@ -401,9 +386,9 @@ void initWebServer()
               if (request->hasParam("file"))
               {
                 String message = request->getParam("file")->value();
-                Log.traceln("downfile %s",message.c_str());
-                //request->send(200, "text/plain", "Params ok");
-               // root = SD.open("/RLDATA");
+                  snprintf(logbuff, sizeof(logbuff), "downfile %s",message.c_str());
+                 logger.LogInfo(logbuff);
+     
                File sfile = SD.open(message, FILE_READ);
 
                if (sfile){
@@ -420,7 +405,9 @@ void initWebServer()
     if (request->hasParam("file"))
     {
       String message =  request->getParam("file")->value();
-      Log.traceln("delfile %s", message.c_str());
+       snprintf(logbuff, sizeof(logbuff), "delfile %s", message.c_str());
+       logger.LogInfo(logbuff);
+     
       // request->send(200, "text/plain", "Params ok");
       // root = SD.open("/RLDATA");
       SD.remove(message);
@@ -430,7 +417,7 @@ void initWebServer()
     else if (request->hasParam("dir"))
     {
       String message =  request->getParam("dir")->value();
-      Log.traceln("deldir %s", message.c_str());
+
 
       SD.rmdir(message);
       request->send(200, "text/plain", "dir del  ok ");
@@ -501,13 +488,12 @@ void initSD()
   else
   {
     B_SD = true;
-
+    logger.Begin();
     if (SD.mkdir("RLDATA"))
     {
       Serial.println("dir is created.");
     }
 
-    // File logfile = SD.open("/RLDATA/racelap.log");
     Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 
     File root = SD.open("/RLDATA");
@@ -516,7 +502,7 @@ void initSD()
 
     root.close();
 
-    Log.traceln("print RLDATA Directory done!");
+    logger.LogInfo("print RLDATA Directory done!");
 
     File file = SD.open("/RLDATA/track.txt");
 
@@ -526,7 +512,7 @@ void initSD()
     {
       String output;
       serializeJson(doc, output);
-      Log.traceln("track.txt %s", output.c_str());
+      logger.LogInfo("track.txt " + output);
     }
 
     file.close();
@@ -540,15 +526,11 @@ void initSD()
 
 void initDisplay()
 {
-  Log.traceln("init Display");
-  Wire.begin();
-
-  Log.traceln("wire %T", Wire.status());
-  //  Log.traceln("wire %T", Wire.available());
+  logger.LogInfo("init Display");
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
   {
-    Log.traceln("init Display Failed");
+    logger.LogInfo("init Display Failed");
     B_SSD1306 = false;
   }
   else
@@ -559,7 +541,7 @@ void initDisplay()
 
     sprintf(displayInfo.title, "RaceLap  0.5");
 
-    Log.traceln("init Display ok");
+    logger.LogInfo("init Display ok");
   }
 }
 
@@ -575,7 +557,7 @@ void showDisplay()
     if (KMPH - RecordKmph > 0)
     {
       display.setTextSize(7);
-      display.setCursor(30, 0);
+      display.setCursor(20, 0);
       display.println((int)KMPH);
     }
     else
@@ -584,8 +566,10 @@ void showDisplay()
       display.setCursor(0, 0);
 
       display.print(displayInfo.title);
-      display.print(F("   "));
-      display.println(RaceStatus);
+      display.print(F(" "));
+      display.print(RaceStatus);
+      display.print(F(" "));
+      display.println(last_satellites);
       if (strcmp(buffer, "") != 0)
       {
 
@@ -610,7 +594,7 @@ void showDisplay()
 
 void initGps()
 {
-  Log.traceln("init GPS");
+  logger.LogInfo("init GPS");
 
   // ss.begin(9600);
   ss.begin(57600);
@@ -618,9 +602,9 @@ void initGps()
 
   while (!ss.available())
   {
-    Log.traceln("GPS invaild");
+    logger.LogInfo("GPS invaild");
   }
-  Log.traceln("GPS init OK");
+  logger.LogInfo("GPS init OK");
 }
 
 void recordGps()
@@ -638,13 +622,14 @@ void recordGps()
   if (RaceStatus == _RecordToSleep)
   {
     int sleep_t = (millis() - lastSpeedLimitTime) - SleepCD * 1000;
-    // Log.traceln("..%u..%d..%T..%d", (millis() - lastSpeedLimitTime), (millis() - lastSpeedLimitTime) - SleepCD * 1000, (millis() - lastSpeedLimitTime) - SleepCD * 1000 > 0, sleep_t);
+    // logger.LogInfo("..%u..%d..%T..%d", (millis() - lastSpeedLimitTime), (millis() - lastSpeedLimitTime) - SleepCD * 1000, (millis() - lastSpeedLimitTime) - SleepCD * 1000 > 0, sleep_t);
     if (sleep_t > 0)
     {
 
       if (dataFile)
       {
-        Log.traceln("close DataFileName %s", DataFileName);
+        snprintf(logbuff, sizeof(logbuff), "close DataFileName %s", DataFileName);
+        logger.LogInfo(logbuff);
         dataFile.close();
         strcpy(DataFileName, "");
       }
@@ -652,35 +637,36 @@ void recordGps()
       sprintf(displayInfo.log, "Sleep ,speed=%0.2f", KMPH);
 
       RaceStatus = _Sleep;
-      Log.traceln("CD ok,form _RecordToSleep to _Sleep");
+      logger.LogInfo("CD ok,form _RecordToSleep to _Sleep");
     }
     else
     {
 
-      // Log.traceln("speed = %D cd=%d", KMPH, (millis() - lastSpeedLimitTime) / 1000);
+      // logger.LogInfo("speed = %D cd=%d", KMPH, (millis() - lastSpeedLimitTime) / 1000);
 
       sprintf(displayInfo.log, "speed = %0.2f cd= %ld", KMPH, (millis() - lastSpeedLimitTime) / 1000);
     }
   }
-  /*
-    if (!gps.location.isValid() || !gps.date.isValid() || !gps.time.isValid())
-    {
-      sprintf(displayInfo.log, "GPS notValid %d %d");
-      KMPH = 0;
-      if (RaceStatus == _Recording)
-      {
 
-        RaceStatus = _RecordToSleep;
-        Log.traceln("GPS not valid form _Recording to _RecordToSleep");
-      }
-      return;
+  if (!gps.location.isValid())
+  {
+    sprintf(displayInfo.log, "GPS notValid");
+    KMPH = 0;
+    if (RaceStatus == _Recording)
+    {
+
+      RaceStatus = _RecordToSleep;
+      logger.LogInfo("GPS not valid form _Recording to _RecordToSleep");
     }
-    */
-  // Log.traceln("recordGps %T %T %T", gps.location.isValid(), gps.location.isUpdated()), gps.satellites.isValid();
+    // return;
+  }
+
+  // logger.LogInfo("recordGps %T %T %T", gps.location.isValid(), gps.location.isUpdated()), gps.satellites.isValid();
   if (gps.satellites.isValid() && last_satellites != gps.satellites.value())
   {
     last_satellites = gps.satellites.value();
-    Log.traceln("satellites=%d", gps.satellites.value());
+    // snprintf(logbuff, sizeof(logbuff), "satellites=%d", gps.satellites.value());
+    // logger.LogInfo(logbuff);
   }
 
   //
@@ -704,7 +690,7 @@ void recordGps()
              year,
              month, day, hour, minute, second, csecond, lat, lng, altitude, KMPH, millis());
 
-    // Log.traceln(buffer);
+    // logger.LogInfo(buffer);
 
     // gps init datetime not correct
     if (year < 2022)
@@ -744,7 +730,7 @@ void recordGps()
 
     if (lastkmph != KMPH)
     {
-      Log.traceln("kmph from %D to %D", lastkmph, KMPH);
+      logger.LogInfo("kmph from %D to %D", lastkmph, KMPH);
       lastkmph = KMPH;
     }
 */
@@ -755,7 +741,8 @@ void recordGps()
       {
         if (RaceStatus != _Recording)
         {
-          Log.traceln("from %d into _Recording", RaceStatus);
+          snprintf(logbuff, sizeof(logbuff), "from %d into _Recording", RaceStatus);
+          logger.LogInfo(logbuff);
           RaceStatus = _Recording;
         }
 
@@ -767,7 +754,8 @@ void recordGps()
           {
             sprintf(DataFileName, "%sRL%04d%02d%02d%02d%02d%02d.txt", DataFileDir, year, month, day, hour, minute, second);
           }
-          Log.traceln("new DataFileName recording %s", DataFileName);
+          snprintf(logbuff, sizeof(logbuff), "new DataFileName recording %s", DataFileName);
+          logger.LogInfo(logbuff);
           dataFile = SD.open(DataFileName, FILE_WRITE);
         }
         if (dataFile)
@@ -776,7 +764,7 @@ void recordGps()
           dataFile.flush();
         }
 
-        // Log.traceln(buffer);
+        // logger.LogInfo(buffer);
       }
       else
       {
@@ -784,7 +772,7 @@ void recordGps()
         if (RaceStatus == _Recording)
         {
           RaceStatus = _RecordToSleep;
-          Log.traceln("speed <limit form _RecordToSleep to _Sleep");
+          logger.LogInfo("speed <limit form _RecordToSleep to _Sleep");
         }
         if (dataFile && RaceStatus == _RecordToSleep)
         {
@@ -813,11 +801,11 @@ void setup()
   // Serial.setDebugOutput(false);
 
   // put your setup code here, to run once:
-  Log.traceln("setup...");
-  Log.traceln("Mounting the filesystem...\n");
+  logger.LogInfo("setup...");
+  logger.LogInfo("Mounting the filesystem...");
   if (!LittleFS.begin())
   {
-    Log.traceln("could not mount the filesystem...\n");
+    logger.LogInfo("could not mount the filesystem...");
     delay(2000);
     ESP.restart();
   }
@@ -829,7 +817,7 @@ void setup()
   initGps();
 
   StartTime = millis();
-  Log.traceln("init ok\n");
+  logger.LogInfo("init ok\n");
 }
 
 void loop()
