@@ -13,40 +13,44 @@ SDLogger::SDLogger()
 {
 }
 
-void SDLogger::Begin()
+void SDLogger::Begin(bool sd)
 {
 
-  if (SD.mkdir("RLDATA"))
+  if (sd)
   {
-    Serial.println("RLLOG is created.");
-  }
-  Serial.println("RLLOG init.");
-  logFile = SD.open("/RLDATA/log.txt", FILE_WRITE);
 
-  if (logFile)
-  {
-    Serial.print("log.txt size=");
-    Serial.print(logFile.size());
-    Serial.print(" 1M=");
-    Serial.println(1 * 1024 * 1024);
-    if (logFile.size() > 1 * 1024 * 1024.0)
+    if (SD.mkdir("RLDATA"))
     {
-      SD.remove("/RLDATA/log.txt");
-      delay(250);
-      logFile = SD.open(logFilePath, FILE_WRITE);
-      delay(250);
+      Serial.println("RLLOG is created.");
     }
-  }
+    Serial.println("RLLOG init.");
+    logFile = SD.open("/RLDATA/log.txt", FILE_WRITE);
 
-  if (logFile)
-  {
-    Serial.println("RLLOG init ok");
-    logFile.println("\r\n\r\n-----------------------------------------------------------\r\n\r\n");
-    logFile.flush();
-  }
-  else
-  {
-    Serial.println("RLLOG init error");
+    if (logFile)
+    {
+      Serial.print("log.txt size=");
+      Serial.print(logFile.size());
+      Serial.print(" 1M=");
+      Serial.println(1 * 1024 * 1024);
+      if (logFile.size() > 1 * 1024 * 1024.0)
+      {
+        SD.remove("/RLDATA/log.txt");
+        delay(250);
+        logFile = SD.open(logFilePath, FILE_WRITE);
+        delay(250);
+      }
+    }
+
+    if (logFile)
+    {
+      Serial.println("RLLOG init ok");
+      logFile.println("\r\n\r\n-----------------------------------------------------------\r\n\r\n");
+      logFile.flush();
+    }
+    else
+    {
+      Serial.println("RLLOG init error");
+    }
   }
 
   // char logbuff[100];

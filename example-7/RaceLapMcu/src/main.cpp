@@ -14,11 +14,14 @@
 #include <ArduinoJson.h>
 #include "SDLogger.h"
 
-#define LED D0 // Led in NodeMCU at pin GPIO16 (D0).
+#define LED D0        // Led in NodeMCU at pin GPIO16 (D0).
+#define OLED_RESET -1 // GPIO0
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define SCREEN_ADDRESS 0x3C
+
+ADC_MODE(ADC_VCC);
 
 SDLogger logger;
 TinyGPSPlus gps;
@@ -49,7 +52,9 @@ const int chipSelect = 15;
 uint32_t last_satellites = 0;
 
 AsyncWebServer server(80);
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+// Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+// Adafruit_SSD1306 display(1);
 
 SoftwareSerial ss(D3, D4); // RX, TX
 
@@ -64,7 +69,7 @@ char lastbuffer[100];
 char logbuff[100];
 
 double RecordKmph = 30;
-int SleepCD = 60;
+int SleepCD = 30;
 
 double KMPH = 0;
 
@@ -119,11 +124,12 @@ String ListDirectoryJSON()
 
   File dir = SD.open("/RLDATA");
   String tree = "";
+  int count = 0;
   while (true)
   {
 
     File entry = dir.openNextFile();
-    if (!entry)
+    if (!entry || count > 30)
     {
       // no more files
       break;
@@ -132,7 +138,12 @@ String ListDirectoryJSON()
     if (!entry.isDirectory())
     {
 
-      tree = tree + "/" + dir.name() + "/" + entry.name() + ",";
+      String str = entry.name();
+      if (strcmp(DataFileName, str.c_str()) != 0)
+      {
+        tree = tree + "/" + dir.name() + "/" + entry.name() + "_" + entry.size() + ",";
+        count++;
+      }
     }
     entry.close();
   }
@@ -146,8 +157,7 @@ String ListDirectory()
 {
 
   File dir = SD.open("/RLDATA");
-  String tree = "<table>";
-  String entryName = "";
+  String tree = F("<table>");
 
   while (true)
   {
@@ -161,16 +171,16 @@ String ListDirectory()
 
     if (entry.isDirectory())
     {
-      tree += F("<tr>");
-      tree += F("<td>");
-      tree += entry.name();
-      tree += F("/</td><td></td>");
-      tree += F("<td class=\"detailsColumn\" data-value=\"0\">-</td>");
-      tree += F("<td class=\"detailsColumn\" data-value=\"0\">");
-      tree += F("<button class='buttons' onclick=\"location.href='/del?dir=/");
-      tree = tree + dir.name() + "/" + entry.name();
-      tree += F("';\">del</button></td>");
-      tree += F("</tr>");
+      // tree += F("<tr>");
+      // tree += F("<td>");
+      // tree += entry.name();
+      // tree += F("/</td><td></td>");
+      // tree += F("<td class=\"detailsColumn\" data-value=\"0\">-</td>");
+      // tree += F("<td class=\"detailsColumn\" data-value=\"0\">");
+      // tree += F("<button class='buttons' onclick=\"location.href='/del?dir=/");
+      // tree = tree + dir.name() + "/" + entry.name();
+      // tree += F("';\">del</button></td>");
+      // tree += F("</tr>");
     }
     else
     {
@@ -196,6 +206,7 @@ String ListDirectory()
 
   tree += F("</table>");
 
+  Serial.println(tree);
   return tree;
 }
 
@@ -244,6 +255,29 @@ void handleGetMcuCfg(AsyncWebServerRequest *request)
     request->send(response);
   }
   file.close();
+}
+void handleSysinfo(AsyncWebServerRequest *request)
+{
+
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  StaticJsonDocument<200> doc;
+
+  JsonObject e = doc.createNestedObject("e");
+  e["code"] = 1;
+  JsonObject data = doc.createNestedObject("data");
+  // String str =
+  data["datafilename"] = String(DataFileName);
+  data["RaceStatus"] = RaceStatus;
+  data["RaceStatusEnum"] = "0 _Setup 1_Starting 2_Recording 3_RecordToSleep 4_Sleep";
+  data["RAM"] = ESP.getFreeHeap();
+  data["FreeHeap"] = ESP.getMaxFreeBlockSize();
+  data["Vcc"] = ESP.getVcc() / 1024.0;
+  data["Version"] = ESP.getSdkVersion();
+  data["CPU"] = ESP.getCpuFreqMHz();
+  data["ResetReason"] = ESP.getResetReason();
+
+  serializeJson(doc, *response);
+  request->send(response);
 }
 
 void handleGetLocation(AsyncWebServerRequest *request)
@@ -354,7 +388,9 @@ void initWifi()
   // WiFi.begin("wifi-acans", "85750218");
 
   WiFi.begin("yunweizu", "yunweizubangbangda");
+  //  WiFi.begin("qianmi-mobile", "qianmi123");
 
+  // WiFi.begin("wifi-acans", "85750218");
   logger.LogInfo("Connecting");
   while (WiFi.status() != WL_CONNECTED)
   {
@@ -375,11 +411,12 @@ void initWebServer()
 
   server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
 
-  server.on("/listsd", HTTP_GET, [](AsyncWebServerRequest *request)
+  server.on("/listsd1", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(200, "text/plain", ListDirectory()); });
 
   server.on("/listsdjson", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(200, "text/plain", ListDirectoryJSON()); });
+  server.on("/sysinfo", HTTP_GET, handleSysinfo);
 
   server.on("/down", HTTP_GET, [](AsyncWebServerRequest *request)
             {
@@ -410,9 +447,14 @@ void initWebServer()
      
       // request->send(200, "text/plain", "Params ok");
       // root = SD.open("/RLDATA");
-      SD.remove(message);
+      
+      if (SD.remove(message)){
+            request->send(200, "text/plain", "{\"e\":{\"code\":1}}");
+      }else{
+          request->send(200, "text/plain", "{\"e\":{\"code\":-1}}");
+      }
 
-      request->send(200, "text/plain", "file del  ok ");
+      
     }
     else if (request->hasParam("dir"))
     {
@@ -460,13 +502,13 @@ void printDirectory(File dir, int numTabs)
     {
       // files have sizes, directories do not
       Serial.print("\t\t");
-      Serial.print(entry.size(), DEC);
-      time_t cr = entry.getCreationTime();
-      time_t lw = entry.getLastWrite();
-      struct tm *tmstruct = localtime(&cr);
-      Serial.printf("\tCREATION: %d-%02d-%02d %02d:%02d:%02d", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
-      tmstruct = localtime(&lw);
-      Serial.printf("\tLAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
+      Serial.println(entry.size(), DEC);
+      // time_t cr = entry.getCreationTime();
+      // time_t lw = entry.getLastWrite();
+      // struct tm *tmstruct = localtime(&cr);
+      // Serial.printf("\tCREATION: %d-%02d-%02d %02d:%02d:%02d", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
+      //  tmstruct = localtime(&lw);
+      // Serial.printf("\tLAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
     }
     entry.close();
   }
@@ -602,7 +644,7 @@ void initGps()
 
   while (!ss.available())
   {
-    logger.LogInfo("GPS invaild");
+    logger.LogInfo("GPS ss invaild");
   }
   logger.LogInfo("GPS init OK");
 }
@@ -685,10 +727,17 @@ void recordGps()
     int second = gps.time.second();
     int csecond = gps.time.centisecond();
 
+    if (last_lat == lat && last_lng == lng)
+    {
+      return;
+    }
     snprintf(buffer, sizeof(buffer),
              "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%lu",
              year,
              month, day, hour, minute, second, csecond, lat, lng, altitude, KMPH, millis());
+
+    last_lat = lat;
+    last_lng = lng;
 
     // logger.LogInfo(buffer);
 

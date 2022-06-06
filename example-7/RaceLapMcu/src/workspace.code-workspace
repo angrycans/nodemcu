@@ -6,6 +6,10 @@
 		{
 			"name": "RaceLapMcu",
 			"path": ".."
+		},
+		{
+			"name": "oled1.3",
+			"path": "../../../example-8/oled1.3"
 		}
 	],
 	"settings": {
@@ -46,7 +50,9 @@
 			"stdexcept": "cpp",
 			"ostream": "cpp",
 			"istream": "cpp",
-			"typeinfo": "cpp"
+			"typeinfo": "cpp",
+			"__string": "cpp",
+			"algorithm": "cpp"
 		}
 	}
 }
