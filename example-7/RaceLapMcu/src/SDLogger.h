@@ -15,7 +15,7 @@ class SDLogger
 {
 public:
   SDLogger();
-  void Begin();
+  void Begin(bool sd);
   void LogInfo(String info);
   void LogInfo(const char *info);
 

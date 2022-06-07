@@ -2,24 +2,27 @@
 #include <FS.h>       // File System for Web Server Files
 #include <LittleFS.h> // This file system is used.
 #include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+#include "SSD1306Wire.h"
+#include "SH1106Wire.h"
 #include <SPI.h>
 #include <SD.h>
 #include <SoftwareSerial.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include <ArduinoLog.h>
 #include <TinyGPS++.h>
 #include <ArduinoJson.h>
 #include "SDLogger.h"
 
-#define LED D0        // Led in NodeMCU at pin GPIO16 (D0).
-#define OLED_RESET -1 // GPIO0
+#define LED D0 // Led in NodeMCU at pin GPIO16 (D0).
 
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-#define SCREEN_ADDRESS 0x3C
+//#define OLED13
+
+#if defined(OLED13)
+SH1106Wire display(0x3c, SDA, SCL); // 1.3 SH1106
+#else
+SSD1306Wire display(0x3c, SDA, SCL); // 0.96 ssd1306
+#endif
+//
 
 ADC_MODE(ADC_VCC);
 
@@ -43,8 +46,8 @@ RACESTATUS RaceStatus = _Setup;
 char DataFileName[64] = ""; //"RL2022-05-18_14.txt";
 char DataFileDir[24] = "/RLDATA/";
 
-bool B_SD = false;      // SD Card status
-bool B_SSD1306 = false; // 0.96 OLED display status
+bool B_SD = false;       // SD Card status
+bool IS_DISPLAY = false; //  OLED display status
 
 // SD Reader CS pin
 const int chipSelect = 15;
@@ -52,9 +55,6 @@ const int chipSelect = 15;
 uint32_t last_satellites = 0;
 
 AsyncWebServer server(80);
-// Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-// Adafruit_SSD1306 display(1);
 
 SoftwareSerial ss(D3, D4); // RX, TX
 
@@ -514,124 +514,160 @@ void printDirectory(File dir, int numTabs)
   }
 }
 
-void initSD()
-{
-  // // keep checking the SD reader for valid SD card/format
-  Serial.println("init SD Card");
-  // while (!SD.begin(chipSelect))
-  // {
-  //   TRACE("SD Card Failed, Will Retry...");
-  // }
-  if (!SD.begin(chipSelect))
-  {
-    Serial.println("init SD Card Failed");
-    B_SD = false;
-  }
-  else
-  {
-    B_SD = true;
-    logger.Begin();
-    if (SD.mkdir("RLDATA"))
-    {
-      Serial.println("dir is created.");
-    }
-
-    Log.begin(LOG_LEVEL_VERBOSE, &Serial);
-
-    File root = SD.open("/RLDATA");
-
-    printDirectory(root, 0);
-
-    root.close();
-
-    logger.LogInfo("print RLDATA Directory done!");
-
-    File file = SD.open("/RLDATA/track.txt");
-
-    StaticJsonDocument<512> doc;
-    DeserializationError error = deserializeJson(doc, file);
-    if (!error)
-    {
-      String output;
-      serializeJson(doc, output);
-      logger.LogInfo("track.txt " + output);
-    }
-
-    file.close();
-
-    if (dataFile)
-    {
-      dataFile.close();
-    }
-  }
-}
-
 void initDisplay()
 {
   logger.LogInfo("init Display");
 
-  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
-  {
-    logger.LogInfo("init Display Failed");
-    B_SSD1306 = false;
-  }
-  else
-  {
+  display.init();
 
-    B_SSD1306 = true;
-    delay(250);
+  IS_DISPLAY = true;
+  delay(250);
 
-    sprintf(displayInfo.title, "RaceLap  0.5");
+  sprintf(displayInfo.title, "RaceLap  0.6");
 
-    logger.LogInfo("init Display ok");
-  }
+  logger.LogInfo("init Display ok");
+  // }
 }
 
 void showDisplay()
 {
   // TRACE("showDisplay");
-  if (B_SSD1306)
+  if (IS_DISPLAY)
   {
 
-    display.clearDisplay();
-    display.setTextColor(WHITE);
+    display.clear();
 
-    if (KMPH - RecordKmph > 0)
+    switch (RaceStatus)
     {
-      display.setTextSize(7);
-      display.setCursor(20, 0);
-      display.println((int)KMPH);
-    }
-    else
-    {
-      display.setTextSize(1);
-      display.setCursor(0, 0);
-
-      display.print(displayInfo.title);
-      display.print(F(" "));
-      display.print(RaceStatus);
-      display.print(F(" "));
-      display.println(last_satellites);
-      if (strcmp(buffer, "") != 0)
-      {
-
-        display.setCursor(0, 8);
-        display.println(buffer);
-      }
-
+    case _Setup:
+      display.setFont(ArialMT_Plain_10);
+      display.drawString(0, 0, displayInfo.title);
       if (strcmp(displayInfo.log, "") != 0)
       {
-        display.setCursor(0, 48);
-        display.println(displayInfo.log);
+        display.drawString(0, 48, displayInfo.log);
       }
+      break;
+    case _Starting:
+      display.setFont(ArialMT_Plain_10);
+      display.drawString(0, 0, displayInfo.title);
+      if (strcmp(displayInfo.log, "") != 0)
+      {
+        display.drawString(0, 48, displayInfo.log);
+      }
+      break;
+    case _Recording:
+      display.setFont(ArialMT_Plain_24);
+      display.setTextAlignment(TEXT_ALIGN_LEFT);
+      display.drawString(20, 0, (String)KMPH);
+      break;
+    case _RecordToSleep:
+      display.setFont(ArialMT_Plain_10);
+      display.drawString(0, 0, displayInfo.title);
+      if (strcmp(displayInfo.log, "") != 0)
+      {
+        display.drawString(0, 48, displayInfo.log);
+      }
+      break;
+    case _Sleep:
+      display.setFont(ArialMT_Plain_10);
+      display.drawString(0, 0, displayInfo.title);
+      if (strcmp(displayInfo.log, "") != 0)
+      {
+        display.drawString(0, 48, displayInfo.log);
+      }
+      break;
+
+    default:
+      break;
     }
 
-    // display.setTextSize(2);
-    // display.setCursor(50, 48);
-    // display.println(displayInfo.speed);
+    // if (KMPH - RecordKmph > 0)
+    // {
+    //   display.setFont(ArialMT_Plain_24);
+    //   display.setTextAlignment(TEXT_ALIGN_LEFT);
+    //   display.drawString(20, 0, (String)KMPH);
+    // }
+    // else
+    // {
+    //   display.setFont(ArialMT_Plain_10);
+    //   display.drawString(0, 0, displayInfo.title);
+    //   // display.print(displayInfo.title);
+    //   // display.print(F(" "));
+    //   // display.print(RaceStatus);
+    //   // display.print(F(" "));
+    //   // display.println(last_satellites);
+    //   if (strcmp(buffer, "") != 0)
+    //   {
+
+    //     display.drawString(0, 8, buffer);
+    //   }
+
+    //   if (strcmp(displayInfo.log, "") != 0)
+    //   {
+
+    //     display.drawString(0, 48, displayInfo.log);
+    //   }
+    // }
+
     display.display();
   }
-  // displayInfo.logo = "RaceLap verion 0.01";
+}
+
+void initSD()
+{
+  // // keep checking the SD reader for valid SD card/format
+  sprintf(displayInfo.log, "init ...");
+  showDisplay();
+  Serial.println("init SD Card");
+  // while (!SD.begin(chipSelect))
+  // {
+  //   TRACE("SD Card Failed, Will Retry...");
+  // }
+  while (!SD.begin(chipSelect))
+  {
+    Serial.println("init SD Card Failed");
+    B_SD = false;
+    sprintf(displayInfo.log, "init SD Card Failed");
+
+    if (millis() - lastDisplayTime > 500)
+    {
+      showDisplay();
+      lastDisplayTime = millis();
+    }
+  }
+
+  B_SD = true;
+  logger.Begin(B_SD);
+  if (SD.mkdir("RLDATA"))
+  {
+    Serial.println("dir is created.");
+  }
+
+  File root = SD.open("/RLDATA");
+
+  printDirectory(root, 0);
+
+  root.close();
+
+  logger.LogInfo("print RLDATA Directory done!");
+
+  File file = SD.open("/RLDATA/track.txt");
+
+  StaticJsonDocument<512> doc;
+  DeserializationError error = deserializeJson(doc, file);
+  if (!error)
+  {
+    String output;
+    serializeJson(doc, output);
+    logger.LogInfo("track.txt " + output);
+  }
+
+  file.close();
+
+  if (dataFile)
+  {
+    dataFile.close();
+  }
 }
 
 void initGps()
@@ -644,7 +680,14 @@ void initGps()
 
   while (!ss.available())
   {
-    logger.LogInfo("GPS ss invaild");
+    logger.LogInfo("GPS module invaild");
+    sprintf(displayInfo.log, "GPS module invaild");
+
+    if (millis() - lastDisplayTime > 500)
+    {
+      showDisplay();
+      lastDisplayTime = millis();
+    }
   }
   logger.LogInfo("GPS init OK");
 }
@@ -652,11 +695,11 @@ void initGps()
 void recordGps()
 {
   //
-  // power 45 second no record
-  if ((millis() - StartTime) < 30 * 1000)
+  // power 3 second no record
+  if ((millis() - StartTime) < 3 * 1000)
   {
     RaceStatus = _Starting;
-    sprintf(displayInfo.log, "%ld", 30 - (millis() - StartTime) / 1000);
+    sprintf(displayInfo.log, "%ld", 3 - (millis() - StartTime) / 1000);
     return;
   }
 
@@ -692,11 +735,10 @@ void recordGps()
 
   if (!gps.location.isValid())
   {
-    sprintf(displayInfo.log, "GPS notValid");
+    sprintf(displayInfo.log, "GPS Search ...");
     KMPH = 0;
     if (RaceStatus == _Recording)
     {
-
       RaceStatus = _RecordToSleep;
       logger.LogInfo("GPS not valid form _Recording to _RecordToSleep");
     }
@@ -707,8 +749,6 @@ void recordGps()
   if (gps.satellites.isValid() && last_satellites != gps.satellites.value())
   {
     last_satellites = gps.satellites.value();
-    // snprintf(logbuff, sizeof(logbuff), "satellites=%d", gps.satellites.value());
-    // logger.LogInfo(logbuff);
   }
 
   //
@@ -843,7 +883,6 @@ void setup()
 
   RaceStatus = _Setup;
   Serial.begin(9600);
-  initSD();
 
   initLed();
 
@@ -860,6 +899,7 @@ void setup()
   }
 
   initDisplay();
+  initSD();
 
   initWifi();
   initWebServer();

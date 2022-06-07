@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include <SPI.h>
+#include <SD.h>
 #include "SSD1306Wire.h"
 #include "SH1106Wire.h"
 #include "SDLogger.h"
@@ -12,10 +14,14 @@
 #define SCREEN_ADDRESS 0x3C
 static unsigned long lastDisplayTime = 0;
 
-SDLogger logger;
-SSD1306Wire display(0x3c, SDA, SCL); // 0.86
+const int chipSelect = D8;
 
-// SH1106Wire display(0x3c, SDA, SCL); // 1.3
+File myFile;
+
+SDLogger logger;
+// SSD1306Wire display(0x3c, SDA, SCL); // 0.96
+
+SH1106Wire display(0x3c, SDA, SCL); // 1.3
 
 void initDisplay()
 {
@@ -36,11 +42,66 @@ void showDisplay()
   display.display();
 }
 
+void initsd()
+{
+  Serial.print("initsd...");
+
+  // pinMode(D8, OUTPUT);
+
+  if (!SD.begin(chipSelect))
+  {
+    Serial.println("initialization failed!");
+    return;
+  }
+  Serial.println("initialization done.");
+
+  // open the file. note that only one file can be open at a time,
+  // so you have to close this one before opening another.
+  myFile = SD.open("test.txt", FILE_WRITE);
+
+  // if the file opened okay, write to it:
+  if (myFile)
+  {
+    Serial.print("Writing to test.txt...");
+    myFile.println("testing 1, 2, 3.");
+    // close the file:
+    myFile.close();
+    Serial.println("done.");
+  }
+  else
+  {
+    // if the file didn't open, print an error:
+    Serial.println("error opening test.txt");
+  }
+
+  // re-open the file for reading:
+  myFile = SD.open("test.txt");
+  if (myFile)
+  {
+    Serial.println("test.txt:");
+
+    // read from the file until there's nothing else in it:
+    while (myFile.available())
+    {
+      Serial.write(myFile.read());
+    }
+    // close the file:
+    myFile.close();
+  }
+  else
+  {
+    // if the file didn't open, print an error:
+    Serial.println("error opening test.txt");
+  }
+}
 void setup()
 {
   Serial.begin(9600);
+  initsd();
+  Serial.println("initialization done.");
 
   logger.Begin(false);
+
   initDisplay();
   // put your setup code here, to run once:
 }
