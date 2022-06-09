@@ -3,7 +3,7 @@
 #include <SoftwareSerial.h>
  
 TinyGPSPlus gps;
-SoftwareSerial gpsSerial(D3, D4); // RX, TX
+SoftwareSerial gpsSerial(D4, D3); // RX, TX
 char buffer[100];
  
 void printData() 
@@ -37,6 +37,8 @@ void setup()
 {
     Serial.begin(9600);
     gpsSerial.begin(57600);
+    delay(2000);
+    Serial.println("init ok");
 }
  
 void loop() 
