@@ -15,10 +15,12 @@
 #include "race.h"
 
 void showDisplay();
+void setFinishLinePos();
+void handleSetSpeed(AsyncWebServerRequest *request);
 
 #define LED D0 // Led in NodeMCU at pin GPIO16 (D0).
 
-#define OLED13
+//#define OLED13
 
 #define DEBUG
 
@@ -59,7 +61,7 @@ unsigned long lastDisplayTime = 0;
 
 int preRecordCd = 3;
 int recordtoLoopCd = 30;
-double RecordKmph = 4;
+double RecordKmph = 30;
 
 unsigned long lastdevtime = 0;
 double lastkmph = 0;
@@ -79,7 +81,7 @@ TDisplayInfo displayInfo;
 
 char *dTime()
 {
-  char *tmp = new char[12];
+  char *tmp = new char[21];
   unsigned long minutes = millis() / 60000;
   unsigned long seconds = (millis() / 1000) - ((millis() / 60000) * 60);
   unsigned long tenths = (millis() / 100) % 10;
@@ -340,11 +342,53 @@ void handleSetLocation(AsyncWebServerRequest *request)
     e["code"] = 1;
     e["msg"] = "set ok";
     file.close();
+
+    setFinishLinePos();
     serializeJson(doc, *response);
     request->send(response);
   }
 
   // Close the file
+}
+
+void handleSetSpeed(AsyncWebServerRequest *request)
+{
+
+  int speed = request->getParam("speed")->value().toInt();
+
+  if (speed == -1)
+  {
+
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    StaticJsonDocument<200> doc;
+
+    JsonObject e = doc.createNestedObject("e");
+    e["code"] = 1;
+    JsonObject data = doc.createNestedObject("data");
+    data["speed"] = RecordKmph;
+
+    serializeJson(doc, *response);
+    request->send(response);
+  }
+  else if (speed > 0)
+  {
+
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    StaticJsonDocument<200> doc;
+
+    RecordKmph = speed;
+
+    JsonObject e = doc.createNestedObject("e");
+    e["code"] = 1;
+    e["msg"] = "set ok";
+
+#if defined(DEBUG)
+    snprintf(logbuff, sizeof(logbuff), "[%s]SetSpeed %d %f", dTime(), speed, RecordKmph);
+    logger.LogInfo(logbuff);
+#endif
+    serializeJson(doc, *response);
+    request->send(response);
+  }
 }
 
 void initWifi()
@@ -469,6 +513,7 @@ void initWebServer()
   server.on("/getmcucfg", HTTP_GET, handleGetMcuCfg);
 
   server.on("/setlocation", HTTP_GET, handleSetLocation);
+  server.on("/setspeed", HTTP_GET, handleSetSpeed);
 
   server.begin();
 }
@@ -667,32 +712,8 @@ void initSD()
 
   logger.LogInfo("print RLDATA Directory done!");
 
-  File file = SD.open("/RLDATA/track.txt");
+  setFinishLinePos();
 
-  StaticJsonDocument<512> doc;
-  DeserializationError error = deserializeJson(doc, file);
-  if (!error)
-  {
-    // String output;
-    // serializeJson(doc, output);
-    // logger.LogInfo("track.txt " + output);
-
-    race.lat1 = atof(doc["lat1"]);
-    race.lng1 = atof(doc["lng1"]);
-    race.lat2 = atof(doc["lat2"]);
-    race.lng2 = atof(doc["lng2"]);
-
-    char tmp[100];
-    sprintf(tmp, "finishline %.8f %.8f %.8f %.8f", race.lat1, race.lng1, race.lat2, race.lng2);
-    logger.LogInfo(tmp);
-  }
-
-  file.close();
-
-  // if (dataFile)
-  // {
-  //   dataFile.close();
-  // }
   sprintf(displayInfo.log, "init sd card done!");
   showDisplay();
   delay(250);
@@ -1186,4 +1207,29 @@ void loop()
       recordGps();
     }
   }
+}
+
+void setFinishLinePos()
+{
+  File file = SD.open("/RLDATA/track.txt");
+
+  StaticJsonDocument<512> doc;
+  DeserializationError error = deserializeJson(doc, file);
+  if (!error)
+  {
+    // String output;
+    // serializeJson(doc, output);
+    // logger.LogInfo("track.txt " + output);
+
+    race.lat1 = atof(doc["lat1"]);
+    race.lng1 = atof(doc["lng1"]);
+    race.lat2 = atof(doc["lat2"]);
+    race.lng2 = atof(doc["lng2"]);
+
+    char tmp[100];
+    sprintf(tmp, "finishline %.8f %.8f %.8f %.8f", race.lat1, race.lng1, race.lat2, race.lng2);
+    logger.LogInfo(tmp);
+  }
+
+  file.close();
 }
