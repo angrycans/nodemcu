@@ -20,7 +20,7 @@ void handleSetSpeed(AsyncWebServerRequest *request);
 
 #define LED D0 // Led in NodeMCU at pin GPIO16 (D0).
 
-//#define OLED13
+#define OLED13
 
 #define DEBUG
 
