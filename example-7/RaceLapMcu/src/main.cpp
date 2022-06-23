@@ -37,6 +37,7 @@ SoftwareSerial ss(D4, D3); // RX, TX
 
 ADC_MODE(ADC_VCC);
 
+int debug = 0; // 是否是接了usb debug启动
 SDLogger logger;
 TinyGPSPlus gps;
 Race race;
@@ -1165,9 +1166,29 @@ void initLed()
 void setup()
 {
 
-  race.setStatus(d_Setup);
   Serial.begin(9600);
-  Serial.println("setup...");
+  //等待4s 连接
+  while (Serial.available() == 0 && millis() < 2000)
+    ;
+  if (Serial.available() > 0)
+  {
+    // If data is available, we enter here.
+    int test = Serial.read(); // We then clear the input buffer
+
+    Serial.println("USB DEBUG"); // Give feedback indicating mode
+
+    debug = 1; // Enable debug
+  }
+  else
+  {
+    //  Serial.println("USB DEBUG"); // Give feedback indicating mode
+
+    debug = 0; // Enable debug
+  }
+
+  race.setStatus(d_Setup);
+  Serial.print("setup...");
+  Serial.println(debug);
   initLed();
   Serial.println("initDisplay...");
   initDisplay();
@@ -1187,7 +1208,9 @@ void setup()
   initGps();
 
   race.setStatus(d_Looping);
-  logger.LogInfo("init ok\n");
+
+  snprintf(logbuff, sizeof(logbuff), "init ok debug=%d", debug);
+  logger.LogInfo(logbuff);
 }
 
 void loop()

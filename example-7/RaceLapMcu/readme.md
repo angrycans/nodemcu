@@ -6,5 +6,6 @@
 过终点算法
 https://github.com/rgmorales/MiniLapTimer/blob/master/LapTimerMini.ino
 https://github.com/tongo/OpenLapTimer/blob/master/Track.cpp
+https://github.com/JimEli/gps_lap_timer/blob/master/utility.h
 
 
