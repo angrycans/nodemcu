@@ -4,8 +4,8 @@
   Released with MIT.
 */
 
-#ifndef RACE_h
-#define RACE_h
+#ifndef RACE_hpp
+#define RACE_hpp
 
 #include "Arduino.h"
 #include <TinyGPS++.h>

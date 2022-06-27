@@ -12,7 +12,7 @@
 #include <TinyGPS++.h>
 #include <ArduinoJson.h>
 #include "SDLogger.h"
-#include "race.h"
+#include "race.hpp"
 
 void showDisplay();
 void setFinishLinePos();
@@ -25,9 +25,9 @@ void handleSetSpeed(AsyncWebServerRequest *request);
 #define DEBUG
 
 #if defined(OLED13)
-SH1106Wire display(0x3c, SDA, SCL); // 1.3 SH1106
+SH1106Wire display(0x3c, SDA, SCL); // 1.3 SH1106 d2 d1
 #else
-SSD1306Wire display(0x3c, SDA, SCL); // 0.96 ssd1306
+SSD1306Wire display(0x3c, SDA, SCL); // 0.96 ssd1306 d2 d1
 #endif
 //
 
@@ -771,6 +771,7 @@ void recordGps()
     int second = gps.time.second();
     int csecond = gps.time.centisecond();
     double deg = gps.course.deg();
+    int satls = gps.satellites.value();
 
     if (race.last_gps.location.lat() == lat && race.last_gps.location.lng() == lng)
     {
@@ -820,7 +821,7 @@ void recordGps()
     snprintf(buffer, sizeof(buffer),
              "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%lu",
              year,
-             month, day, hour, minute, second, csecond, lat, lng, altitude, KMPH, deg, millis());
+             month, day, hour, minute, second, csecond, lat, lng, altitude, KMPH, deg, millis(), satls);
 
     if (B_SD)
     {
@@ -984,179 +985,6 @@ void recordGps()
     break;
   }
 }
-
-// void recordGps1()
-// {
-
-//   // sleep cd time
-//   if (RaceStatus == _RecordToSleep)
-//   {
-//     int sleep_t = (millis() - lastSpeedLimitTime) - SleepCD * 1000;
-//     // logger.LogInfo("..%u..%d..%T..%d", (millis() - lastSpeedLimitTime), (millis() - lastSpeedLimitTime) - SleepCD * 1000, (millis() - lastSpeedLimitTime) - SleepCD * 1000 > 0, sleep_t);
-//     if (sleep_t > 0)
-//     {
-
-//       if (dataFile)
-//       {
-//         snprintf(logbuff, sizeof(logbuff), "close DataFileName %s", DataFileName);
-//         logger.LogInfo(logbuff);
-//         dataFile.close();
-//         strcpy(DataFileName, "");
-//       }
-
-//       sprintf(displayInfo.log, "Sleep ,speed=%0.2f", KMPH);
-
-//       RaceStatus = _Sleep;
-//       logger.LogInfo("CD ok,form _RecordToSleep to _Sleep");
-//     }
-//     else
-//     {
-
-//       // logger.LogInfo("speed = %D cd=%d", KMPH, (millis() - lastSpeedLimitTime) / 1000);
-
-//       sprintf(displayInfo.log, "speed = %0.2f cd= %ld", KMPH, (millis() - lastSpeedLimitTime) / 1000);
-//     }
-//   }
-
-//   if (!gps.location.isValid())
-//   {
-//     sprintf(displayInfo.log, "GPS Search ...");
-//     KMPH = 0;
-//     if (RaceStatus == _Recording)
-//     {
-//       RaceStatus = _RecordToSleep;
-//       logger.LogInfo("GPS not valid form _Recording to _RecordToSleep");
-//     }
-//     // return;
-//   }
-
-//   // logger.LogInfo("recordGps %T %T %T", gps.location.isValid(), gps.location.isUpdated()), gps.satellites.isValid();
-//   if (gps.satellites.isValid() && last_satellites != gps.satellites.value())
-//   {
-//     last_satellites = gps.satellites.value();
-//   }
-
-//   //
-//   if (gps.location.isUpdated())
-//   // if (gps.location.isValid())
-//   {
-//     double lat = gps.location.lat();
-//     double lng = gps.location.lng();
-//     double altitude = gps.altitude.meters();
-//     KMPH = gps.speed.kmph();
-//     int year = gps.date.year();
-//     int month = gps.date.month();
-//     int day = gps.date.day();
-//     int hour = gps.time.hour();
-//     int minute = gps.time.minute();
-//     int second = gps.time.second();
-//     int csecond = gps.time.centisecond();
-
-//     if (last_lat == lat && last_lng == lng)
-//     {
-//       return;
-//     }
-//     snprintf(buffer, sizeof(buffer),
-//              "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%lu",
-//              year,
-//              month, day, hour, minute, second, csecond, lat, lng, altitude, KMPH, millis());
-
-//     last_lat = lat;
-//     last_lng = lng;
-
-//     // logger.LogInfo(buffer);
-
-//     // gps init datetime not correct
-//     if (year < 2022)
-//     {
-//       return;
-//     }
-//     /*
-
-//     if (lastStartTime == 0)
-//     {
-//       lastStartTime = millis();
-//     }
-
-//     long diff = millis() - lastStartTime;
-
-//     if (diff >= 0 && diff < 20000)
-//     {
-//       KMPH = 21.0;
-//     }
-//     else if (diff > 20000 && diff < 35000)
-//     {
-//       KMPH = 0.5;
-//     }
-//     else if (diff > 35000 && diff < 58000)
-//     {
-//       KMPH = 30;
-//     }
-//     else if (diff > 58000 && diff < 65000)
-//     {
-//       KMPH = 2;
-//     }
-//     else if (diff > 65000)
-//     {
-//       KMPH = 5;
-//       lastStartTime = millis();
-//     }
-
-//     if (lastkmph != KMPH)
-//     {
-//       logger.LogInfo("kmph from %D to %D", lastkmph, KMPH);
-//       lastkmph = KMPH;
-//     }
-// */
-//     if (B_SD)
-//     {
-
-//       if (KMPH - RecordKmph > 0)
-//       {
-//         if (RaceStatus != _Recording)
-//         {
-//           snprintf(logbuff, sizeof(logbuff), "from %d into _Recording", RaceStatus);
-//           logger.LogInfo(logbuff);
-//           RaceStatus = _Recording;
-//         }
-
-//         lastSpeedLimitTime = millis();
-
-//         if (!dataFile)
-//         {
-//           if (strcmp(DataFileName, "") == 0)
-//           {
-//             sprintf(DataFileName, "%sRL%04d%02d%02d%02d%02d%02d.txt", DataFileDir, year, month, day, hour, minute, second);
-//           }
-//           snprintf(logbuff, sizeof(logbuff), "new DataFileName recording %s", DataFileName);
-//           logger.LogInfo(logbuff);
-//           dataFile = SD.open(DataFileName, FILE_WRITE);
-//         }
-//         if (dataFile)
-//         {
-//           dataFile.println(buffer);
-//           dataFile.flush();
-//         }
-
-//         // logger.LogInfo(buffer);
-//       }
-//       else
-//       {
-
-//         if (RaceStatus == _Recording)
-//         {
-//           RaceStatus = _RecordToSleep;
-//           logger.LogInfo("speed <limit form _RecordToSleep to _Sleep");
-//         }
-//         if (dataFile && RaceStatus == _RecordToSleep)
-//         {
-//           dataFile.println(buffer);
-//           dataFile.flush();
-//         }
-//       }
-//     }
-//   }
-// }
 
 void initLed()
 {
