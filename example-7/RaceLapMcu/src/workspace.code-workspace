@@ -10,6 +10,14 @@
 		{
 			"name": "oled1.3",
 			"path": "../../../example-8/oled1.3"
+		},
+		{
+			"name": "example-ublox-tools",
+			"path": "../../../example-ublox-tools"
+		},
+		{
+			"name": "example-poweroff",
+			"path": "../../../example-poweroff"
 		}
 	],
 	"settings": {
