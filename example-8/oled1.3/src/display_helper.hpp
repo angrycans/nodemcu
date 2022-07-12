@@ -19,10 +19,14 @@ SSD1306Wire display(0x3c, SDA, SCL); // 0.96 ssd1306 d2 d1
 
 OLEDDisplayUi ui(&display);
 
+String ErrInfo;
+
 String formatMs(unsigned long milli);
 void drawWifi(OLEDDisplay *display, int x, int y);
 void drawBattery(OLEDDisplay *display, int x, int y, int n);
 void drawSatles(OLEDDisplay *display, int x, int y, int n);
+void drawErrInfo(OLEDDisplay *display, int x, int y, int n);
+
 void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y);
 void retFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y);
 void lapFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y);
@@ -81,25 +85,11 @@ void drawWifi(OLEDDisplay *display, int x, int y)
 
 void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y)
 {
-
-  //   int screenW = 128;
-  // int screenH = 64;
-  // int clockCenterX = screenW / 2;
-  // int clockCenterY = ((screenH - 16) / 2); // top yellow part is 16 px height
   drawBattery(display, 104, 1, 100);
 
-  // drawBattery(0, 48, 0);
   drawSatles(display, 0, 1, 9);
 
-  // drawWifi(display, 80, -1);
-  //  drawSatles(0, 16, 6);
-  //  drawSatles(0, 32, 9);
-  //  drawSatles(0, 48, 12);
-
   display->drawLine(0, 12, 0 + 128, 12);
-
-  // String timenow = String(millis() / 60000) + ":" + twoDigits(millis() / 1000) + "." + twoDigits(millis());
-
   display->setTextAlignment(TEXT_ALIGN_CENTER);
   display->setFont(ArialMT_Plain_10);
   display->drawString(64, 0, "Rec");

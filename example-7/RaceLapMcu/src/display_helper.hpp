@@ -19,18 +19,34 @@ SSD1306Wire display(0x3c, SDA, SCL); // 0.96 ssd1306 d2 d1
 
 OLEDDisplayUi ui(&display);
 
+String ErrInfo = "";
+
 String formatMs(unsigned long milli);
 void drawWifi(OLEDDisplay *display, int x, int y);
 void drawBattery(OLEDDisplay *display, int x, int y, int n);
 void drawSatles(OLEDDisplay *display, int x, int y, int n);
+void drawErrInfo(OLEDDisplay *display, int x, int y, int n);
+
+void logoFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y);
 void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y);
 void retFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y);
 void lapFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y);
 
 void initDisplay();
+void showDisplay();
 
-FrameCallback frames[] = {clockFrame, retFrame, lapFrame};
-int frameCount = 3;
+FrameCallback frames[] = {logoFrame, clockFrame, retFrame, lapFrame};
+int frameCount = 4;
+
+void setDisplayFrame(int f)
+{
+  ui.switchToFrame(f);
+}
+void showDisplay()
+{
+
+  ui.update();
+}
 
 void initDisplay()
 {
@@ -79,54 +95,83 @@ void drawWifi(OLEDDisplay *display, int x, int y)
   display->drawXbm(x, y, 12, 12, wifi_logo);
 }
 
+void logoFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y)
+{
+  display->setFont(ArialMT_Plain_24);
+  display->setTextAlignment(TEXT_ALIGN_CENTER);
+  display->drawString(64 + x, 12 + y, "RaceLap");
+}
+
 void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y)
 {
 
-  //   int screenW = 128;
-  // int screenH = 64;
-  // int clockCenterX = screenW / 2;
-  // int clockCenterY = ((screenH - 16) / 2); // top yellow part is 16 px height
+  if (ErrInfo != "")
+  {
+    display->setFont(ArialMT_Plain_10);
+    display->setTextAlignment(TEXT_ALIGN_LEFT);
+    display->drawString(x, 12 + y, ErrInfo);
+    return;
+  }
   drawBattery(display, 104, 1, 100);
 
-  // drawBattery(0, 48, 0);
-  drawSatles(display, 0, 1, 9);
-
-  // drawWifi(display, 80, -1);
-  //  drawSatles(0, 16, 6);
-  //  drawSatles(0, 32, 9);
-  //  drawSatles(0, 48, 12);
+  drawSatles(display, 0, 1, gps.satellites.isValid() ? gps.satellites.value() : -1);
 
   display->drawLine(0, 12, 0 + 128, 12);
-
-  // String timenow = String(millis() / 60000) + ":" + twoDigits(millis() / 1000) + "." + twoDigits(millis());
-
   display->setTextAlignment(TEXT_ALIGN_CENTER);
   display->setFont(ArialMT_Plain_10);
-  display->drawString(64, 0, "Rec");
+  if (strcmp(DataFileName, "") > 0 && dataFile)
+  {
+    (millis() / 1000) % 2 ? display->drawString(64, 0, "Rec") : display->drawString(64, 0, "");
+  }
+  // digitalWrite(LED_BUILTIN, (millis() / 1000) % 2);
+  if (gps.satellites.value() - 3 < 0)
+  {
+
+    display->setTextAlignment(TEXT_ALIGN_CENTER);
+    display->setFont(ArialMT_Plain_16);
+    (millis() / 1000) % 2 ? display->drawString(64 + x, 32 + y, "GPS Search...") : display->drawString(64 + x, 32 + y, "");
+
+    return;
+  }
+
+  //距离终点线5KM内 没有赛道信息.
+  if (race.nearTarck(gps.location.lat(), gps.location.lng()))
+  {
+    (millis() / 1000) % 2 ? display->drawString(64 + x, 32 + y, "near no track") : display->drawString(64 + x, 32 + y, "");
+
+    return;
+  }
+
   display->setFont(ArialMT_Plain_10);
   display->setTextAlignment(TEXT_ALIGN_LEFT);
-  display->drawString(x, 20 + y, "LAP");
+
+  if (!race.nearTarck(gps.location.lat(), gps.location.lng()))
+  {
+    (millis() / 1000) % 2 ? display->drawString(x, 20 + y, "no track") : display->drawString(+x, 20 + y, "");
+  }
+  else
+  {
+    display->drawString(x, 20 + y, "LAP");
+    display->setFont(ArialMT_Plain_16);
+    display->drawString(22 + x, 16 + y, String(race.totalLap));
+  }
+
   display->setFont(ArialMT_Plain_16);
-  display->drawString(22 + x, 16 + y, "5");
   display->setTextAlignment(TEXT_ALIGN_RIGHT);
-  display->drawString(104 + x, 16 + y, "119");
+  display->drawString(104 + x, 16 + y, String(KMPH, 0));
   display->setTextAlignment(TEXT_ALIGN_LEFT);
   display->setFont(ArialMT_Plain_10);
   display->drawString(105 + x, 21 + y, "KMH");
 
   display->setTextAlignment(TEXT_ALIGN_CENTER);
   display->setFont(ArialMT_Plain_24);
-
-  display->drawString(64 + x, 32 + y, formatMs(millis()));
+  display->drawString(64 + x, 32 + y, formatMs(0));
+  // display->drawString(64 + x, 32 + y, formatMs(millis()));
 }
 
 void retFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y)
 {
-  // drawBattery(display, 100, 0, 100);
-  // drawSatles(display, 0, 0, 12);
-  // display->drawLine(0, 14, 0 + 128, 14);
 
-  // display->setTextAlignment(TEXT_ALIGN_CENTER);
   display->setTextAlignment(TEXT_ALIGN_LEFT);
   display->setFont(ArialMT_Plain_10);
   // display->drawString(0 + x, 0 + y, "LOG");
@@ -243,19 +288,26 @@ void drawBattery(OLEDDisplay *display, int x, int y, int n)
 }
 void drawSatles(OLEDDisplay *display, int x, int y, int n)
 {
-
   display->drawLine(x, y, x + 4, y);
   display->drawLine(x, y, x + 2, y + 3);
   display->drawLine(x + 4, y, x + 2, y + 3);
   display->drawLine(x + 2, y + 1, x + 2, y + 9);
 
+  if (n == -1)
+  {
+    display->drawLine(x + 5, y + 4, x + 10, y + 9);
+    display->drawLine(x + 10, y + 4, x + 5, y + 9);
+    return;
+  }
+
   switch (n / 3)
   {
   case 0:
     display->drawRect(x + 5, y + 6, 3, 4);
-    display->drawRect(x + 5 + 3 + 1, y + 6 - 2, 3, 4 + 2);
-    display->drawRect(x + 5 + (3 + 1) * 2, y + 6 - 2 * 2, 3, 4 + 2 * 2);
-    display->drawRect(x + 5 + (3 + 1) * 3, y + 6 - 2 * 3, 3, 4 + 2 * 3);
+    // display->drawRect(x + 5 + 3 + 1, y + 6 - 2, 3, 4 + 2);
+    // display->drawRect(x + 5 + (3 + 1) * 2, y + 6 - 2 * 2, 3, 4 + 2 * 2);
+    // display->drawRect(x + 5 + (3 + 1) * 3, y + 6 - 2 * 3, 3, 4 + 2 * 3);
+    return;
     break;
 
   case 1:

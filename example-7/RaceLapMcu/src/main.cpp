@@ -21,12 +21,6 @@
 
 #define DEBUG
 
-#if defined(OLED13)
-SH1106Wire display(0x3c, SDA, SCL); // 1.3 SH1106 d2 d1
-#else
-SSD1306Wire display(0x3c, SDA, SCL); // 0.96 ssd1306 d2 d1
-#endif
-
 //
 #if defined(NEO_M10)
 const uint8_t UBLOX_INIT[] PROGMEM = {
@@ -46,13 +40,9 @@ const uint8_t UBLOX_INIT[] PROGMEM = {
     0x00, 0x00, 0x07, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0xDD, 0xC3,
     0xb5, 0x62, 0x06, 0x00, 0x01, 0x00, 0x01, 0x08, 0x22};
 SoftwareSerial ss(D4, D0); // RX, TX
-
 #else
-SoftwareSerial ss(D4, D0);           // RX, TX
+SoftwareSerial ss(D4, D0); // RX, TX
 #endif
-
-void showDisplay();
-void setFinishLinePos();
 
 int debug = 0; // 是否是接了usb debug启动
 SDLogger logger;
@@ -65,17 +55,14 @@ File dataFile;
 char DataFileName[64] = ""; //"RL2022-05-18_14.txt";
 char DataFileDir[24] = "/RLDATA/";
 
-bool B_SD = false;       // SD Card status
-bool IS_DISPLAY = false; //  OLED display status
+bool B_SD = false; // SD Card status
 
 // SD Reader CS pin
 const int chipSelect = 15;
 
-char buffer[100];
+char buffer[120];
 char lastbuffer[100];
 char logbuff[100];
-
-unsigned long lastDisplayTime = 0;
 
 int preRecordCd = 3;
 int recordtoLoopCd = 30;
@@ -83,19 +70,8 @@ double RecordKmph = 30;
 
 unsigned long lastdevtime = 0;
 double lastkmph = 0;
-double KMPH = 0;
-
-class TDisplayInfo
-{
-public:
-  char title[30];
-  char log[100];
-  char status[20];
-};
-
-// typedef struct TDisplayInfo DisplayInfo;
-
-TDisplayInfo displayInfo;
+double KMPH = 0; // current speed
+int totalLap = 0;
 
 char *dTime()
 {
@@ -109,23 +85,20 @@ char *dTime()
 }
 
 #include "webserver_help.hpp"
+#include "display_helper.hpp"
+
 void initWifi()
 {
 
   logger.LogInfo("init Wifi");
-  sprintf(displayInfo.log, "init Wifi...");
-  showDisplay();
-  delay(250);
-
+  // delay(250);
   const char *ssid = "RaceLap";      // Enter SSID here
   const char *password = "88888888"; // Enter Password here
   WiFi.softAP(ssid, password);
-  delay(250);
+  // delay(250);
   logger.LogInfo("Soft-AP IP address = ");
   logger.LogInfo(WiFi.softAPIP().toString().c_str());
-  sprintf(displayInfo.log, WiFi.softAPIP().toString().c_str());
-  showDisplay();
-  delay(250);
+  // delay(250);
 
   // Serial.print("DHCP status:");
   // Serial.println(wifi_softap_dhcps_status());
@@ -196,46 +169,14 @@ void printDirectory(File dir, int numTabs)
   }
 }
 
-void initDisplay()
+void showDisplay2()
 {
-  logger.LogInfo("init Display");
-
-  display.init();
-
-  IS_DISPLAY = true;
-  delay(250);
-
-  sprintf(displayInfo.title, "RaceLap  0.7");
-
-  logger.LogInfo("init Display ok");
-  // }
-}
-
-void showDisplay()
-{
-  // TRACE("showDisplay");
-  if (IS_DISPLAY)
-  {
-
+  /*
     display.clear();
 
     switch (race.getStatus().status)
     {
     case d_Looping:
-      char tmpbuff[100];
-      if (race.sessionActive)
-      {
-
-        sprintf(tmpbuff, "Best Session:%s", race.formatSessionTime(race.bestSessionTime).c_str());
-        display.drawString(0, 0, tmpbuff);
-
-        sprintf(tmpbuff, "total lap:%d best:%d", race.totolLap, race.bestLap);
-        display.drawString(0, 0, tmpbuff);
-        sprintf(tmpbuff, "maxspeed:%.2f", race.maxspeed);
-        display.drawString(0, 0, tmpbuff);
-
-        return;
-      }
 
       display.setFont(ArialMT_Plain_10);
 
@@ -314,28 +255,21 @@ void showDisplay()
       break;
     }
     display.display();
-  }
+    */
 }
 
 void initSD()
 {
   // // keep checking the SD reader for valid SD card/format
-  sprintf(displayInfo.log, "init SD card ...");
-  showDisplay();
-  delay(250);
+  delay(100);
   Serial.println("init SD Card");
 
   while (!SD.begin(chipSelect))
   {
     Serial.println("init SD Card Failed");
+    ErrInfo += "SD CARD FAILED\n";
+    showDisplay();
     B_SD = false;
-    sprintf(displayInfo.log, "init SD Card Failed");
-
-    if (millis() - lastDisplayTime > 500)
-    {
-      showDisplay();
-      lastDisplayTime = millis();
-    }
   }
 
   B_SD = true;
@@ -345,29 +279,29 @@ void initSD()
     Serial.println("RLDATA dir is created.");
   }
 
-  File root = SD.open("/RLDATA");
+  // File root = SD.open("/RLDATA");
 
-  printDirectory(root, 0);
+  // printDirectory(root, 0);
 
-  root.close();
+  // root.close();
 
-  logger.LogInfo("print RLDATA Directory done!");
+  // logger.LogInfo("print RLDATA Directory done!");
 
-  setFinishLinePos();
+  getTrack();
 
-  sprintf(displayInfo.log, "init sd card done!");
-  showDisplay();
-  delay(250);
+  // sprintf(displayInfo.log, "init sd card done!");
+  // showDisplay();
+  delay(100);
   logger.LogInfo("init sd card done!");
+  // ErrInfo += "sdcard init ok.\n";
+  showDisplay();
 }
 
 void initGps()
 {
-  logger.LogInfo("init GPS");
-  sprintf(displayInfo.log, "init GPS");
-  showDisplay();
 
-  delay(1000);
+  logger.LogInfo("init GPS");
+
 #if defined(NEO_M10)
   logger.LogInfo("init GPS NEO_M10");
   ss.begin(9600);
@@ -382,37 +316,36 @@ void initGps()
         ss.write(pgm_read_byte(UBLOX_INIT + i));
       }
 
-      delay(2000);
+      delay(1000);
       break;
     }
     delay(100);
     Serial.println("gpsSerial connet .");
   }
-  delay(100);
+  delay(250);
 
   logger.LogInfo("init GPS NEO_M10 end");
 #endif
 
-  delay(500);
+  delay(250);
   ss.begin(57600);
+
+  int at = millis();
+
   while (!ss.available())
   {
-    logger.LogInfo("GPS module invaild");
-    sprintf(displayInfo.log, "GPS module invaild");
-
-    if (millis() - lastDisplayTime > 500)
+    if (millis() - at > 5000)
     {
-      showDisplay();
-      lastDisplayTime = millis();
+      ErrInfo += "GPS init failed.\n";
+#if defined(DEBUG)
+      logger.LogInfo("init GPS failed.");
+#endif
+      break;
     }
   }
 #if defined(DEBUG)
   logger.LogInfo("init GPS ok");
 #endif
-  sprintf(displayInfo.log, "init GPS ok");
-
-  showDisplay();
-  delay(250);
 
   lastdevtime = 0;
 }
@@ -442,45 +375,47 @@ void recordGps()
     }
 
     //计算圈速
-    if (race.segmentsIntersect(lat, lng, race.last_gps.location.lat(), race.last_gps.location.lng(), race.lat1, race.lng1, race.lat2, race.lng2))
+    if (race.trackplan_size > 0)
     {
-#if defined(DEBUG)
-      snprintf(logbuff, sizeof(logbuff), "segmentsIntersect checked");
-      logger.LogInfo(logbuff);
-#endif
-      if (!race.sessionActive)
+      if (race.segmentsIntersect(lat, lng, race.last_gps.location.lat(), race.last_gps.location.lng(), race.trackplan[race.trackplan_size - 1][0], race.trackplan[race.trackplan_size - 1][1], race.trackplan[race.trackplan_size - 1][2], race.trackplan[race.trackplan_size - 1][3]))
       {
-        race.sessionActive = true;
-        race.sessionTime = millis();
-        race.totolLap = 0;
-        race.maxspeed = 0;
-      }
-      else
-      {
-        race.currentLap += 1;
-        race.totolLap += 1;
-        if (KMPH > race.maxspeed)
-        {
-          race.maxspeed = KMPH;
-        }
-        // this is the best or first lap
-        if ((race.bestSessionTime > millis() - race.sessionTime) || (race.bestSessionTime == 0))
-        { // test for session time and also for the very first lap, when bestSesstionTime is 0
-          race.bestSessionTime = millis() - race.sessionTime;
-          race.bestLap = race.currentLap;
-        }
-
 #if defined(DEBUG)
-        snprintf(logbuff, sizeof(logbuff), "[%s]currlap %d,totol %d,maxspeed:%f,bestlap:%d,bestsession:%lu", dTime(), race.currentLap, race.totolLap, race.maxspeed, race.bestLap, race.bestSessionTime);
+        snprintf(logbuff, sizeof(logbuff), "segmentsIntersect checked");
         logger.LogInfo(logbuff);
 #endif
+        if (!race.sessionActive)
+        {
+          race.sessionActive = true;
+          race.sessionTime = millis();
+          race.totalLap = 0;
+          race.maxspeed = 0;
+        }
+        else
+        {
+          race.currentLap += 1;
+          race.totalLap += 1;
+          if (KMPH > race.maxspeed)
+          {
+            race.maxspeed = KMPH;
+          }
+          // this is the best or first lap
+          if ((race.bestSessionTime > millis() - race.sessionTime) || (race.bestSessionTime == 0))
+          { // test for session time and also for the very first lap, when bestSesstionTime is 0
+            race.bestSessionTime = millis() - race.sessionTime;
+            race.bestLap = race.currentLap;
+          }
+
+#if defined(DEBUG)
+          snprintf(logbuff, sizeof(logbuff), "[%s]currlap %d,totol %d,maxspeed:%f,bestlap:%d,bestsession:%lu", dTime(), race.currentLap, race.totalLap, race.maxspeed, race.bestLap, race.bestSessionTime);
+          logger.LogInfo(logbuff);
+#endif
+        }
+        // reset the sessionTime
+        race.sessionTime = millis();
       }
-      // reset the sessionTime
-      race.sessionTime = millis();
+
+      race.last_gps = gps;
     }
-
-    race.last_gps = gps;
-
     snprintf(buffer, sizeof(buffer),
              "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%lu,%d",
              year,
@@ -659,24 +594,25 @@ void setup()
 {
 
   Serial.begin(9600);
-
   race.setStatus(d_Setup);
   Serial.print("setup...");
   Serial.println(debug);
   initLed();
   Serial.println("initDisplay...");
   initDisplay();
+  setDisplayFrame(0);
+  showDisplay();
 
   Serial.println("init LittleFS filesystem...");
   if (!LittleFS.begin())
   {
     logger.LogInfo("could not mount LittleFS filesystem...");
-    delay(2000);
-    ESP.restart();
+    delay(100);
+    ErrInfo += "GPS init failed.\n";
+    // ESP.restart();
   }
 
   initSD();
-
   initWifi();
   initWebServer();
   initGps();
@@ -685,18 +621,16 @@ void setup()
 
   snprintf(logbuff, sizeof(logbuff), "init ok debug=%d", debug);
   logger.LogInfo(logbuff);
+
+  setDisplayFrame(1);
+  showDisplay();
+  delay(250);
 }
 
 void loop()
 {
   digitalWrite(LED_BUILTIN, (millis() / 1000) % 2);
-
-  if (millis() - lastDisplayTime > 500)
-  {
-    showDisplay();
-    lastDisplayTime = millis();
-  }
-
+  showDisplay();
   while (ss.available() > 0)
   {
     if (gps.encode(ss.read()))
@@ -704,29 +638,4 @@ void loop()
       recordGps();
     }
   }
-}
-
-void setFinishLinePos()
-{
-  File file = SD.open("/RLDATA/track.txt");
-
-  StaticJsonDocument<512> doc;
-  DeserializationError error = deserializeJson(doc, file);
-  if (!error)
-  {
-    // String output;
-    // serializeJson(doc, output);
-    // logger.LogInfo("track.txt " + output);
-
-    race.lat1 = atof(doc["lat1"]);
-    race.lng1 = atof(doc["lng1"]);
-    race.lat2 = atof(doc["lat2"]);
-    race.lng2 = atof(doc["lng2"]);
-
-    char tmp[100];
-    sprintf(tmp, "finishline %.8f %.8f %.8f %.8f", race.lat1, race.lng1, race.lat2, race.lng2);
-    logger.LogInfo(tmp);
-  }
-
-  file.close();
 }

@@ -32,16 +32,19 @@ class Race
 private:
   RaceStatuS r_status;
   int last_satellites = 0;
+
   // bool __dev__ = false;
   // SDLogger *logger;
 
 public:
+  // float lat1;
+  // float lng1;
+  // float lat2;
+  // float lng2;
+  int trackplan_size = 0;
+  float **trackplan;
   unsigned long lastGpsUpdateTimer = 0;
   TinyGPSPlus last_gps;
-  float lat1;
-  float lng1;
-  float lat2;
-  float lng2;
 
   bool sessionActive = false;
 
@@ -50,7 +53,7 @@ public:
 
   int currentLap = 0;
   int bestLap = 0;
-  int totolLap = 0;
+  int totalLap = 0;
   double maxspeed = 0;
 
   Race()
@@ -107,7 +110,7 @@ public:
 
     currentLap = 0;
     bestLap = 0;
-    totolLap = 0;
+    totalLap = 0;
     maxspeed = 0;
   }
 
@@ -140,11 +143,57 @@ public:
       return String(minutes) + ":" + String(seconds) + ":" + String(tenths);
   }
 
-  // void setDev(SDLogger *_logger)
-  // {
-  //   __dev__ = true;
-  //   logger = _logger;
-  // }
+  void setTrace(float arr[][4], int _size)
+  {
+    // lat1 = atof(doc["lat1"]);
+    // lng1 = atof(doc["lng1"]);
+    // lat2 = atof(doc["lat2"]);
+    // lng2 = atof(doc["lng2"]);
+    // Serial.print[doc["trackplan"]]
+    trackplan_size = _size;
+    trackplan = new float *[_size];
+
+    for (int i = 0; i < trackplan_size; i++)
+    {
+      trackplan[i] = new float[4];
+      trackplan[i][0] = arr[i][0];
+      trackplan[i][1] = arr[i][1];
+      trackplan[i][2] = arr[i][2];
+      trackplan[i][3] = arr[i][3];
+      char tmp1[1000];
+      sprintf(tmp1, "%d %f %f %f %f", i, trackplan[i][0], trackplan[i][1], trackplan[i][2], trackplan[i][3]);
+      Serial.println(tmp1);
+    }
+  }
+
+  bool nearTarck(float lat, float lon)
+  {
+
+    if (trackplan_size > 0)
+    {
+      unsigned long distanceKmToTarck =
+          (unsigned long)TinyGPSPlus::distanceBetween(
+              lat,
+              lon,
+              trackplan[trackplan_size - 1][0],
+              trackplan[trackplan_size - 1][1]) /
+          1000;
+
+      if ((distanceKmToTarck - 5) < 0)
+      {
+        return true;
+      }
+      else
+      {
+        return false;
+      }
+    }
+    else
+    {
+
+      return false;
+    }
+  }
 };
 
 #endif

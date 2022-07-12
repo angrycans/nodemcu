@@ -5,6 +5,7 @@ AsyncWebServer server(80);
 
 String file_size(int bytes);
 String ListDirectoryJSON();
+void getTrack();
 void notFound(AsyncWebServerRequest *request);
 void handleGetMcuCfg(AsyncWebServerRequest *request);
 void handleSysinfo(AsyncWebServerRequest *request);
@@ -264,7 +265,7 @@ void handleSetLocation(AsyncWebServerRequest *request)
     e["msg"] = "set ok";
     file.close();
 
-    setFinishLinePos();
+    // setFinishLinePos();
     serializeJson(doc, *response);
     request->send(response);
   }
@@ -310,6 +311,69 @@ void handleSetSpeed(AsyncWebServerRequest *request)
     serializeJson(doc, *response);
     request->send(response);
   }
+}
+
+void getTrack()
+{
+  File file = SD.open("/RLDATA/track.json");
+
+  StaticJsonDocument<1024> doc;
+  DeserializationError error = deserializeJson(doc, file);
+  if (!error)
+  {
+    // String output;
+    // serializeJson(doc, output);
+    // logger.LogInfo("track.txt " + output);
+
+    // race.lat1 = atof(doc["lat1"]);
+    // race.lng1 = atof(doc["lng1"]);
+    // race.lat2 = atof(doc["lat2"]);
+    // race.lng2 = atof(doc["lng2"]);
+
+    // var trackplan = [
+    //   [ 31.934493, 118.986260, 31.934659, 118.986156 ],
+    //   [ 31.935279, 118.986374, 31.935097, 118.986298 ],
+    //   [ 31.934911, 118.985879, 31.934865, 118.986073 ],
+    //   [ 31.934722, 118.985327, 31.934918, 118.985345 ],
+    //   [ 31.935798, 118.986160, 31.935994, 118.986176 ],
+    //   [ 31.935468, 118.986605, 31.935468, 118.986803 ],
+    //   [ 31.934884, 118.987121, 31.934764, 118.987279 ],
+    //   [ 31.934679, 118.986682, 31.934449, 118.986870 ]
+    // ]
+
+    // // char tmp[1000];
+    // Serial.println();
+    // serializeJson(doc["trackplan"], Serial);
+    // Serial.println();
+
+    JsonArray array = doc["trackplan"];
+
+    int size = array.size();
+
+      float trackplan[size][4];
+
+    for (int i = 0; i < size; i++)
+    {
+
+      JsonArray arr = array[i];
+
+      trackplan[i][0] = arr[0].as<float>();
+      trackplan[i][1] = arr[1].as<float>();
+      trackplan[i][2] = arr[2].as<float>();
+      trackplan[i][3] = arr[3].as<float>();
+      // float lat1 = arr[0].as<float>;
+      // sprintf(tmp, "%d %f %f %f %f", i, arr[0].as<float>(), arr[1].as<float>(), arr[2].as<float>(), arr[3].as<float>());
+      // logger.LogInfo(tmp);
+    }
+
+    race.setTrace(trackplan, size);
+
+    // char tmp[100];
+    // sprintf(tmp, "finishline %.8f %.8f %.8f %.8f", race.lat1, race.lng1, race.lat2, race.lng2);
+    // logger.LogInfo(tmp);
+  }
+
+  file.close();
 }
 
 void initWebServer()
