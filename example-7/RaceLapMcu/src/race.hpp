@@ -9,6 +9,7 @@
 
 #include "Arduino.h"
 #include <TinyGPS++.h>
+#include <LinkedList.h>
 #include "SDLogger.h"
 
 enum DeviesStatus
@@ -27,12 +28,22 @@ struct RaceStatuS
   unsigned long timer = 0;
 };
 
+class LapInfo
+{
+public:
+  int maxspeed;
+  int avespeed;
+  unsigned long time;
+  unsigned long difftime;
+  // bool isbest;
+};
+
 class Race
 {
 private:
   RaceStatuS r_status;
   int last_satellites = 0;
-
+  ESPLinkedList<LapInfo> *lapInfoList;
   // bool __dev__ = false;
   // SDLogger *logger;
 
@@ -55,17 +66,40 @@ public:
   int bestLap = 0;
   int totalLap = 0;
   double maxspeed = 0;
+  double avespeed = 0;
 
   Race()
   {
     r_status.status = d_Setup;
     r_status.timer = millis();
+    lapInfoList = new ESPLinkedList<LapInfo>();
   }
 
   void setStatus(DeviesStatus _status)
   {
     r_status.status = _status;
     r_status.timer = millis();
+
+    switch (_status)
+    {
+    case d_Recording:
+
+      sessionActive = true;
+      sessionTime = millis();
+      totalLap = 0;
+      maxspeed = 0;
+      avespeed = 0;
+      bestLap=0;
+      bestSessionTime = 0;
+
+      break;
+    case d_Looping:
+
+      break;
+
+    default:
+      break;
+    }
 
     // if ()
   }
@@ -114,35 +148,6 @@ public:
     maxspeed = 0;
   }
 
-  boolean segmentsIntersect(float lat1, float lon1, float lat2, float lon2, float finishLineLat1, float finishLineLon1, float finishLineLat2, float finishLineLon2)
-  {
-    // does line(p1, p2) intersect line(p3, p4)
-    float fDeltaX = lat2 - lat1;
-    float fDeltaY = lon2 - lon1;
-    float da = finishLineLat2 - finishLineLat1;
-    float db = finishLineLon2 - finishLineLon1;
-    if ((da * fDeltaY - db * fDeltaX) == 0)
-    {
-      // The segments are parallel
-      return false;
-    }
-    float s = (fDeltaX * (finishLineLon1 - lon1) + fDeltaY * (lat1 - finishLineLat1)) / (da * fDeltaY - db * fDeltaX);
-    float t = (da * (lon1 - finishLineLon1) + db * (finishLineLat1 - lat1)) / (db * fDeltaX - da * fDeltaY);
-
-    return (s >= 0) && (s <= 1) && (t >= 0) && (t <= 1);
-  }
-
-  String formatSessionTime(unsigned long sessionTime)
-  {
-    unsigned long minutes = sessionTime / 60000;
-    unsigned long seconds = (sessionTime / 1000) - ((sessionTime / 60000) * 60);
-    unsigned long tenths = (sessionTime / 100) % 10;
-    if (seconds < 10)
-      return String(minutes) + ":0" + String(seconds) + ":" + String(tenths);
-    else
-      return String(minutes) + ":" + String(seconds) + ":" + String(tenths);
-  }
-
   void setTrace(float arr[][4], int _size)
   {
     // lat1 = atof(doc["lat1"]);
@@ -169,8 +174,10 @@ public:
   bool nearTarck(float lat, float lon)
   {
 
+    return false;
     if (trackplan_size > 0)
     {
+
       unsigned long distanceKmToTarck =
           (unsigned long)TinyGPSPlus::distanceBetween(
               lat,
@@ -192,6 +199,82 @@ public:
     {
 
       return false;
+    }
+  }
+
+  //计算圈速
+  void computerSession(TinyGPSPlus *_gps)
+  {
+    double lat = _gps->location.lat();
+    double lng = _gps->location.lng();
+    // double altitude = gps.altitude.meters();
+    double speed = _gps->speed.kmph();
+    // int year = gps.date.year();
+    // int month = gps.date.month();
+    // int day = gps.date.day();
+    // int hour = gps.time.hour();
+    // int minute = gps.time.minute();
+    // int second = gps.time.second();
+    // int csecond = gps.time.centisecond();
+    // double deg = gps.course.deg();
+    // int satls = gps.satellites.value();
+
+    double lapmaxspeed = 0;
+    double lapavespeed = 0;
+
+    //保存速度
+    if (speed > maxspeed)
+    {
+      maxspeed = speed;
+    }
+    if (speed > lapmaxspeed)
+    {
+      lapmaxspeed = speed;
+    }
+
+    avespeed = (avespeed + speed) / 2;
+    lapavespeed = (lapavespeed + speed) / 2;
+
+    if (trackplan_size > 0)
+    {
+      if (segmentsIntersect(lat, lng, last_gps.location.lat(), last_gps.location.lng(), trackplan[trackplan_size - 1][0], trackplan[trackplan_size - 1][1], trackplan[trackplan_size - 1][2], trackplan[trackplan_size - 1][3]))
+      {
+#if defined(DEBUG)
+        snprintf(logbuff, sizeof(logbuff), "segmentsIntersect checked");
+        logger.LogInfo(logbuff);
+#endif
+
+        LapInfo lapinfo;
+        lapinfo.time = millis();
+        lapinfo.difftime = lapInfoList->size() == 0 ? 0 : lapinfo.time - lapInfoList->get(currentLap).time;
+        lapinfo.maxspeed = lapmaxspeed;
+        lapinfo.avespeed = lapavespeed;
+        lapInfoList->add(lapinfo);
+
+        currentLap += 1;
+        totalLap += 1;
+
+        // this is the best or first lap
+        if ((bestSessionTime > lapinfo.time - sessionTime) || (bestSessionTime == 0))
+        { // test for session time and also for the very first lap, when bestSesstionTime is 0
+          bestSessionTime = lapinfo.time - sessionTime;
+          bestLap = currentLap;
+        }
+
+        // race.planInfoList.
+
+#if defined(DEBUG)
+        snprintf(logbuff, sizeof(logbuff), "[%s]currlap %d,totol %d,maxspeed:%f,bestlap:%d,bestsession:%lu", formatTime(millis()), race.currentLap, race.totalLap, race.maxspeed, race.bestLap, race.bestSessionTime);
+        logger.LogInfo(logbuff);
+#endif
+
+        // reset the session
+        sessionTime = millis();
+        lapmaxspeed = 0;
+        lapavespeed = 0;
+      }
+
+      last_gps = *_gps;
     }
   }
 };

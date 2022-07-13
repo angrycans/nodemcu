@@ -21,7 +21,6 @@ OLEDDisplayUi ui(&display);
 
 String ErrInfo = "";
 
-String formatMs(unsigned long milli);
 void drawWifi(OLEDDisplay *display, int x, int y);
 void drawBattery(OLEDDisplay *display, int x, int y, int n);
 void drawSatles(OLEDDisplay *display, int x, int y, int n);
@@ -40,10 +39,33 @@ int frameCount = 4;
 
 void setDisplayFrame(int f)
 {
-  ui.switchToFrame(f);
+
+  if (ui.getUiState()->currentFrame != f)
+  {
+    ui.switchToFrame(f);
+  }
 }
 void showDisplay()
 {
+
+  switch (race.getStatus().status)
+  {
+  case d_Looping:
+
+    if (race.sessionActive)
+    {
+      setDisplayFrame(2);
+    }
+
+    break;
+
+  case d_Recording:
+    setDisplayFrame(1);
+    break;
+
+  default:
+    break;
+  }
 
   ui.update();
 }
@@ -71,25 +93,6 @@ void initDisplay()
   ui.switchToFrame(0);
 }
 
-String formatMs(unsigned long milli)
-{
-  // hours
-  // int hr = (milli / (1000 * 60 * 60)) % 24;
-
-  // minutes
-  int min = (milli / (1000 * 60)) % 60;
-
-  // seconds
-  int sec = (milli / 1000) % 60;
-
-  // milliseconds
-  int ms = milli % 1000;
-
-  char t[10];
-  sprintf(t, "%02d:%02d.%03d", min, sec, ms);
-  return t;
-}
-
 void drawWifi(OLEDDisplay *display, int x, int y)
 {
   display->drawXbm(x, y, 12, 12, wifi_logo);
@@ -114,7 +117,7 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
   }
   drawBattery(display, 104, 1, 100);
 
-  drawSatles(display, 0, 1, gps.satellites.isValid() ? gps.satellites.value() : -1);
+  drawSatles(display, 0, 1, gps.satellites.isValid() ? (int)gps.satellites.value() : -1);
 
   display->drawLine(0, 12, 0 + 128, 12);
   display->setTextAlignment(TEXT_ALIGN_CENTER);
@@ -124,7 +127,12 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
     (millis() / 1000) % 2 ? display->drawString(64, 0, "Rec") : display->drawString(64, 0, "");
   }
   // digitalWrite(LED_BUILTIN, (millis() / 1000) % 2);
-  if (gps.satellites.value() - 3 < 0)
+
+  // #if defined(DEBUG)
+  //   snprintf(logbuff, sizeof(logbuff), "satellites d", gps.satellites.value());
+  //   Serial.println(logbuff);
+  // #endif
+  if ((int)gps.satellites.value() < 3)
   {
 
     display->setTextAlignment(TEXT_ALIGN_CENTER);
@@ -134,18 +142,11 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
     return;
   }
 
-  //距离终点线5KM内 没有赛道信息.
-  if (race.nearTarck(gps.location.lat(), gps.location.lng()))
-  {
-    (millis() / 1000) % 2 ? display->drawString(64 + x, 32 + y, "near no track") : display->drawString(64 + x, 32 + y, "");
-
-    return;
-  }
-
   display->setFont(ArialMT_Plain_10);
   display->setTextAlignment(TEXT_ALIGN_LEFT);
 
   if (!race.nearTarck(gps.location.lat(), gps.location.lng()))
+  // if (false)
   {
     (millis() / 1000) % 2 ? display->drawString(x, 20 + y, "no track") : display->drawString(+x, 20 + y, "");
   }
@@ -165,7 +166,8 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
 
   display->setTextAlignment(TEXT_ALIGN_CENTER);
   display->setFont(ArialMT_Plain_24);
-  display->drawString(64 + x, 32 + y, formatMs(0));
+
+  race.sessionActive ? display->drawString(64 + x, 32 + y, formatTime2(millis() - race.sessionTime)) : display->drawString(64 + x, 32 + y, formatTime2(0));
   // display->drawString(64 + x, 32 + y, formatMs(millis()));
 }
 
@@ -179,12 +181,18 @@ void retFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_
   display->drawString(64 + x, 0 + y, "2022/07/08 15:30");
   // display->setFont(ArialMT_Plain_10);
   display->setTextAlignment(TEXT_ALIGN_LEFT);
-  display->drawString(x, 12 + y, "LAP COUNT 10 BEST 4");
-  display->drawString(x, 24 + y, "BEST  00:56.381");
-  // display->setTextAlignment(TEXT_ALIGN_RIGHT);
-  display->drawString(x, 36 + y, "SESSION  8:32.980");
-  // display->setTextAlignment(TEXT_ALIGN_LEFT);
-  // display->setFont(ArialMT_Plain_10);
+
+  char buff[64];
+  sprintf(buff, "LAP COUNT %d BEST %d", race.totalLap, race.bestLap);
+  display->drawString(x, 12 + y, buff);
+
+  sprintf(buff, "BEST  %s", formatTime(race.bestSessionTime));
+  display->drawString(x, 24 + y, buff);
+
+  sprintf(buff, "SESSION  %s", formatTime(race.sessionTime));
+  display->drawString(x, 36 + y, buff);
+
+  sprintf(buff, "TOP %dKMH AVE %dKMH", (int)race.maxspeed, (int)race.avespeed);
   display->drawString(x, 48 + y, "TOP 189KMH AVE 98KMH");
 }
 

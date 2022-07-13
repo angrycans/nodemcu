@@ -305,7 +305,7 @@ void handleSetSpeed(AsyncWebServerRequest *request)
     e["msg"] = "set ok";
 
 #if defined(DEBUG)
-    snprintf(logbuff, sizeof(logbuff), "[%s]SetSpeed %d %f", dTime(), speed, RecordKmph);
+    snprintf(logbuff, sizeof(logbuff), "[%s]SetSpeed %d %f", formatTime(millis()), speed, RecordKmph);
     logger.LogInfo(logbuff);
 #endif
     serializeJson(doc, *response);
@@ -350,7 +350,7 @@ void getTrack()
 
     int size = array.size();
 
-      float trackplan[size][4];
+    float trackplan[size][4];
 
     for (int i = 0; i < size; i++)
     {

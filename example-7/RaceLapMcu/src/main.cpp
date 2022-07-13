@@ -12,6 +12,7 @@
 #include <TinyGPS++.h>
 #include <ArduinoJson.h>
 #include "SDLogger.h"
+#include "helper.hpp"
 #include "race.hpp"
 
 #define LED D0 // Led in NodeMCU at pin GPIO16 (D0).
@@ -21,7 +22,10 @@
 
 #define DEBUG
 
-//
+// #define _GPRMCterm   "GPRMC"
+// #define _GPGGAterm   "GPGGA"
+// #define _GNRMCterm   "GNRMC"
+// #define _GNGGAterm   "GNGGA"
 #if defined(NEO_M10)
 const uint8_t UBLOX_INIT[] PROGMEM = {
     // Rate (pick one)
@@ -32,7 +36,7 @@ const uint8_t UBLOX_INIT[] PROGMEM = {
     // 0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x24, // GxGGA off
     0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x2B, // GxGLL off
     0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x32, // GxGSA off
-    0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0x39, // GxGSV off
+    // 0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0x39, // GxGSV off
     // 0xB5,0x62,0x06,0x01,0x08,0x00,0xF0,0x04,0x00,0x00,0x00,0x00,0x00,0x01,0x04,0x40, // GxRMC off
     0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x05, 0x47, // GxVTG off
     // 57600
@@ -51,6 +55,8 @@ Race race;
 // gps_fix fix;
 
 File dataFile;
+
+File gpsFile;
 
 char DataFileName[64] = ""; //"RL2022-05-18_14.txt";
 char DataFileDir[24] = "/RLDATA/";
@@ -72,17 +78,6 @@ unsigned long lastdevtime = 0;
 double lastkmph = 0;
 double KMPH = 0; // current speed
 int totalLap = 0;
-
-char *dTime()
-{
-  char *tmp = new char[21];
-  unsigned long minutes = millis() / 60000;
-  unsigned long seconds = (millis() / 1000) - ((millis() / 60000) * 60);
-  unsigned long tenths = (millis() / 100) % 10;
-  sprintf(tmp, "%02lu:%02lu.%03lu", minutes, seconds, tenths);
-
-  return tmp;
-}
 
 #include "webserver_help.hpp"
 #include "display_helper.hpp"
@@ -169,95 +164,6 @@ void printDirectory(File dir, int numTabs)
   }
 }
 
-void showDisplay2()
-{
-  /*
-    display.clear();
-
-    switch (race.getStatus().status)
-    {
-    case d_Looping:
-
-      display.setFont(ArialMT_Plain_10);
-
-      if (gps.satellites.isValid())
-      {
-        sprintf(tmpbuff, "Sat:%d", gps.satellites.value());
-      }
-      else
-      {
-        sprintf(tmpbuff, "Sat:Unknow");
-      }
-      display.drawString(0, 0, tmpbuff);
-
-      if (gps.location.isValid() && gps.satellites.value() > 3)
-      {
-        sprintf(tmpbuff, "lat:%.8f lng:%.8f", gps.location.lat(), gps.location.lng());
-        display.drawString(0, 20, tmpbuff);
-        sprintf(tmpbuff, "speed:%.2f", gps.speed.kmph());
-        display.drawString(0, 40, tmpbuff);
-      }
-      else
-      {
-
-        if ((millis() / 1000) % 3 == 0)
-        {
-          display.drawString(0, 20, "Gps search.");
-        }
-        else if ((millis() / 1000) % 3 == 1)
-        {
-          display.drawString(0, 20, "Gps search..");
-        }
-        else
-        {
-          display.drawString(0, 20, "Gps search...");
-        }
-      }
-
-      break;
-    case d_Recording:
-      display.setFont(ArialMT_Plain_24);
-
-      // display.drawString(0, 20, race.getStatusName().c_str());
-      sprintf(displayInfo.status, "%d", (int)KMPH);
-      display.drawString(20, 0, displayInfo.status);
-
-      break;
-    case d_preRecord:
-      display.setFont(ArialMT_Plain_10);
-
-      // display.drawString(0, 20, race.getStatusName().c_str());
-      sprintf(displayInfo.status, "%s %d %0.2f", race.getStatusName().c_str(), preRecordCd - (int)((millis() - race.getStatus().timer) / 1000), KMPH);
-      display.drawString(0, 30, displayInfo.status);
-      break;
-    case d_RecordToLoop:
-      display.setFont(ArialMT_Plain_10);
-
-      // display.drawString(0, 20, race.getStatusName().c_str());
-      sprintf(displayInfo.status, "%s %d %0.2f", race.getStatusName().c_str(), recordtoLoopCd - (int)((millis() - race.getStatus().timer) / 1000), KMPH);
-      display.drawString(0, 30, displayInfo.status);
-      break;
-    default:
-      display.setFont(ArialMT_Plain_10);
-      display.drawString(0, 0, displayInfo.title);
-
-      sprintf(displayInfo.status, "%s %0.2f", race.getStatusName().c_str(), KMPH);
-      display.drawString(0, 30, displayInfo.status);
-      if (strcmp(DataFileName, "") != 0)
-      {
-        display.drawString(0, 40, DataFileName);
-      }
-
-      if (strcmp(displayInfo.log, "") != 0)
-      {
-        display.drawString(0, 50, displayInfo.log);
-      }
-      break;
-    }
-    display.display();
-    */
-}
-
 void initSD()
 {
   // // keep checking the SD reader for valid SD card/format
@@ -288,6 +194,13 @@ void initSD()
   // logger.LogInfo("print RLDATA Directory done!");
 
   getTrack();
+
+  gpsFile = SD.open("/RLDATA/gps.txt", FILE_WRITE);
+
+  if (gpsFile)
+  {
+    gpsFile.println("\n----------------------------");
+  }
 
   // sprintf(displayInfo.log, "init sd card done!");
   // showDisplay();
@@ -374,48 +287,8 @@ void recordGps()
       return;
     }
 
-    //计算圈速
-    if (race.trackplan_size > 0)
-    {
-      if (race.segmentsIntersect(lat, lng, race.last_gps.location.lat(), race.last_gps.location.lng(), race.trackplan[race.trackplan_size - 1][0], race.trackplan[race.trackplan_size - 1][1], race.trackplan[race.trackplan_size - 1][2], race.trackplan[race.trackplan_size - 1][3]))
-      {
-#if defined(DEBUG)
-        snprintf(logbuff, sizeof(logbuff), "segmentsIntersect checked");
-        logger.LogInfo(logbuff);
-#endif
-        if (!race.sessionActive)
-        {
-          race.sessionActive = true;
-          race.sessionTime = millis();
-          race.totalLap = 0;
-          race.maxspeed = 0;
-        }
-        else
-        {
-          race.currentLap += 1;
-          race.totalLap += 1;
-          if (KMPH > race.maxspeed)
-          {
-            race.maxspeed = KMPH;
-          }
-          // this is the best or first lap
-          if ((race.bestSessionTime > millis() - race.sessionTime) || (race.bestSessionTime == 0))
-          { // test for session time and also for the very first lap, when bestSesstionTime is 0
-            race.bestSessionTime = millis() - race.sessionTime;
-            race.bestLap = race.currentLap;
-          }
+    race.computerSession(&gps);
 
-#if defined(DEBUG)
-          snprintf(logbuff, sizeof(logbuff), "[%s]currlap %d,totol %d,maxspeed:%f,bestlap:%d,bestsession:%lu", dTime(), race.currentLap, race.totalLap, race.maxspeed, race.bestLap, race.bestSessionTime);
-          logger.LogInfo(logbuff);
-#endif
-        }
-        // reset the sessionTime
-        race.sessionTime = millis();
-      }
-
-      race.last_gps = gps;
-    }
     snprintf(buffer, sizeof(buffer),
              "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%lu,%d",
              year,
@@ -433,7 +306,7 @@ void recordGps()
             sprintf(DataFileName, "%sRL%04d%02d%02d%02d%02d%02d.txt", DataFileDir, year, month, day, hour, minute, second);
           }
 #if defined(DEBUG)
-          snprintf(logbuff, sizeof(logbuff), "[%s]new DataFileName recording %s", dTime(), DataFileName);
+          snprintf(logbuff, sizeof(logbuff), "[%s]new DataFileName recording %s", formatTime(millis()), DataFileName);
           logger.LogInfo(logbuff);
 #endif
           dataFile = SD.open(DataFileName, FILE_WRITE);
@@ -447,58 +320,6 @@ void recordGps()
     }
   }
 
-  // GPS 长时间没有更新数据
-
-  /*
-    if (lastdevtime == 0)
-    {
-      lastdevtime = millis();
-    }
-
-    long diff = millis() - lastdevtime;
-
-    if (diff >= 0 && diff < 3000)
-    {
-      KMPH = 0.5;
-    }
-    else if (diff > 3000 && diff < 5000)
-    {
-      KMPH = 30;
-    }
-    else if (diff > 5000 && diff < 9000)
-    {
-      KMPH = 2;
-    }
-    else if (diff > 9000 && diff < 20000)
-    {
-      KMPH = 23;
-    }
-    else if (diff > 20000 && diff < 35000)
-    {
-      KMPH = 0.5;
-    }
-    else if (diff > 35000 && diff < 58000)
-    {
-      KMPH = 30;
-    }
-    else if (diff > 58000 && diff < 65000)
-    {
-      KMPH = 2;
-    }
-    else if (diff > 65000)
-    {
-      KMPH = 5;
-      lastdevtime = millis();
-    }
-
-    if (lastkmph != KMPH)
-    {
-      snprintf(logbuff, sizeof(logbuff), "kmph from %f to %f", lastkmph, KMPH);
-      logger.LogInfo(logbuff);
-      lastkmph = KMPH;
-    }
-    */
-
   switch (race.getStatus().status)
   {
   case d_Looping:
@@ -507,7 +328,7 @@ void recordGps()
     {
       race.setStatus(d_preRecord);
 #if defined(DEBUG)
-      snprintf(logbuff, sizeof(logbuff), "[%s]d_Looping to d_preRecord kmph=%.2f", dTime(), KMPH);
+      snprintf(logbuff, sizeof(logbuff), "[%s]d_Looping to d_preRecord kmph=%.2f", formatTime(millis()), KMPH);
       logger.LogInfo(logbuff);
 #endif
     }
@@ -518,7 +339,7 @@ void recordGps()
     {
       race.setStatus(d_Looping);
 #if defined(DEBUG)
-      snprintf(logbuff, sizeof(logbuff), "[%s]d_preRecord to d_Looping kmph=%.2f RecordKmph=%.2f", dTime(), KMPH, RecordKmph);
+      snprintf(logbuff, sizeof(logbuff), "[%s]d_preRecord to d_Looping kmph=%.2f RecordKmph=%.2f", formatTime(millis()), KMPH, RecordKmph);
       logger.LogInfo(logbuff);
 #endif
       return;
@@ -528,7 +349,7 @@ void recordGps()
       race.resetSession();
       race.setStatus(d_Recording);
 #if defined(DEBUG)
-      snprintf(logbuff, sizeof(logbuff), "[%s]d_preRecord to d_Recording >preRecordCd %d", dTime(), preRecordCd);
+      snprintf(logbuff, sizeof(logbuff), "[%s]d_preRecord to d_Recording >preRecordCd %d", formatTime(millis()), preRecordCd);
       logger.LogInfo(logbuff);
 #endif
     }
@@ -538,7 +359,7 @@ void recordGps()
     if (int((millis() - race.lastGpsUpdateTimer) / 1000) > 5)
     {
 #if defined(DEBUG)
-      snprintf(logbuff, sizeof(logbuff), "[%s]GPS no signal %d", dTime(), int((millis() - race.lastGpsUpdateTimer) / 1000));
+      snprintf(logbuff, sizeof(logbuff), "[%s]GPS no signal %d", formatTime(millis()), int((millis() - race.lastGpsUpdateTimer) / 1000));
       logger.LogInfo(logbuff);
 #endif
       KMPH = 0;
@@ -547,7 +368,7 @@ void recordGps()
     {
       race.setStatus(d_RecordToLoop);
 #if defined(DEBUG)
-      snprintf(logbuff, sizeof(logbuff), "[%s]d_Recording to d_RecordToLoop kmph=%.2f <RecordKmph=%.2f", dTime(), KMPH, RecordKmph);
+      snprintf(logbuff, sizeof(logbuff), "[%s]d_Recording to d_RecordToLoop kmph=%.2f <RecordKmph=%.2f", formatTime(millis()), KMPH, RecordKmph);
       logger.LogInfo(logbuff);
 #endif
     }
@@ -559,7 +380,7 @@ void recordGps()
     {
       race.setStatus(d_Recording);
 #if defined(DEBUG)
-      snprintf(logbuff, sizeof(logbuff), "[%s]d_RecordToLoop to d_Recording kmph=%.2f > RecordKmph=%.2f", dTime(), KMPH, RecordKmph);
+      snprintf(logbuff, sizeof(logbuff), "[%s]d_RecordToLoop to d_Recording kmph=%.2f > RecordKmph=%.2f", formatTime(millis()), KMPH, RecordKmph);
       logger.LogInfo(logbuff);
 #endif
       return;
@@ -569,7 +390,7 @@ void recordGps()
       if (dataFile)
       {
 #if defined(DEBUG)
-        snprintf(logbuff, sizeof(logbuff), "[%s]close DataFileName %s", dTime(), DataFileName);
+        snprintf(logbuff, sizeof(logbuff), "[%s]close DataFileName %s", formatTime(millis()), DataFileName);
         logger.LogInfo(logbuff);
 #endif
         dataFile.close();
@@ -622,7 +443,7 @@ void setup()
   snprintf(logbuff, sizeof(logbuff), "init ok debug=%d", debug);
   logger.LogInfo(logbuff);
 
-  setDisplayFrame(1);
+  // setDisplayFrame(1);
   showDisplay();
   delay(250);
 }
@@ -631,9 +452,21 @@ void loop()
 {
   digitalWrite(LED_BUILTIN, (millis() / 1000) % 2);
   showDisplay();
+
+  // #if defined(DEBUG)
+  //   snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
+  //   Serial.println(logbuff);
+  // #endif
   while (ss.available() > 0)
   {
-    if (gps.encode(ss.read()))
+    char inByte = ss.read();
+// Serial.print(inByte);
+#if defined(DEBUG)
+    // snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
+    gpsFile.print(inByte);
+    gpsFile.flush();
+#endif
+    if (gps.encode(inByte))
     {
       recordGps();
     }
