@@ -55,6 +55,8 @@ void showDisplay()
     if (race.sessionActive)
     {
       setDisplayFrame(2);
+    }else{
+      setDisplayFrame(1);
     }
 
     break;

@@ -7,8 +7,7 @@
             "compilerArgs": [],
             "intelliSenseMode": "clang-x64",
             "includePath": [
-                "/Users/angrycans/Library/Arduino15/packages/esp8266/hardware/esp8266/3.0.2/cores/esp8266",
-                "/Users/angrycans/Documents/Arduino/libraries"
+                
             ],
             "forcedInclude": [],
             "cStandard": "c17",

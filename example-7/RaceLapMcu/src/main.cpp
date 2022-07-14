@@ -56,7 +56,7 @@ Race race;
 
 File dataFile;
 
-File gpsFile;
+//File gpsFile;
 
 char DataFileName[64] = ""; //"RL2022-05-18_14.txt";
 char DataFileDir[24] = "/RLDATA/";
@@ -195,12 +195,12 @@ void initSD()
 
   getTrack();
 
-  gpsFile = SD.open("/RLDATA/gps.txt", FILE_WRITE);
+  // gpsFile = SD.open("/RLDATA/gps.txt", FILE_WRITE);
 
-  if (gpsFile)
-  {
-    gpsFile.println("\n----------------------------");
-  }
+  // if (gpsFile)
+  // {
+  //   gpsFile.println("\n----------------------------");
+  // }
 
   // sprintf(displayInfo.log, "init sd card done!");
   // showDisplay();
@@ -459,14 +459,14 @@ void loop()
   // #endif
   while (ss.available() > 0)
   {
-    char inByte = ss.read();
+    //char inByte = ss.read();
 // Serial.print(inByte);
-#if defined(DEBUG)
-    // snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
-    gpsFile.print(inByte);
-    gpsFile.flush();
-#endif
-    if (gps.encode(inByte))
+// #if defined(DEBUG)
+//     // snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
+//     gpsFile.print(inByte);
+//     gpsFile.flush();
+// #endif
+    if (gps.encode(ss.read()))
     {
       recordGps();
     }
