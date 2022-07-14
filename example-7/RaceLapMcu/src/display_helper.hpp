@@ -33,9 +33,13 @@ void lapFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_
 
 void initDisplay();
 void showDisplay();
+// void showLogoDisplay();
 
-FrameCallback frames[] = {logoFrame, clockFrame, retFrame, lapFrame};
-int frameCount = 4;
+FrameCallback frames1[] = {logoFrame};
+int frameCount1 = 1;
+
+FrameCallback frames2[] = {clockFrame, retFrame, lapFrame};
+int frameCount2 = 3;
 
 void setDisplayFrame(int f)
 {
@@ -54,15 +58,21 @@ void showDisplay()
 
     if (race.sessionActive)
     {
-      setDisplayFrame(2);
-    }else{
-      setDisplayFrame(1);
+
+      ui.enableAutoTransition();
+      // setDisplayFrame(2);
+    }
+    else
+    {
+      ui.disableAutoTransition();
+      setDisplayFrame(0);
     }
 
     break;
 
   case d_Recording:
-    setDisplayFrame(1);
+    ui.disableAutoTransition();
+    setDisplayFrame(0);
     break;
 
   default:
@@ -80,7 +90,7 @@ void initDisplay()
 
   // Add frames
 
-  ui.setFrames(frames, frameCount);
+  ui.setFrames(frames1, frameCount1);
 
   ui.disableAllIndicators();
   ui.disableAutoTransition();
@@ -134,7 +144,7 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
   //   snprintf(logbuff, sizeof(logbuff), "satellites d", gps.satellites.value());
   //   Serial.println(logbuff);
   // #endif
-  if ((int)gps.satellites.value() < 3)
+  if ((!gps.location.isUpdated()) && (int)gps.satellites.value() < 3)
   {
 
     display->setTextAlignment(TEXT_ALIGN_CENTER);
@@ -204,10 +214,25 @@ void lapFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_
   display->setTextAlignment(TEXT_ALIGN_LEFT);
   display->setFont(ArialMT_Plain_10);
   display->setTextAlignment(TEXT_ALIGN_CENTER);
+  /*
+  class LapInfo
+{
+public:
+  int maxspeed;
+  int avespeed;
+  unsigned long time;
+  unsigned long difftime;
+  // bool isbest;
+};
 
-  for (int i = 0; i < 5; i++)
+  */
+
+  for (int i = 0; i < race.lapInfoList->size(); i++)
   {
-    display->drawString(64 + x, 12 * i + y, String(i) + " 00:56.381 116 101");
+    char tmp[48];
+    sprintf(tmp, "%d %s +%s %d %d", i, formatTime(race.lapInfoList->get(i).time), formatTimeMs(race.lapInfoList->get(i).difftime), race.lapInfoList->get(i).maxspeed, race.lapInfoList->get(i).avespeed);
+
+    display->drawString(64 + x, 12 * i + y, tmp);
   }
 }
 
@@ -302,6 +327,10 @@ void drawSatles(OLEDDisplay *display, int x, int y, int n)
   display->drawLine(x, y, x + 2, y + 3);
   display->drawLine(x + 4, y, x + 2, y + 3);
   display->drawLine(x + 2, y + 1, x + 2, y + 9);
+
+  display->setTextAlignment(TEXT_ALIGN_LEFT);
+  display->setFont(ArialMT_Plain_10);
+  display->drawString(x + 24, y, String(n));
 
   if (n == -1)
   {

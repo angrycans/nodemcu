@@ -223,20 +223,26 @@ void handleGetLocation(AsyncWebServerRequest *request)
 void handleSetLocation(AsyncWebServerRequest *request)
 {
   StaticJsonDocument<512> params;
-  params["lat1"] = request->getParam("lat1")->value();
-  params["lng1"] = request->getParam("lng1")->value();
-  params["lat2"] = request->getParam("lat2")->value();
-  params["lng2"] = request->getParam("lng2")->value();
   params["trackname"] = request->getParam("trackname")->value();
+
+  JsonArray trackplan = params.createNestedArray("trackplan");
+
+  StaticJsonDocument<JSON_ARRAY_SIZE(4)> arraydoc;
+  JsonArray item = arraydoc.to<JsonArray>();
+  item.add(request->getParam("lat1")->value());
+  item.add(request->getParam("lng1")->value());
+  item.add(request->getParam("lat2")->value());
+  item.add(request->getParam("lng2")->value());
+  trackplan.add(item);
 
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   StaticJsonDocument<200> doc;
 
   JsonObject e = doc.createNestedObject("e");
 
-  SD.remove("/RLDATA/track.txt");
+  SD.remove("/RLDATA/track.json");
 
-  File file = SD.open("/RLDATA/track.txt", FILE_WRITE);
+  File file = SD.open("/RLDATA/track.json", FILE_WRITE);
   if (!file)
   {
     e["code"] = 1;

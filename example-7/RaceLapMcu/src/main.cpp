@@ -56,7 +56,7 @@ Race race;
 
 File dataFile;
 
-//File gpsFile;
+// File gpsFile;
 
 char DataFileName[64] = ""; //"RL2022-05-18_14.txt";
 char DataFileDir[24] = "/RLDATA/";
@@ -71,8 +71,8 @@ char lastbuffer[100];
 char logbuff[100];
 
 int preRecordCd = 3;
-int recordtoLoopCd = 30;
-double RecordKmph = 30;
+int recordtoLoopCd = 10;
+double RecordKmph = 20;
 
 unsigned long lastdevtime = 0;
 double lastkmph = 0;
@@ -293,6 +293,9 @@ void recordGps()
              "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%lu,%d",
              year,
              month, day, hour, minute, second, csecond, lat, lng, altitude, KMPH, deg, millis(), satls);
+#if defined(DEBUG)
+    Serial.println(buffer);
+#endif
 
     if (B_SD)
     {
@@ -445,7 +448,10 @@ void setup()
 
   // setDisplayFrame(1);
   showDisplay();
+
   delay(250);
+  ui.setFrames(frames2, frameCount2);
+  //  ui.switchToFrame(0);
 }
 
 void loop()
@@ -459,13 +465,13 @@ void loop()
   // #endif
   while (ss.available() > 0)
   {
-    //char inByte = ss.read();
-// Serial.print(inByte);
-// #if defined(DEBUG)
-//     // snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
-//     gpsFile.print(inByte);
-//     gpsFile.flush();
-// #endif
+    // char inByte = ss.read();
+    // Serial.print(inByte);
+    // #if defined(DEBUG)
+    //     // snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
+    //     gpsFile.print(inByte);
+    //     gpsFile.flush();
+    // #endif
     if (gps.encode(ss.read()))
     {
       recordGps();

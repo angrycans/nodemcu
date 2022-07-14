@@ -43,7 +43,7 @@ class Race
 private:
   RaceStatuS r_status;
   int last_satellites = 0;
-  ESPLinkedList<LapInfo> *lapInfoList;
+
   // bool __dev__ = false;
   // SDLogger *logger;
 
@@ -52,6 +52,7 @@ public:
   // float lng1;
   // float lat2;
   // float lng2;
+  ESPLinkedList<LapInfo> *lapInfoList;
   int trackplan_size = 0;
   float **trackplan;
   unsigned long lastGpsUpdateTimer = 0;
@@ -83,14 +84,16 @@ public:
     switch (_status)
     {
     case d_Recording:
-
-      sessionActive = true;
-      sessionTime = millis();
-      totalLap = 0;
-      maxspeed = 0;
-      avespeed = 0;
-      bestLap=0;
-      bestSessionTime = 0;
+      if (!sessionActive)
+      {
+        sessionActive = true;
+        sessionTime = millis();
+        totalLap = 0;
+        maxspeed = 0;
+        avespeed = 0;
+        bestLap = 0;
+        bestSessionTime = 0;
+      }
 
       break;
     case d_Looping:
@@ -165,7 +168,7 @@ public:
       trackplan[i][1] = arr[i][1];
       trackplan[i][2] = arr[i][2];
       trackplan[i][3] = arr[i][3];
-      char tmp1[1000];
+      char tmp1[100];
       sprintf(tmp1, "%d %f %f %f %f", i, trackplan[i][0], trackplan[i][1], trackplan[i][2], trackplan[i][3]);
       Serial.println(tmp1);
     }

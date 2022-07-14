@@ -26,6 +26,27 @@ char *formatTime(unsigned long milli)
   return tmp;
 }
 
+char *formatTimeMs(unsigned long milli)
+{
+  char *tmp = new char[15];
+
+  // seconds
+  int sec = (milli / 1000) % 60;
+
+  String str = "";
+  if (sec > 0)
+  {
+    str = String(sec);
+  }
+
+  // milliseconds
+  int ms = milli % 1000;
+
+  snprintf(tmp, 15, "%s.%03d", str.c_str(), ms);
+
+  return tmp;
+}
+
 String formatTime2(unsigned long milli)
 {
   // hours

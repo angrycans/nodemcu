@@ -107,7 +107,7 @@ void setup()
     
     }
 
-    gpsFile = SD.open("/RLDATA/gps.txt", FILE_WRITE);
+    gpsFile = SD.open("gps.txt", FILE_WRITE);
 
    if (gpsFile)
    {
@@ -208,10 +208,13 @@ void loop()
   while (gpsSerial.available() > 0) {
     char inByte = gpsSerial.read();
     //Serial.write(inByte);
-    Serial.print(inByte);
-    gpsFile.print(inByte);
-    gpsFile.flush();
-  }
+    //Serial.print(inByte);
+//    gpsFile.print(inByte);
+//    gpsFile.flush();
+if (gps.encode(inByte)) {
+              printData();
+        } 
+        }
 
   //
   //while (Serial.available() > 0) {
