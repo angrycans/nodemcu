@@ -10,6 +10,7 @@
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <TinyGPS++.h>
+#include <TimeLib.h>
 #include <ArduinoJson.h>
 #include "SDLogger.h"
 #include "helper.hpp"
@@ -77,7 +78,9 @@ double RecordKmph = 20;
 unsigned long lastdevtime = 0;
 double lastkmph = 0;
 double KMPH = 0; // current speed
-int totalLap = 0;
+// int totalLap = 0;
+
+bool isSetTime = false;
 
 #include "webserver_help.hpp"
 #include "display_helper.hpp"
@@ -281,10 +284,18 @@ void recordGps()
     int csecond = gps.time.centisecond();
     double deg = gps.course.deg();
     int satls = gps.satellites.value();
+    int age = gps.location.age();
 
     if (race.last_gps.location.lat() == lat && race.last_gps.location.lng() == lng)
     {
       return;
+    }
+
+    if (!isSetTime && (age > 500))
+    {
+      setTime(hour, minute, second, day, month, year);
+      adjustTime(8 * SECS_PER_HOUR);
+      isSetTime = true;
     }
 
     race.computerSession(&gps);
@@ -424,8 +435,7 @@ void setup()
   initLed();
   Serial.println("initDisplay...");
   initDisplay();
-  setDisplayFrame(0);
-  showDisplay();
+  showLogoDisplay();
 
   Serial.println("init LittleFS filesystem...");
   if (!LittleFS.begin())
@@ -446,12 +456,8 @@ void setup()
   snprintf(logbuff, sizeof(logbuff), "init ok debug=%d", debug);
   logger.LogInfo(logbuff);
 
-  // setDisplayFrame(1);
-  showDisplay();
-
   delay(250);
-  ui.setFrames(frames2, frameCount2);
-  //  ui.switchToFrame(0);
+  setDisplayFrame(0);
 }
 
 void loop()

@@ -33,13 +33,13 @@ void lapFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_
 
 void initDisplay();
 void showDisplay();
-// void showLogoDisplay();
+void showLogoDisplay();
 
-FrameCallback frames1[] = {logoFrame};
-int frameCount1 = 1;
+// FrameCallback frames1[] = {logoFrame};
+// int frameCount1 = 1;
 
-FrameCallback frames2[] = {clockFrame, retFrame, lapFrame};
-int frameCount2 = 3;
+FrameCallback frames[] = {clockFrame, retFrame, lapFrame};
+int frameCount = 3;
 
 void setDisplayFrame(int f)
 {
@@ -49,6 +49,18 @@ void setDisplayFrame(int f)
     ui.switchToFrame(f);
   }
 }
+
+void showLogoDisplay()
+{
+  // display.init();
+  display.clear();
+  // display.flipScreenVertically();
+  display.setFont(ArialMT_Plain_24);
+  display.setTextAlignment(TEXT_ALIGN_CENTER);
+  display.drawString(64, 12, "RaceLap");
+  display.display();
+}
+
 void showDisplay()
 {
 
@@ -59,19 +71,19 @@ void showDisplay()
     if (race.sessionActive)
     {
 
-      ui.enableAutoTransition();
-      // setDisplayFrame(2);
+      // ui.enableAutoTransition();
+      setDisplayFrame(1);
     }
     else
     {
-      ui.disableAutoTransition();
+      // ui.disableAutoTransition();
       setDisplayFrame(0);
     }
 
     break;
 
   case d_Recording:
-    ui.disableAutoTransition();
+    // ui.disableAutoTransition();
     setDisplayFrame(0);
     break;
 
@@ -90,7 +102,7 @@ void initDisplay()
 
   // Add frames
 
-  ui.setFrames(frames1, frameCount1);
+  ui.setFrames(frames, frameCount);
 
   ui.disableAllIndicators();
   ui.disableAutoTransition();
@@ -102,19 +114,12 @@ void initDisplay()
   display.flipScreenVertically();
   // display.invertDisplay();
 
-  ui.switchToFrame(0);
+  // ui.switchToFrame(0);
 }
 
 void drawWifi(OLEDDisplay *display, int x, int y)
 {
   display->drawXbm(x, y, 12, 12, wifi_logo);
-}
-
-void logoFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y)
-{
-  display->setFont(ArialMT_Plain_24);
-  display->setTextAlignment(TEXT_ALIGN_CENTER);
-  display->drawString(64 + x, 12 + y, "RaceLap");
 }
 
 void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y)
@@ -136,7 +141,14 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
   display->setFont(ArialMT_Plain_10);
   if (strcmp(DataFileName, "") > 0 && dataFile)
   {
-    (millis() / 1000) % 2 ? display->drawString(64, 0, "Rec") : display->drawString(64, 0, "");
+    (millis() / 1000) % 2 ? display->drawString(64 + 24, 0, "Rec") : display->drawString(64 + 24, 0, "");
+  }
+
+  if (isSetTime)
+  {
+    char tmp[6];
+    sprintf(tmp, "%2d:%2d", hour(), minute());
+    display->drawString(64, 0, tmp);
   }
   // digitalWrite(LED_BUILTIN, (millis() / 1000) % 2);
 

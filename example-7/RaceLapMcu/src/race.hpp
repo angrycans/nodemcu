@@ -11,6 +11,7 @@
 #include <TinyGPS++.h>
 #include <LinkedList.h>
 #include "SDLogger.h"
+#include <TimeLib.h>
 
 enum DeviesStatus
 {
@@ -238,6 +239,7 @@ public:
     avespeed = (avespeed + speed) / 2;
     lapavespeed = (lapavespeed + speed) / 2;
 
+    //有赛道终点信息
     if (trackplan_size > 0)
     {
       if (segmentsIntersect(lat, lng, last_gps.location.lat(), last_gps.location.lng(), trackplan[trackplan_size - 1][0], trackplan[trackplan_size - 1][1], trackplan[trackplan_size - 1][2], trackplan[trackplan_size - 1][3]))
