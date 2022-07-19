@@ -191,8 +191,8 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
   display->setTextAlignment(TEXT_ALIGN_CENTER);
   display->setFont(ArialMT_Plain_24);
 
-  race.sessionActive ? display->drawString(64 + x, 32 + y, formatTime2(millis() - race.sessionTime)) : display->drawString(64 + x, 32 + y, formatTime2(0));
-  // display->drawString(64 + x, 32 + y, formatMs(millis()));
+  // race.sessionActive ? display->drawString(64 + x, 32 + y, formatTime2(millis() - race.sessionTime)) : display->drawString(64 + x, 32 + y, formatTime2(0));
+  display->drawString(64 + x, 32 + y, formatTime2(millis()));
 }
 
 void retFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y)

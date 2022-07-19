@@ -23,10 +23,6 @@
 
 #define DEBUG
 
-// #define _GPRMCterm   "GPRMC"
-// #define _GPGGAterm   "GPGGA"
-// #define _GNRMCterm   "GNRMC"
-// #define _GNGGAterm   "GNGGA"
 #if defined(NEO_M10)
 const uint8_t UBLOX_INIT[] PROGMEM = {
     // Rate (pick one)
@@ -40,10 +36,14 @@ const uint8_t UBLOX_INIT[] PROGMEM = {
     // 0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0x39, // GxGSV off
     // 0xB5,0x62,0x06,0x01,0x08,0x00,0xF0,0x04,0x00,0x00,0x00,0x00,0x00,0x01,0x04,0x40, // GxRMC off
     0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x05, 0x47, // GxVTG off
+                                                                                                    // 38400
+    // 0xb5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xd0, 0x08, 0x00, 0x00, 0x00, 0x96,
+    // 0x00, 0x00, 0x07, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x97, 0xa8,
     // 57600
     0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x00, 0xE1,
     0x00, 0x00, 0x07, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0xDD, 0xC3,
-    0xb5, 0x62, 0x06, 0x00, 0x01, 0x00, 0x01, 0x08, 0x22};
+    0xb5,
+    0x62, 0x06, 0x00, 0x01, 0x00, 0x01, 0x08, 0x22};
 SoftwareSerial ss(D4, D0); // RX, TX
 #else
 SoftwareSerial ss(D4, D0); // RX, TX
@@ -84,6 +84,7 @@ bool isSetTime = false;
 
 #include "webserver_help.hpp"
 #include "display_helper.hpp"
+#include "gps_helper.hpp"
 
 void initWifi()
 {
@@ -210,7 +211,6 @@ void initSD()
   delay(100);
   logger.LogInfo("init sd card done!");
   // ErrInfo += "sdcard init ok.\n";
-  showDisplay();
 }
 
 void initGps()
@@ -220,7 +220,9 @@ void initGps()
 
 #if defined(NEO_M10)
   logger.LogInfo("init GPS NEO_M10");
+  delay(2000);
   ss.begin(9600);
+  // delay(250);
   while (1)
   {
     if (ss.available() > 0)
@@ -235,19 +237,31 @@ void initGps()
       delay(1000);
       break;
     }
-    delay(100);
+    delay(500);
     Serial.println("gpsSerial connet .");
   }
-  delay(250);
+  // delay(250);
 
   logger.LogInfo("init GPS NEO_M10 end");
+  delay(1000);
+  ss.begin(57600);
+#else
+  ss.begin(57600);
 #endif
 
-  delay(250);
-  ss.begin(57600);
+  // int at = millis();
 
+  smartDelay(1000);
+
+  //   if (gps.charsProcessed() < 10)
+  //   {
+  //     ErrInfo += "GPS init failed.\n";
+  // #if defined(DEBUG)
+  //     logger.LogInfo("GPS init failed. No GPS data received: check wiring");
+  // #endif
+  //   }
+  // Serial.println(F("No GPS data received: check wiring"));
   int at = millis();
-
   while (!ss.available())
   {
     if (millis() - at > 5000)
@@ -268,8 +282,15 @@ void initGps()
 
 void recordGps()
 {
+
   if (gps.location.isUpdated())
   {
+    if (!isSetTime && gps.date.isValid())
+    {
+      setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
+      adjustTime(8 * SECS_PER_HOUR);
+      isSetTime = true;
+    }
     race.lastGpsUpdateTimer = millis();
     double lat = gps.location.lat();
     double lng = gps.location.lng();
@@ -284,18 +305,10 @@ void recordGps()
     int csecond = gps.time.centisecond();
     double deg = gps.course.deg();
     int satls = gps.satellites.value();
-    int age = gps.location.age();
 
     if (race.last_gps.location.lat() == lat && race.last_gps.location.lng() == lng)
     {
       return;
-    }
-
-    if (!isSetTime && (age > 500))
-    {
-      setTime(hour, minute, second, day, month, year);
-      adjustTime(8 * SECS_PER_HOUR);
-      isSetTime = true;
     }
 
     race.computerSession(&gps);
@@ -305,7 +318,7 @@ void recordGps()
              year,
              month, day, hour, minute, second, csecond, lat, lng, altitude, KMPH, deg, millis(), satls);
 #if defined(DEBUG)
-    Serial.println(buffer);
+    // Serial.println(buffer);
 #endif
 
     if (B_SD)
@@ -463,12 +476,12 @@ void setup()
 void loop()
 {
   digitalWrite(LED_BUILTIN, (millis() / 1000) % 2);
-  showDisplay();
 
   // #if defined(DEBUG)
   //   snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
   //   Serial.println(logbuff);
   // #endif
+  showDisplay();
   while (ss.available() > 0)
   {
     // char inByte = ss.read();
@@ -480,6 +493,7 @@ void loop()
     // #endif
     if (gps.encode(ss.read()))
     {
+      printData();
       recordGps();
     }
   }

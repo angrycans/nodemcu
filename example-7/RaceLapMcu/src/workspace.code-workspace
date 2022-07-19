@@ -18,6 +18,10 @@
 		{
 			"name": "example-poweroff",
 			"path": "../../../example-poweroff"
+		},
+		{
+			"name": "example-esp32c3-demo1",
+			"path": "../../../example-esp32c3-demo1"
 		}
 	],
 	"settings": {
@@ -61,7 +65,9 @@
 			"typeinfo": "cpp",
 			"__string": "cpp",
 			"algorithm": "cpp",
-			"iosfwd": "cpp"
+			"iosfwd": "cpp",
+			"filesystem": "cpp",
+			"unordered_set": "cpp"
 		}
 	}
 }

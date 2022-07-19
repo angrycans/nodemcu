@@ -123,6 +123,7 @@ void setup()
   //        }
 
   Serial.println("init ok0");
+  /*
     gpsSerial.begin(9600);
   delay(2000);
   while (1) {
@@ -142,6 +143,7 @@ void setup()
     Serial.println("gpsSerial connet .");
   }
   delay(100);
+  */
   gpsSerial.begin(57600);
   Serial.println("init ok1");
   while (!gpsSerial.available())
@@ -208,12 +210,12 @@ void loop()
   while (gpsSerial.available() > 0) {
     char inByte = gpsSerial.read();
     //Serial.write(inByte);
-    //Serial.print(inByte);
-//    gpsFile.print(inByte);
-//    gpsFile.flush();
-if (gps.encode(inByte)) {
-              printData();
-        } 
+    Serial.print(inByte);
+    gpsFile.print(inByte);
+    gpsFile.flush();
+//if (gps.encode(inByte)) {
+//              printData();
+//        } 
         }
 
   //
