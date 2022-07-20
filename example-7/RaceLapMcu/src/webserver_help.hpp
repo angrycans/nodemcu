@@ -231,8 +231,8 @@ void handleSetLocation(AsyncWebServerRequest *request)
   JsonArray item = arraydoc.to<JsonArray>();
   item.add(request->getParam("lat1")->value());
   item.add(request->getParam("lng1")->value());
-  item.add(request->getParam("lat1")->value());
-  item.add(request->getParam("lng1")->value());
+  item.add(request->getParam("lat2")->value());
+  item.add(request->getParam("lng2")->value());
   // item.add(1111111111.0009);
   // item.add(1111111111.0006);
   // item.add(1111111111.0007);
