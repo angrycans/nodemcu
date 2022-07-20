@@ -12,10 +12,12 @@
 #include <LinkedList.h>
 #include "SDLogger.h"
 #include <TimeLib.h>
+#include <sys/time.h> // struct timeval
 
 enum DeviesStatus
 {
   d_Setup,
+  d_gps_searching,
   d_Looping,
   d_preRecord,
   d_Recording,
@@ -35,7 +37,16 @@ public:
   int maxspeed;
   int avespeed;
   unsigned long time;
+  unsigned long time2;
+  int off;
   unsigned long difftime;
+  // time_t p0_at;
+  // time_t p1_at;
+  // // int p0_at_ms;
+  // // int p1_at_ms;
+  //  point_t p0;
+  //  point_t p1;
+
   // bool isbest;
 };
 
@@ -249,11 +260,54 @@ public:
         logger.LogInfo(logbuff);
 #endif
 
+        tmElements_t te1;
+        te1.Second = _gps->time.second();
+        te1.Hour = _gps->time.hour();
+        te1.Minute = _gps->time.minute();
+        te1.Day = _gps->date.day();
+        te1.Month = _gps->date.month();
+        te1.Year = _gps->date.year() - 1970; // Y2K, in seconds = 946684800UL
+
+        int te1_ms = _gps->time.centisecond() * 10;
+
+        // tmElements_t te0;
+        // te0.Second = last_gps.time.second();
+        // te0.Hour = last_gps.time.hour();
+        // te0.Minute = last_gps.time.minute();
+        // te0.Day = last_gps.date.day();
+        // te0.Month = last_gps.date.month();
+        // te0.Year = last_gps.date.year() - 1970; // Y2K, in seconds = 946684800UL
+        // int te0_ms = last_gps.time.centisecond() * 10;
+
+        point_t cp;
+        IntersectPoint1({lat, lng}, {last_gps.location.lat(), last_gps.location.lng()}, {trackplan[trackplan_size - 1][0], trackplan[trackplan_size - 1][1]}, {trackplan[trackplan_size - 1][2], trackplan[trackplan_size - 1][3]}, &cp);
+
+        // int ms = (int)(makeTime(te1) * 1000 + _gps->time.centisecond() - makeTime(te0) * 1000 + last_gps.time.centisecond());
+
+        // var distance_point0 = turf.distance([prevprevItem[1], prevprevItem[2]], [prev_intersectpoint[1], prev_intersectpoint[0]], { units: 'kilometers' });
+        //           var distance_point1 = turf.distance([prevPoint[1], prevPoint[2]], [intersectP[1], intersectP[0]], { units: 'kilometers' });
+        //           let off0 = (distance_point0 / +prevprevItem[4]) * 60 * 60 * 1000;
+        //           let off1 = (distance_point1 / +prevPoint[4]) * 60 * 60 * 1000;
+
+        float d = 0.0f;
+        float off = 0.0f;
+
+        if (lapInfoList->size() > 0)
+        {
+          d = Distance({lat, lng}, cp);
+          off = (d * 1000 / speed) * 60 * 60;
+        }
+
         LapInfo lapinfo;
         lapinfo.time = millis();
-        lapinfo.difftime = lapInfoList->size() == 0 ? 0 : lapinfo.time - lapInfoList->get(currentLap).time;
+        lapinfo.time2 = te1_ms - (int)off;
+        lapinfo.off = (int)off;
+        lapinfo.difftime = lapInfoList->size() == 0 ? 0 : lapinfo.time2 - lapInfoList->get(currentLap).time2;
         lapinfo.maxspeed = lapmaxspeed;
         lapinfo.avespeed = lapavespeed;
+        // lapinfo.p0_at = makeTime(te0);
+        // lapinfo.p1_at = makeTime(te1);
+        // lapinfo.p0_at_ms = gps.time.centisecond();
         lapInfoList->add(lapinfo);
 
         currentLap += 1;

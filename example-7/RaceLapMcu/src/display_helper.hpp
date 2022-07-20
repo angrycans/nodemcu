@@ -25,6 +25,7 @@ void drawWifi(OLEDDisplay *display, int x, int y);
 void drawBattery(OLEDDisplay *display, int x, int y, int n);
 void drawSatles(OLEDDisplay *display, int x, int y, int n);
 void drawErrInfo(OLEDDisplay *display, int x, int y, int n);
+void drawGpsSearchingTime(OLEDDisplay *display);
 
 void logoFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y);
 void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y);
@@ -66,6 +67,9 @@ void showDisplay()
 
   switch (race.getStatus().status)
   {
+  case d_gps_searching:
+    setDisplayFrame(0);
+    break;
   case d_Looping:
 
     if (race.sessionActive)
@@ -134,6 +138,10 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
   }
   drawBattery(display, 104, 1, 100);
 
+  if (race.getStatus().status == d_gps_searching)
+  {
+    drawGpsSearchingTime(display);
+  }
   drawSatles(display, 0, 1, gps.satellites.isValid() ? (int)gps.satellites.value() : -1);
 
   display->drawLine(0, 12, 0 + 128, 12);
@@ -191,8 +199,8 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
   display->setTextAlignment(TEXT_ALIGN_CENTER);
   display->setFont(ArialMT_Plain_24);
 
-  // race.sessionActive ? display->drawString(64 + x, 32 + y, formatTime2(millis() - race.sessionTime)) : display->drawString(64 + x, 32 + y, formatTime2(0));
-  display->drawString(64 + x, 32 + y, formatTime2(millis()));
+  race.sessionActive ? display->drawString(64 + x, 32 + y, formatTime2(millis() - race.sessionTime)) : display->drawString(64 + x, 32 + y, formatTime2(0));
+  // display->drawString(64 + x, 32 + y, formatTime2(millis()));
 }
 
 void retFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y)
@@ -333,6 +341,15 @@ void drawBattery(OLEDDisplay *display, int x, int y, int n)
     break;
   }
 }
+
+void drawGpsSearchingTime(OLEDDisplay *display)
+{
+
+  display->setTextAlignment(TEXT_ALIGN_CENTER);
+  display->setFont(ArialMT_Plain_10);
+  display->drawString(64, 0, String((int)(millis() - race.getStatus().timer) / 1000));
+}
+
 void drawSatles(OLEDDisplay *display, int x, int y, int n)
 {
   display->drawLine(x, y, x + 4, y);

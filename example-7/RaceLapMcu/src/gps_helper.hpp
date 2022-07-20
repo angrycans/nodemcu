@@ -59,12 +59,12 @@ static void printDateTime(TinyGPSDate &d, TinyGPSTime &t)
 
   if (!t.isValid())
   {
-    Serial.print(F("******** "));
+    Serial.print(F("*********** "));
   }
   else
   {
     char sz[32];
-    sprintf(sz, "%02d:%02d:%02d ", t.hour(), t.minute(), t.second());
+    sprintf(sz, "%02d:%02d:%02d.%03d ", t.hour(), t.minute(), t.second(), t.centisecond());
     Serial.print(sz);
   }
 

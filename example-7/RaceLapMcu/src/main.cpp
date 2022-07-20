@@ -199,14 +199,7 @@ void initSD()
 
   getTrack();
 
-  // gpsFile = SD.open("/RLDATA/gps.txt", FILE_WRITE);
-
-  // if (gpsFile)
-  // {
-  //   gpsFile.println("\n----------------------------");
-  // }
-
-  // sprintf(displayInfo.log, "init sd card done!");
+   // sprintf(displayInfo.log, "init sd card done!");
   // showDisplay();
   delay(100);
   logger.LogInfo("init sd card done!");
@@ -217,10 +210,10 @@ void initGps()
 {
 
   logger.LogInfo("init GPS");
-
+  delay(2000);
 #if defined(NEO_M10)
   logger.LogInfo("init GPS NEO_M10");
-  delay(2000);
+
   ss.begin(9600);
   // delay(250);
   while (1)
@@ -234,7 +227,7 @@ void initGps()
         ss.write(pgm_read_byte(UBLOX_INIT + i));
       }
 
-      delay(1000);
+      delay(2000);
       break;
     }
     delay(500);
@@ -283,13 +276,23 @@ void initGps()
 void recordGps()
 {
 
+  if ((race.getStatus().status == d_gps_searching) && ((int)(millis() - race.getStatus().timer) > 5000 && gps.charsProcessed() < 10))
+  {
+    ErrInfo = "No GPS data received,reboot";
+#if defined(DEBUG)
+    snprintf(logbuff, sizeof(logbuff), "No GPS data received");
+    logger.LogInfo(logbuff);
+#endif
+  }
+
   if (gps.location.isUpdated())
   {
-    if (!isSetTime && gps.date.isValid())
+    if (race.getStatus().status == d_gps_searching && gps.date.isValid())
     {
       setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
       adjustTime(8 * SECS_PER_HOUR);
       isSetTime = true;
+      race.setStatus(d_Looping);
     }
     race.lastGpsUpdateTimer = millis();
     double lat = gps.location.lat();
@@ -312,13 +315,14 @@ void recordGps()
     }
 
     race.computerSession(&gps);
-
     snprintf(buffer, sizeof(buffer),
              "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%lu,%d",
              year,
-             month, day, hour, minute, second, csecond, lat, lng, altitude, KMPH, deg, millis(), satls);
+             month, day, hour, minute, second * 10, csecond, lat, lng, altitude, KMPH, deg, millis(), satls);
+
 #if defined(DEBUG)
     // Serial.println(buffer);
+
 #endif
 
     if (B_SD)
@@ -422,6 +426,20 @@ void recordGps()
 #endif
         dataFile.close();
         strcpy(DataFileName, "");
+#if defined(DEBUG)
+        logger.LogInfo("-----ret-----");
+        for (int i = 0; i < race.lapInfoList->size(); i++)
+        {
+          // int maxspeed;
+          // int avespeed;
+          // unsigned long time;
+          // unsigned long time2;
+          // int off;
+          // unsigned long difftime;
+          snprintf(logbuff, sizeof(logbuff), "%d %ld %ld %ld %d %d %d", i, race.lapInfoList->get(0).time, race.lapInfoList->get(0).time2, race.lapInfoList->get(0).difftime, race.lapInfoList->get(0).off, race.lapInfoList->get(0).maxspeed, race.lapInfoList->get(0).avespeed);
+          logger.LogInfo(logbuff);
+        }
+#endif
       }
       race.setStatus(d_Looping);
     }
@@ -464,7 +482,7 @@ void setup()
   initWebServer();
   initGps();
 
-  race.setStatus(d_Looping);
+  race.setStatus(d_gps_searching);
 
   snprintf(logbuff, sizeof(logbuff), "init ok debug=%d", debug);
   logger.LogInfo(logbuff);
@@ -486,14 +504,14 @@ void loop()
   {
     // char inByte = ss.read();
     // Serial.print(inByte);
-    // #if defined(DEBUG)
-    //     // snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
-    //     gpsFile.print(inByte);
-    //     gpsFile.flush();
-    // #endif
+    //  #if defined(DEBUG)
+    //      // snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
+    //      gpsFile.print(inByte);
+    //      gpsFile.flush();
+    //  #endif
     if (gps.encode(ss.read()))
     {
-      printData();
+      //  printData();
       recordGps();
     }
   }

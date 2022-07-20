@@ -227,12 +227,16 @@ void handleSetLocation(AsyncWebServerRequest *request)
 
   JsonArray trackplan = params.createNestedArray("trackplan");
 
-  StaticJsonDocument<JSON_ARRAY_SIZE(4)> arraydoc;
+  StaticJsonDocument<JSON_ARRAY_SIZE(50)> arraydoc;
   JsonArray item = arraydoc.to<JsonArray>();
   item.add(request->getParam("lat1")->value());
   item.add(request->getParam("lng1")->value());
-  item.add(request->getParam("lat2")->value());
-  item.add(request->getParam("lng2")->value());
+  item.add(request->getParam("lat1")->value());
+  item.add(request->getParam("lng1")->value());
+  // item.add(1111111111.0009);
+  // item.add(1111111111.0006);
+  // item.add(1111111111.0007);
+  // item.add(1111111111.0008);
   trackplan.add(item);
 
   AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -252,10 +256,6 @@ void handleSetLocation(AsyncWebServerRequest *request)
     file.close();
     return;
   }
-
-  // Serialize JSON to file
-  String output;
-  serializeJson(doc, output);
 
   if (serializeJson(params, file) == 0)
   {
@@ -327,30 +327,36 @@ void getTrack()
   DeserializationError error = deserializeJson(doc, file);
   if (!error)
   {
-    // String output;
-    // serializeJson(doc, output);
-    // logger.LogInfo("track.txt " + output);
+// String output;
+// serializeJson(doc, output);
+// logger.LogInfo("track.txt " + output);
 
-    // race.lat1 = atof(doc["lat1"]);
-    // race.lng1 = atof(doc["lng1"]);
-    // race.lat2 = atof(doc["lat2"]);
-    // race.lng2 = atof(doc["lng2"]);
+// race.lat1 = atof(doc["lat1"]);
+// race.lng1 = atof(doc["lng1"]);
+// race.lat2 = atof(doc["lat2"]);
+// race.lng2 = atof(doc["lng2"]);
 
-    // var trackplan = [
-    //   [ 31.934493, 118.986260, 31.934659, 118.986156 ],
-    //   [ 31.935279, 118.986374, 31.935097, 118.986298 ],
-    //   [ 31.934911, 118.985879, 31.934865, 118.986073 ],
-    //   [ 31.934722, 118.985327, 31.934918, 118.985345 ],
-    //   [ 31.935798, 118.986160, 31.935994, 118.986176 ],
-    //   [ 31.935468, 118.986605, 31.935468, 118.986803 ],
-    //   [ 31.934884, 118.987121, 31.934764, 118.987279 ],
-    //   [ 31.934679, 118.986682, 31.934449, 118.986870 ]
-    // ]
+// var trackplan = [
+//   [ 31.934493, 118.986260, 31.934659, 118.986156 ],
+//   [ 31.935279, 118.986374, 31.935097, 118.986298 ],
+//   [ 31.934911, 118.985879, 31.934865, 118.986073 ],
+//   [ 31.934722, 118.985327, 31.934918, 118.985345 ],
+//   [ 31.935798, 118.986160, 31.935994, 118.986176 ],
+//   [ 31.935468, 118.986605, 31.935468, 118.986803 ],
+//   [ 31.934884, 118.987121, 31.934764, 118.987279 ],
+//   [ 31.934679, 118.986682, 31.934449, 118.986870 ]
+// ]
 
-    // // char tmp[1000];
-    // Serial.println();
-    // serializeJson(doc["trackplan"], Serial);
-    // Serial.println();
+// // char tmp[1000];
+// Serial.println();
+// serializeJson(doc, Serial);
+// Serial.println();
+#if defined(DEBUG)
+    // snprintf(logbuff, sizeof(logbuff), "No GPS data received");
+    String output;
+    serializeJson(doc, output);
+    logger.LogInfo(output);
+#endif
 
     JsonArray array = doc["trackplan"];
 
