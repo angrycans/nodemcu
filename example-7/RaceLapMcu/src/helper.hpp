@@ -3,7 +3,7 @@ float EARTH_RADIUS = 3956.0; // In miles.
 
 struct point_t
 {
-  float x, y;
+  double x, y;
 };
 
 char *formatTime(unsigned long milli);

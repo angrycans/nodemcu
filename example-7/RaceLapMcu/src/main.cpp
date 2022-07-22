@@ -12,7 +12,10 @@
 #include <TinyGPS++.h>
 #include <TimeLib.h>
 #include <ArduinoJson.h>
+//#include "MillisTaskManager.h"
+
 #include "SDLogger.h"
+
 #include "helper.hpp"
 #include "race.hpp"
 
@@ -36,14 +39,11 @@ const uint8_t UBLOX_INIT[] PROGMEM = {
     // 0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0x39, // GxGSV off
     // 0xB5,0x62,0x06,0x01,0x08,0x00,0xF0,0x04,0x00,0x00,0x00,0x00,0x00,0x01,0x04,0x40, // GxRMC off
     0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x05, 0x47, // GxVTG off
-                                                                                                    // 38400
-    // 0xb5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xd0, 0x08, 0x00, 0x00, 0x00, 0x96,
-    // 0x00, 0x00, 0x07, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x97, 0xa8,
     // 57600
     0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x00, 0xE1,
     0x00, 0x00, 0x07, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0xDD, 0xC3,
-    0xb5,
-    0x62, 0x06, 0x00, 0x01, 0x00, 0x01, 0x08, 0x22};
+    0xb5, 0x62, 0x06, 0x00, 0x01, 0x00, 0x01, 0x08, 0x22};
+
 SoftwareSerial ss(D4, D0); // RX, TX
 #else
 SoftwareSerial ss(D4, D0); // RX, TX
@@ -52,6 +52,7 @@ SoftwareSerial ss(D4, D0); // RX, TX
 int debug = 0; // 是否是接了usb debug启动
 SDLogger logger;
 TinyGPSPlus gps;
+// MillisTaskManager taskManager;
 Race race;
 // gps_fix fix;
 
@@ -73,7 +74,7 @@ char logbuff[100];
 
 int preRecordCd = 3;
 int recordtoLoopCd = 10;
-double RecordKmph = 20;
+double RecordKmph = 3;
 
 unsigned long lastdevtime = 0;
 double lastkmph = 0;
@@ -199,7 +200,7 @@ void initSD()
 
   getTrack();
 
-   // sprintf(displayInfo.log, "init sd card done!");
+  // sprintf(displayInfo.log, "init sd card done!");
   // showDisplay();
   delay(100);
   logger.LogInfo("init sd card done!");
@@ -285,7 +286,8 @@ void recordGps()
 #endif
   }
 
-  if (gps.location.isUpdated())
+  // if (gps.location.isUpdated())
+  if (gps.location.isValid())
   {
     if (race.getStatus().status == d_gps_searching && gps.date.isValid())
     {
@@ -305,7 +307,7 @@ void recordGps()
     int hour = gps.time.hour();
     int minute = gps.time.minute();
     int second = gps.time.second();
-    int csecond = gps.time.centisecond();
+    int csecond = gps.time.centisecond() * 10;
     double deg = gps.course.deg();
     int satls = gps.satellites.value();
 
@@ -315,19 +317,19 @@ void recordGps()
     }
 
     race.computerSession(&gps);
+
     snprintf(buffer, sizeof(buffer),
              "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%lu,%d",
              year,
-             month, day, hour, minute, second * 10, csecond, lat, lng, altitude, KMPH, deg, millis(), satls);
+             month, day, hour, minute, second, csecond, lat, lng, altitude, KMPH, deg, millis(), satls);
 
 #if defined(DEBUG)
     // Serial.println(buffer);
-
 #endif
 
     if (B_SD)
     {
-      if ((race.getStatus().status == d_Recording || race.getStatus().status == d_RecordToLoop))
+      if ((race.getStatus().status == d_Recording || race.getStatus().status == d_RecordToStop))
       {
 
         if (!dataFile)
@@ -397,21 +399,21 @@ void recordGps()
     }
     if (KMPH < RecordKmph)
     {
-      race.setStatus(d_RecordToLoop);
+      race.setStatus(d_RecordToStop);
 #if defined(DEBUG)
-      snprintf(logbuff, sizeof(logbuff), "[%s]d_Recording to d_RecordToLoop kmph=%.2f <RecordKmph=%.2f", formatTime(millis()), KMPH, RecordKmph);
+      snprintf(logbuff, sizeof(logbuff), "[%s]d_Recording to d_RecordToStop kmph=%.2f <RecordKmph=%.2f", formatTime(millis()), KMPH, RecordKmph);
       logger.LogInfo(logbuff);
 #endif
     }
 
     break;
 
-  case d_RecordToLoop:
+  case d_RecordToStop:
     if (KMPH > RecordKmph)
     {
       race.setStatus(d_Recording);
 #if defined(DEBUG)
-      snprintf(logbuff, sizeof(logbuff), "[%s]d_RecordToLoop to d_Recording kmph=%.2f > RecordKmph=%.2f", formatTime(millis()), KMPH, RecordKmph);
+      snprintf(logbuff, sizeof(logbuff), "[%s]d_RecordToStop to d_Recording kmph=%.2f > RecordKmph=%.2f", formatTime(millis()), KMPH, RecordKmph);
       logger.LogInfo(logbuff);
 #endif
       return;
@@ -426,23 +428,23 @@ void recordGps()
 #endif
         dataFile.close();
         strcpy(DataFileName, "");
-#if defined(DEBUG)
-        logger.LogInfo("-----ret-----");
-        for (int i = 0; i < race.lapInfoList->size(); i++)
-        {
-          // int maxspeed;
-          // int avespeed;
-          // unsigned long time;
-          // unsigned long time2;
-          // int off;
-          // unsigned long difftime;
-          snprintf(logbuff, sizeof(logbuff), "%d %ld %ld %ld %d %d %d", i, race.lapInfoList->get(0).time, race.lapInfoList->get(0).time2, race.lapInfoList->get(0).difftime, race.lapInfoList->get(0).off, race.lapInfoList->get(0).maxspeed, race.lapInfoList->get(0).avespeed);
-          logger.LogInfo(logbuff);
-        }
-#endif
       }
-      race.setStatus(d_Looping);
+      race.setStatus(d_Stop);
+#if defined(DEBUG)
+      snprintf(logbuff, sizeof(logbuff), "[%s]d_RecordToStop to d_Stop", formatTime(millis()));
+      logger.LogInfo(logbuff);
+#endif
     }
+    break;
+
+  case d_Stop:
+    race.computerLapinfo(&gps);
+
+    race.setStatus(d_Looping);
+#if defined(DEBUG)
+    snprintf(logbuff, sizeof(logbuff), "[%s]d_Stop to d_Looping", formatTime(millis()));
+    logger.LogInfo(logbuff);
+#endif
     break;
 
   default:
@@ -511,8 +513,9 @@ void loop()
     //  #endif
     if (gps.encode(ss.read()))
     {
-      //  printData();
+      // printData();
       recordGps();
     }
   }
+  //   taskManager.Running(millis());
 }

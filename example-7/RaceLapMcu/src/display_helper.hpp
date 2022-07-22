@@ -41,6 +41,7 @@ void showLogoDisplay();
 
 FrameCallback frames[] = {clockFrame, retFrame, lapFrame};
 int frameCount = 3;
+int showSessionTime = 0;
 
 void setDisplayFrame(int f)
 {
@@ -49,6 +50,12 @@ void setDisplayFrame(int f)
   {
     ui.switchToFrame(f);
   }
+}
+
+void showSessionDisplay()
+{
+
+  // if ()
 }
 
 void showLogoDisplay()
@@ -74,9 +81,15 @@ void showDisplay()
 
     if (race.sessionActive)
     {
-
+      if ((int)(millis() - race.getStatus().timer) < 5000)
+      {
+        setDisplayFrame(1);
+      }
+      else
+      {
+        setDisplayFrame(2);
+      }
       // ui.enableAutoTransition();
-      setDisplayFrame(1);
     }
     else
     {
@@ -164,7 +177,7 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
   //   snprintf(logbuff, sizeof(logbuff), "satellites d", gps.satellites.value());
   //   Serial.println(logbuff);
   // #endif
-  if ((!gps.location.isUpdated()) && (int)gps.satellites.value() < 3)
+  if ((!gps.location.isValid()) && (int)gps.satellites.value() < 3)
   {
 
     display->setTextAlignment(TEXT_ALIGN_CENTER);

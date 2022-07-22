@@ -362,19 +362,21 @@ void getTrack()
 
     int size = array.size();
 
-    float trackplan[size][4];
+    double trackplan[size][4];
 
     for (int i = 0; i < size; i++)
     {
 
       JsonArray arr = array[i];
 
-      trackplan[i][0] = arr[0].as<float>();
-      trackplan[i][1] = arr[1].as<float>();
-      trackplan[i][2] = arr[2].as<float>();
-      trackplan[i][3] = arr[3].as<float>();
-      // float lat1 = arr[0].as<float>;
-      // sprintf(tmp, "%d %f %f %f %f", i, arr[0].as<float>(), arr[1].as<float>(), arr[2].as<float>(), arr[3].as<float>());
+      trackplan[i][0] = arr[0].as<double>();
+
+      trackplan[i][1] = arr[1].as<double>();
+      trackplan[i][2] = arr[2].as<double>();
+      trackplan[i][3] = arr[3].as<double>();
+
+      // char tmp[100];
+      // sprintf(tmp, "%d %.8f %.8f %.8f %.8f", i, trackplan[i][0], trackplan[i][1], trackplan[i][2], trackplan[i][3], trackplan[i][3]);
       // logger.LogInfo(tmp);
     }
 
