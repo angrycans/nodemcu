@@ -175,13 +175,13 @@ void handleSysinfo(AsyncWebServerRequest *request)
   // String str =
   data["datafilename"] = String(DataFileName);
   data["RaceStatus"] = race.getStatus().status;
-  data["RaceStatusEnum"] = "0 _Setup 1_preRecord 2_Recording 3_RecordToSleep 4_Sleep";
-  data["RAM"] = ESP.getFreeHeap();
-  data["FreeHeap"] = ESP.getMaxFreeBlockSize();
-  data["Vcc"] = ESP.getVcc() / 1024.0;
-  data["Version"] = ESP.getSdkVersion();
-  data["CPU"] = ESP.getCpuFreqMHz();
-  data["ResetReason"] = ESP.getResetReason();
+  // data["RaceStatusEnum"] = "0 _Setup 1_preRecord 2_Recording 3_RecordToSleep 4_Sleep";
+  // data["RAM"] = ESP.getFreeHeap();
+  // data["FreeHeap"] = ESP.getMaxFreeBlockSize();
+  // data["Vcc"] = ESP.getVcc() / 1024.0;
+  // data["Version"] = ESP.getSdkVersion();
+  // data["CPU"] = ESP.getCpuFreqMHz();
+  // data["ResetReason"] = ESP.getResetReason();
 
   serializeJson(doc, *response);
   request->send(response);

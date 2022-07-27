@@ -12,7 +12,12 @@ const uint8_t wifi_logo[] PROGMEM = {
     0xc0, 0x03, 0x80, 0x01, 0x00, 0x00, 0x00, 0x00};
 
 #if defined(OLED13)
+#if !defined(ESP32)
 SH1106Wire display(0x3c, SDA, SCL); // 1.3 SH1106 d2 d1
+#else
+SH1106Wire display(0x3c, 4, 5); // 1.3 SH1106 gpio4 gpio5
+
+#endif
 #else
 SSD1306Wire display(0x3c, SDA, SCL); // 0.96 ssd1306 d2 d1
 #endif
@@ -246,7 +251,7 @@ void lapFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_
 
   display->setTextAlignment(TEXT_ALIGN_LEFT);
   display->setFont(ArialMT_Plain_10);
-  display->setTextAlignment(TEXT_ALIGN_CENTER);
+  // display->setTextAlignment(TEXT_ALIGN_CENTER);
   /*
   class LapInfo
 {
@@ -265,7 +270,7 @@ public:
     char tmp[48];
     sprintf(tmp, "%d %s +%s %d %d", i, formatTime(race.lapInfoList->get(i).time), formatTimeMs(race.lapInfoList->get(i).difftime), race.lapInfoList->get(i).maxspeed, race.lapInfoList->get(i).avespeed);
 
-    display->drawString(64 + x, 12 * i + y, tmp);
+    display->drawString(x, 12 * i + y, tmp);
   }
 }
 

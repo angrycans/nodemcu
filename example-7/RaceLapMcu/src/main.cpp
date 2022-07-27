@@ -1,4 +1,10 @@
+
+#if !defined(ESP32)
 #include <ESP8266WiFi.h>
+#else
+#include <WiFi.h>
+#endif
+
 #include <FS.h>       // File System for Web Server Files
 #include <LittleFS.h> // This file system is used.
 #include <Wire.h>
@@ -6,8 +12,18 @@
 #include "SH1106Wire.h"
 #include <SPI.h>
 #include <SD.h>
+#if !defined(ESP32)
 #include <SoftwareSerial.h>
 #include <ESPAsyncTCP.h>
+#else
+#include <AsyncTCP.h>
+
+#define SCK 2
+#define MOSI 3
+#define MISO 10
+#define SD_CS 6
+#endif
+
 #include <ESPAsyncWebServer.h>
 #include <TinyGPS++.h>
 #include <TimeLib.h>
@@ -19,7 +35,7 @@
 #include "helper.hpp"
 #include "race.hpp"
 
-#define LED D0 // Led in NodeMCU at pin GPIO16 (D0).
+//#define LED D0 // Led in NodeMCU at pin GPIO16 (D0).
 
 #define OLED13
 #define NEO_M10
@@ -41,10 +57,26 @@ const uint8_t UBLOX_INIT[] PROGMEM = {
     0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x05, 0x47, // GxVTG off
     // 57600
     0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x00, 0xE1,
-    0x00, 0x00, 0x07, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0xDD, 0xC3,
-    0xb5, 0x62, 0x06, 0x00, 0x01, 0x00, 0x01, 0x08, 0x22};
+    0x00, 0x00, 0x07, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0xDD, 0xC3};
+// 0xb5, 0x62, 0x06, 0x00, 0x01, 0x00, 0x01, 0x08, 0x22};
 
+#if !defined(ESP32)
 SoftwareSerial ss(D4, D0); // RX, TX
+#define BUAD 9600
+#else
+// HardwareSerial *ss = &Serial;
+#include <HardwareSerial.h>
+#define TXD1 0 //串口 1使用的TX PIN
+#define RXD1 1 //串口 1使用的RX PIN
+
+// Serial1.begin(9600, SERIAL_8N1, RXD1, TXD1);
+//
+#define ss Serial1
+
+#define LED_BUILTIN 12
+#define BUAD 115200
+#endif
+
 #else
 SoftwareSerial ss(D4, D0); // RX, TX
 #endif
@@ -174,7 +206,7 @@ void initSD()
   // // keep checking the SD reader for valid SD card/format
   delay(100);
   Serial.println("init SD Card");
-
+#if !defined(ESP32)
   while (!SD.begin(chipSelect))
   {
     Serial.println("init SD Card Failed");
@@ -182,6 +214,17 @@ void initSD()
     showDisplay();
     B_SD = false;
   }
+#else
+  SPI.begin(SCK, MISO, MOSI, -1);
+  while (!SD.begin(SD_CS, SPI, 2000000))
+  {
+    Serial.println("init SD Card Failed");
+    ErrInfo += "SD CARD FAILED\n";
+    showDisplay();
+    B_SD = false;
+  }
+
+#endif
 
   B_SD = true;
   logger.Begin(B_SD);
@@ -211,12 +254,12 @@ void initGps()
 {
 
   logger.LogInfo("init GPS");
-  delay(2000);
+  delay(3000);
 #if defined(NEO_M10)
   logger.LogInfo("init GPS NEO_M10");
-
-  ss.begin(9600);
-  // delay(250);
+  ss.begin(9600, SERIAL_8N1, RXD1, TXD1);
+  // ss.begin(9600);
+  //  delay(250);
   while (1)
   {
     if (ss.available() > 0)
@@ -237,7 +280,7 @@ void initGps()
   // delay(250);
 
   logger.LogInfo("init GPS NEO_M10 end");
-  delay(1000);
+  delay(3000);
   ss.begin(57600);
 #else
   ss.begin(57600);
@@ -324,7 +367,7 @@ void recordGps()
              month, day, hour, minute, second, csecond, lat, lng, altitude, KMPH, deg, millis(), satls);
 
 #if defined(DEBUG)
-    // Serial.println(buffer);
+    Serial.println(buffer);
 #endif
 
     if (B_SD)
@@ -454,11 +497,53 @@ void recordGps()
 
 void initLed()
 {
-  pinMode(LED, OUTPUT);
+  // pinMode(LED, OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT);
 }
 
 void setup()
+{
+
+  initLed();
+  Serial.begin(BUAD);
+  Serial.println("setup...");
+  delay(2000);
+  Serial.println("setup...2...");
+  delay(2000);
+  Serial.println("setup...3...");
+  // race.setStatus(d_Setup);
+  // Serial.print("setup...");
+  // Serial.println(debug);
+  // initLed();
+  // Serial.println("initDisplay...");
+  initDisplay();
+  showLogoDisplay();
+
+  Serial.println("init LittleFS filesystem...");
+  if (!LittleFS.begin())
+  {
+    logger.LogInfo("could not mount LittleFS filesystem...");
+    delay(100);
+    ErrInfo += "LittleFS init failed.\n";
+    // ESP.restart();
+  }
+
+  // initSD();
+  initWifi();
+  initWebServer();
+  initGps();
+
+  // race.setStatus(d_gps_searching);
+
+  // snprintf(logbuff, sizeof(logbuff), "init ok debug=%d", debug);
+  // logger.LogInfo(logbuff);
+
+  // delay(250);
+  // setDisplayFrame(0);
+  // delay(250);
+}
+
+void setupEsp8266()
 {
 
   Serial.begin(9600);
@@ -475,7 +560,7 @@ void setup()
   {
     logger.LogInfo("could not mount LittleFS filesystem...");
     delay(100);
-    ErrInfo += "GPS init failed.\n";
+    ErrInfo += "LittleFS init failed.\n";
     // ESP.restart();
   }
 
@@ -491,9 +576,25 @@ void setup()
 
   delay(250);
   setDisplayFrame(0);
+  delay(250);
 }
 
 void loop()
+{
+  digitalWrite(LED_BUILTIN, (millis() / 1000) % 2);
+  while (ss.available() > 0)
+  {
+    char inByte = ss.read();
+    Serial.print(inByte);
+
+    if (gps.encode(inByte))
+    {
+      recordGps();
+      // printData();
+    }
+  }
+}
+void loopEsp8266()
 {
   digitalWrite(LED_BUILTIN, (millis() / 1000) % 2);
 
@@ -504,17 +605,17 @@ void loop()
   showDisplay();
   while (ss.available() > 0)
   {
-    // char inByte = ss.read();
+    char inByte = ss.read();
     // Serial.print(inByte);
-    //  #if defined(DEBUG)
-    //      // snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
-    //      gpsFile.print(inByte);
-    //      gpsFile.flush();
-    //  #endif
-    if (gps.encode(ss.read()))
+    //   #if defined(DEBUG)
+    //       // snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
+    //       gpsFile.print(inByte);
+    //       gpsFile.flush();
+    //   #endif
+    if (gps.encode(inByte))
     {
-      // printData();
       recordGps();
+      // printData();
     }
   }
   //   taskManager.Running(millis());
