@@ -15,7 +15,7 @@ const uint8_t wifi_logo[] PROGMEM = {
 #if !defined(ESP32)
 SH1106Wire display(0x3c, SDA, SCL); // 1.3 SH1106 d2 d1
 #else
-SH1106Wire display(0x3c, 4, 5); // 1.3 SH1106 gpio4 gpio5
+SH1106Wire display(0x3c, 8, 5); // 1.3 SH1106 gpio4 gpio5
 
 #endif
 #else
@@ -165,6 +165,8 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
   display->drawLine(0, 12, 0 + 128, 12);
   display->setTextAlignment(TEXT_ALIGN_CENTER);
   display->setFont(ArialMT_Plain_10);
+  display->drawString(x + 40, 20 + y, (String)(battery.level()));
+  display->drawString(x + 80, 20 + y, (String)(battery.voltage()));
   if (strcmp(DataFileName, "") > 0 && dataFile)
   {
     (millis() / 1000) % 2 ? display->drawString(64 + 24, 0, "Rec") : display->drawString(64 + 24, 0, "");

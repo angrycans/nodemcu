@@ -150,7 +150,7 @@ void setup()
 {
   Serial.begin(115200);
   initDisplay();
-  initSD();
+  // initSD();
 
   pinMode(led1, OUTPUT);
   pinMode(led2, OUTPUT);

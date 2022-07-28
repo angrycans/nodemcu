@@ -91,6 +91,7 @@ Race race;
 File dataFile;
 
 // File gpsFile;
+// unsigned long gpsFileTimer = 0;
 
 char DataFileName[64] = ""; //"RL2022-05-18_14.txt";
 char DataFileDir[24] = "/RLDATA/";
@@ -116,6 +117,7 @@ double KMPH = 0; // current speed
 bool isSetTime = false;
 
 #include "webserver_help.hpp"
+#include "battery_helper.hpp"
 #include "display_helper.hpp"
 #include "gps_helper.hpp"
 
@@ -241,6 +243,11 @@ void initSD()
 
   // logger.LogInfo("print RLDATA Directory done!");
 
+#if defined(DEBUG)
+  SD.remove("/RLDATA/gps.txt");
+  gpsFile = SD.open("/RLDATA/gps.txt", FILE_WRITE);
+#endif
+
   getTrack();
 
   // sprintf(displayInfo.log, "init sd card done!");
@@ -257,9 +264,14 @@ void initGps()
   delay(3000);
 #if defined(NEO_M10)
   logger.LogInfo("init GPS NEO_M10");
+#if !defined(ESP32)
+  ss.begin(9600);
+#else
   ss.begin(9600, SERIAL_8N1, RXD1, TXD1);
-  // ss.begin(9600);
-  //  delay(250);
+#endif
+
+  //
+  delay(250);
   while (1)
   {
     if (ss.available() > 0)
@@ -271,7 +283,7 @@ void initGps()
         ss.write(pgm_read_byte(UBLOX_INIT + i));
       }
 
-      delay(2000);
+      delay(1000);
       break;
     }
     delay(500);
@@ -280,7 +292,7 @@ void initGps()
   // delay(250);
 
   logger.LogInfo("init GPS NEO_M10 end");
-  delay(3000);
+  delay(4000);
   ss.begin(57600);
 #else
   ss.begin(57600);
@@ -290,26 +302,26 @@ void initGps()
 
   smartDelay(1000);
 
-  //   if (gps.charsProcessed() < 10)
-  //   {
-  //     ErrInfo += "GPS init failed.\n";
-  // #if defined(DEBUG)
-  //     logger.LogInfo("GPS init failed. No GPS data received: check wiring");
-  // #endif
-  //   }
-  // Serial.println(F("No GPS data received: check wiring"));
-  int at = millis();
-  while (!ss.available())
+  if (gps.charsProcessed() < 10)
   {
-    if (millis() - at > 5000)
-    {
-      ErrInfo += "GPS init failed.\n";
+    ErrInfo += "GPS init failed.\n";
 #if defined(DEBUG)
-      logger.LogInfo("init GPS failed.");
+    logger.LogInfo("GPS init failed. No GPS data received: check wiring");
 #endif
-      break;
-    }
   }
+  // Serial.println(F("No GPS data received: check wiring"));
+//   int at = millis();
+//   while (!ss.available())
+//   {
+//     if (millis() - at > 5000)
+//     {
+//       ErrInfo += "GPS init failed.\n";
+// #if defined(DEBUG)
+//       logger.LogInfo("init GPS failed.");
+// #endif
+//       break;
+//     }
+//   }
 #if defined(DEBUG)
   logger.LogInfo("init GPS ok");
 #endif
@@ -506,52 +518,11 @@ void setup()
 
   initLed();
   Serial.begin(BUAD);
-  Serial.println("setup...");
-  delay(2000);
-  Serial.println("setup...2...");
   delay(2000);
   Serial.println("setup...3...");
-  // race.setStatus(d_Setup);
-  // Serial.print("setup...");
-  // Serial.println(debug);
-  // initLed();
-  // Serial.println("initDisplay...");
-  initDisplay();
-  showLogoDisplay();
 
-  Serial.println("init LittleFS filesystem...");
-  if (!LittleFS.begin())
-  {
-    logger.LogInfo("could not mount LittleFS filesystem...");
-    delay(100);
-    ErrInfo += "LittleFS init failed.\n";
-    // ESP.restart();
-  }
-
-  // initSD();
-  initWifi();
-  initWebServer();
-  initGps();
-
-  // race.setStatus(d_gps_searching);
-
-  // snprintf(logbuff, sizeof(logbuff), "init ok debug=%d", debug);
-  // logger.LogInfo(logbuff);
-
-  // delay(250);
-  // setDisplayFrame(0);
-  // delay(250);
-}
-
-void setupEsp8266()
-{
-
-  Serial.begin(9600);
   race.setStatus(d_Setup);
-  Serial.print("setup...");
-  Serial.println(debug);
-  initLed();
-  Serial.println("initDisplay...");
+
   initDisplay();
   showLogoDisplay();
 
@@ -561,13 +532,13 @@ void setupEsp8266()
     logger.LogInfo("could not mount LittleFS filesystem...");
     delay(100);
     ErrInfo += "LittleFS init failed.\n";
-    // ESP.restart();
   }
 
   initSD();
   initWifi();
   initWebServer();
   initGps();
+  initBat();
 
   race.setStatus(d_gps_searching);
 
@@ -577,46 +548,96 @@ void setupEsp8266()
   delay(250);
   setDisplayFrame(0);
   delay(250);
+  // gpsFileTimer = millis();
 }
+
+// void setupEsp8266()
+// {
+
+//   Serial.begin(9600);
+//   race.setStatus(d_Setup);
+//   Serial.print("setup...");
+//   Serial.println(debug);
+//   initLed();
+//   Serial.println("initDisplay...");
+//   initDisplay();
+//   showLogoDisplay();
+
+//   Serial.println("init LittleFS filesystem...");
+//   if (!LittleFS.begin())
+//   {
+//     logger.LogInfo("could not mount LittleFS filesystem...");
+//     delay(100);
+//     ErrInfo += "LittleFS init failed.\n";
+//     // ESP.restart();
+//   }
+
+//   initSD();
+//   initWifi();
+//   initWebServer();
+//   initGps();
+
+//   race.setStatus(d_gps_searching);
+
+//   snprintf(logbuff, sizeof(logbuff), "init ok debug=%d", debug);
+//   logger.LogInfo(logbuff);
+
+//   delay(250);
+//   setDisplayFrame(0);
+//   delay(250);
+//   gpsFileTimer = millis();
+// }
 
 void loop()
 {
   digitalWrite(LED_BUILTIN, (millis() / 1000) % 2);
-  while (ss.available() > 0)
-  {
-    char inByte = ss.read();
-    Serial.print(inByte);
-
-    if (gps.encode(inByte))
-    {
-      recordGps();
-      // printData();
-    }
-  }
-}
-void loopEsp8266()
-{
-  digitalWrite(LED_BUILTIN, (millis() / 1000) % 2);
-
-  // #if defined(DEBUG)
-  //   snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
-  //   Serial.println(logbuff);
-  // #endif
   showDisplay();
+  // BatLoop();
+
   while (ss.available() > 0)
   {
     char inByte = ss.read();
-    // Serial.print(inByte);
-    //   #if defined(DEBUG)
-    //       // snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
-    //       gpsFile.print(inByte);
+    // #if defined(DEBUG)
+    //     Serial.print(inByte);
+    //     // snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
+    //     gpsFile.print(inByte);
+    //     if ((int)(millis() - gpsFileTimer) > 30000)
+    //     {
     //       gpsFile.flush();
-    //   #endif
+    //       gpsFileTimer = millis();
+    //     }
+    // #endif
+
     if (gps.encode(inByte))
     {
       recordGps();
       // printData();
     }
   }
-  //   taskManager.Running(millis());
 }
+// void loopEsp8266()
+// {
+//   digitalWrite(LED_BUILTIN, (millis() / 1000) % 2);
+
+//   // #if defined(DEBUG)
+//   //   snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
+//   //   Serial.println(logbuff);
+//   // #endif
+//   showDisplay();
+//   while (ss.available() > 0)
+//   {
+//     char inByte = ss.read();
+//     // Serial.print(inByte);
+//     //   #if defined(DEBUG)
+//     //       // snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
+//     //       gpsFile.print(inByte);
+//     //       gpsFile.flush();
+//     //   #endif
+//     if (gps.encode(inByte))
+//     {
+//       recordGps();
+//       // printData();
+//     }
+//   }
+//   //   taskManager.Running(millis());
+// }
