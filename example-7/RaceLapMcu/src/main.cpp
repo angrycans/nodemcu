@@ -79,6 +79,7 @@ SoftwareSerial ss(D4, D0); // RX, TX
 
 #else
 SoftwareSerial ss(D4, D0); // RX, TX
+#define BUAD 9600
 #endif
 
 int debug = 0; // 是否是接了usb debug启动
@@ -107,7 +108,7 @@ char logbuff[100];
 
 int preRecordCd = 3;
 int recordtoLoopCd = 10;
-double RecordKmph = 3;
+double RecordKmph = 30;
 
 unsigned long lastdevtime = 0;
 double lastkmph = 0;
@@ -244,8 +245,8 @@ void initSD()
   // logger.LogInfo("print RLDATA Directory done!");
 
 #if defined(DEBUG)
-  SD.remove("/RLDATA/gps.txt");
-  gpsFile = SD.open("/RLDATA/gps.txt", FILE_WRITE);
+  // SD.remove("/RLDATA/gps.txt");
+  // gpsFile = SD.open("/RLDATA/gps.txt", FILE_WRITE);
 #endif
 
   getTrack();
