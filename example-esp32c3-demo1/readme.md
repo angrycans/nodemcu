@@ -1,6 +1,0 @@
-esp32c3 SD card Module
-GPIO02---->SCK
-GPIO03---->MOSI
-GPIO10---->MISO
-GPIO06---->CS
-
