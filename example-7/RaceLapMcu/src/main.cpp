@@ -1,5 +1,5 @@
 
-#if !defined(ESP32)
+#if !defined(ESP32C3)
 #include <ESP8266WiFi.h>
 #else
 #include <WiFi.h>
@@ -12,7 +12,7 @@
 #include "SH1106Wire.h"
 #include <SPI.h>
 #include <SD.h>
-#if !defined(ESP32)
+#if !defined(ESP32C3)
 #include <SoftwareSerial.h>
 #include <ESPAsyncTCP.h>
 #else
@@ -60,7 +60,7 @@ const uint8_t UBLOX_INIT[] PROGMEM = {
     0x00, 0x00, 0x07, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0xDD, 0xC3};
 // 0xb5, 0x62, 0x06, 0x00, 0x01, 0x00, 0x01, 0x08, 0x22};
 
-#if !defined(ESP32)
+#if !defined(ESP32C3)
 SoftwareSerial ss(D4, D0); // RX, TX
 #define BUAD 9600
 #else
@@ -209,7 +209,7 @@ void initSD()
   // // keep checking the SD reader for valid SD card/format
   delay(100);
   Serial.println("init SD Card");
-#if !defined(ESP32)
+#if !defined(ESP32C3)
   while (!SD.begin(chipSelect))
   {
     Serial.println("init SD Card Failed");
@@ -266,7 +266,7 @@ void initGps()
   delay(3000);
 #if defined(NEO_M10)
   logger.LogInfo("init GPS NEO_M10");
-#if !defined(ESP32)
+#if !defined(ESP32C3)
   ss.begin(9600);
 #else
   ss.begin(9600, SERIAL_8N1, RXD1, TXD1);

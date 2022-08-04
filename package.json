@@ -4,8 +4,6 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "exm1": "nodemcu-tool upload --port=/dev/tty.usbserial-1410 ./example-1/init.lua ./example-1/httpserver.lua ./example-1/index.html ./example-1/index.css",
-    "terminal": "nodemcu-tool terminal --port=/dev/tty.usbserial-1410",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
