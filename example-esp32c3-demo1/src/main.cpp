@@ -17,7 +17,7 @@ bool B_SD = false;
 int led1 = 12;
 int led2 = 13;
 
-SH1106Wire display(0x3c, 4, 5); // 1.3 SH1106 gpio4 gpio5
+SH1106Wire display(0x3c, 8, 5); // 1.3 SH1106 gpio4 gpio5
 OLEDDisplayUi ui(&display);
 
 void retFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y)

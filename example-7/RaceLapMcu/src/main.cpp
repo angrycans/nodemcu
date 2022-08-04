@@ -219,7 +219,8 @@ void initSD()
   }
 #else
   SPI.begin(SCK, MISO, MOSI, -1);
-  while (!SD.begin(SD_CS, SPI, 2000000))
+  // while (!SD.begin(SD_CS, SPI, 2000000))
+  while (!SD.begin(SD_CS, SPI, 80000000))
   {
     Serial.println("init SD Card Failed");
     ErrInfo += "SD CARD FAILED\n";

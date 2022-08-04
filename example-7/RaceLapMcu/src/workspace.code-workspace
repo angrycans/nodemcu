@@ -22,6 +22,10 @@
 		{
 			"name": "example-esp32c3-demo1",
 			"path": "../../../example-esp32c3-demo1"
+		},
+		{
+			"name": "Marlin-2.0.x",
+			"path": "../../../../Arduino/Marlin-2.0.x"
 		}
 	],
 	"settings": {
