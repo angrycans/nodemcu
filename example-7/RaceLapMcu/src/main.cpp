@@ -1,9 +1,5 @@
 
-#if !defined(ESP32C3)
-#include <ESP8266WiFi.h>
-#else
 #include <WiFi.h>
-#endif
 
 #include <FS.h>       // File System for Web Server Files
 #include <LittleFS.h> // This file system is used.
@@ -12,24 +8,17 @@
 #include "SH1106Wire.h"
 #include <SPI.h>
 #include <SD.h>
-#if !defined(ESP32C3)
-#include <SoftwareSerial.h>
-#include <ESPAsyncTCP.h>
-#else
+
 #include <AsyncTCP.h>
-
-#define SCK 2
-#define MOSI 3
-#define MISO 10
-#define SD_CS 6
-#endif
-
 #include <ESPAsyncWebServer.h>
 #include <TinyGPS++.h>
 #include <TimeLib.h>
 #include <ArduinoJson.h>
-//#include "MillisTaskManager.h"
+#include <HardwareSerial.h>
 
+//#include "MillisTaskManager.h"
+#include "config.h"
+#include "HAL/HAL.h"
 #include "SDLogger.h"
 
 #include "helper.hpp"
@@ -38,7 +27,7 @@
 //#define LED D0 // Led in NodeMCU at pin GPIO16 (D0).
 
 #define OLED13
-#define NEO_M10
+//#define NEO_M10
 
 #define DEBUG
 
@@ -59,27 +48,6 @@ const uint8_t UBLOX_INIT[] PROGMEM = {
     0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x00, 0xE1,
     0x00, 0x00, 0x07, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0xDD, 0xC3};
 // 0xb5, 0x62, 0x06, 0x00, 0x01, 0x00, 0x01, 0x08, 0x22};
-
-#if !defined(ESP32C3)
-SoftwareSerial ss(D4, D0); // RX, TX
-#define BUAD 9600
-#else
-// HardwareSerial *ss = &Serial;
-#include <HardwareSerial.h>
-#define TXD1 0 //串口 1使用的TX PIN
-#define RXD1 1 //串口 1使用的RX PIN
-
-// Serial1.begin(9600, SERIAL_8N1, RXD1, TXD1);
-//
-#define ss Serial1
-
-#define LED_BUILTIN 12
-#define BUAD 115200
-#endif
-
-#else
-SoftwareSerial ss(D4, D0); // RX, TX
-#define BUAD 9600
 #endif
 
 int debug = 0; // 是否是接了usb debug启动
@@ -100,7 +68,6 @@ char DataFileDir[24] = "/RLDATA/";
 bool B_SD = false; // SD Card status
 
 // SD Reader CS pin
-const int chipSelect = 15;
 
 char buffer[120];
 char lastbuffer[100];
@@ -209,26 +176,16 @@ void initSD()
   // // keep checking the SD reader for valid SD card/format
   delay(100);
   Serial.println("init SD Card");
-#if !defined(ESP32C3)
-  while (!SD.begin(chipSelect))
-  {
-    Serial.println("init SD Card Failed");
-    ErrInfo += "SD CARD FAILED\n";
-    showDisplay();
-    B_SD = false;
-  }
-#else
-  SPI.begin(SCK, MISO, MOSI, -1);
-  // while (!SD.begin(SD_CS, SPI, 2000000))
-  while (!SD.begin(SD_CS, SPI, 80000000))
-  {
-    Serial.println("init SD Card Failed");
-    ErrInfo += "SD CARD FAILED\n";
-    showDisplay();
-    B_SD = false;
-  }
 
-#endif
+  SPI.begin(CONFIG_SDCARD_SCK, CONFIG_SDCARD_MISO, CONFIG_SDCARD_MOSI, -1);
+  // while (!SD.begin(SD_CS, SPI, 2000000))
+  while (!SD.begin(CONFIG_SDCARD_CS, SPI, 80000000))
+  {
+    Serial.println("init SD Card Failed");
+    ErrInfo += "SD CARD FAILED\n";
+    showDisplay();
+    B_SD = false;
+  }
 
   B_SD = true;
   logger.Begin(B_SD);
@@ -266,23 +223,19 @@ void initGps()
   delay(3000);
 #if defined(NEO_M10)
   logger.LogInfo("init GPS NEO_M10");
-#if !defined(ESP32C3)
-  ss.begin(9600);
-#else
-  ss.begin(9600, SERIAL_8N1, RXD1, TXD1);
-#endif
 
-  //
+  gpsSerial.begin(9600, SERIAL_8N1, RXD1, TXD1);
+
   delay(250);
   while (1)
   {
-    if (ss.available() > 0)
+    if (gpsSerial.available() > 0)
     {
       Serial.println("gpsSerial.available");
 
       for (uint8_t i = 0; i < sizeof(UBLOX_INIT); i++)
       {
-        ss.write(pgm_read_byte(UBLOX_INIT + i));
+        gpsSerial.write(pgm_read_byte(UBLOX_INIT + i));
       }
 
       delay(1000);
@@ -295,9 +248,10 @@ void initGps()
 
   logger.LogInfo("init GPS NEO_M10 end");
   delay(4000);
-  ss.begin(57600);
+  gpsSerial.begin(57600);
 #else
-  ss.begin(57600);
+  // gpsSerial.begin(57600);
+  gpsSerial.begin(57600, SERIAL_8N1, RXD1, TXD1);
 #endif
 
   // int at = millis();
@@ -495,7 +449,7 @@ void recordGps()
     break;
 
   case d_Stop:
-    race.computerLapinfo(&gps);
+    // race.computerLapinfo(&gps);
 
     race.setStatus(d_Looping);
 #if defined(DEBUG)
@@ -517,39 +471,41 @@ void initLed()
 
 void setup()
 {
+  Serial.begin(BUAD);
+  HAL::Init();
 
   initLed();
-  Serial.begin(BUAD);
-  delay(2000);
-  Serial.println("setup...3...");
+
+  // delay(2000);
+  // Serial.println("setup...3...");
 
   race.setStatus(d_Setup);
 
   initDisplay();
   showLogoDisplay();
 
-  Serial.println("init LittleFS filesystem...");
-  if (!LittleFS.begin())
-  {
-    logger.LogInfo("could not mount LittleFS filesystem...");
-    delay(100);
-    ErrInfo += "LittleFS init failed.\n";
-  }
+  // Serial.println("init LittleFS filesystem...");
+  // if (!LittleFS.begin())
+  // {
+  //   logger.LogInfo("could not mount LittleFS filesystem...");
+  //   delay(100);
+  //   ErrInfo += "LittleFS init failed.\n";
+  // }
 
   initSD();
   initWifi();
   initWebServer();
   initGps();
-  initBat();
+  // initBat();
 
-  race.setStatus(d_gps_searching);
+  // race.setStatus(d_gps_searching);
 
-  snprintf(logbuff, sizeof(logbuff), "init ok debug=%d", debug);
-  logger.LogInfo(logbuff);
+  // snprintf(logbuff, sizeof(logbuff), "init ok debug=%d", debug);
+  // logger.LogInfo(logbuff);
 
-  delay(250);
-  setDisplayFrame(0);
-  delay(250);
+  // delay(250);
+  // setDisplayFrame(0);
+  // delay(250);
   // gpsFileTimer = millis();
 }
 
@@ -594,11 +550,10 @@ void loop()
 {
   digitalWrite(LED_BUILTIN, (millis() / 1000) % 2);
   showDisplay();
-  // BatLoop();
 
-  while (ss.available() > 0)
+  while (gpsSerial.available() > 0)
   {
-    char inByte = ss.read();
+    char inByte = gpsSerial.read();
     // #if defined(DEBUG)
     //     Serial.print(inByte);
     //     // snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
@@ -613,9 +568,11 @@ void loop()
     if (gps.encode(inByte))
     {
       recordGps();
-      // printData();
+      printData();
     }
   }
+
+  HAL::Update();
 }
 // void loopEsp8266()
 // {

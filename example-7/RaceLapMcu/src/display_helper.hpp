@@ -12,14 +12,9 @@ const uint8_t wifi_logo[] PROGMEM = {
     0xc0, 0x03, 0x80, 0x01, 0x00, 0x00, 0x00, 0x00};
 
 #if defined(OLED13)
-#if !defined(ESP32C3)
-SH1106Wire display(0x3c, SDA, SCL); // 1.3 SH1106 d2 d1
+SH1106Wire display(0x3c, CONFIG_DISPLAY_SDA, CONFIG_DISPLAY_SCL); // 1.3 SH1106 gpio4 gpio5
 #else
-SH1106Wire display(0x3c, 8, 5); // 1.3 SH1106 gpio4 gpio5
-
-#endif
-#else
-SSD1306Wire display(0x3c, SDA, SCL); // 0.96 ssd1306 d2 d1
+SSD1306Wire display(0x3c, CONFIG_DISPLAY_SDA, CONFIG_DISPLAY_SCL); // 0.96 ssd1306
 #endif
 
 OLEDDisplayUi ui(&display);
