@@ -1,0 +1,31 @@
+
+#include <WiFi.h>
+
+void initWifi()
+{
+
+  Serial.println("init Wifi");
+  // delay(250);
+  const char *ssid = "RaceLap";      // Enter SSID here
+  const char *password = "88888888"; // Enter Password here
+
+  WiFi.enableAP(true);
+  Serial.println("WiFi.softAP start");
+
+  WiFi.softAP(ssid, password);
+  // delay(250);
+  Serial.println("Soft-AP IP address = ");
+  Serial.println(WiFi.softAPIP().toString().c_str());
+}
+
+void setup()
+{
+  Serial.begin(115200);
+
+  initWifi();
+}
+
+void loop()
+{
+  // digitalWrite(LED_BUILTIN, (millis() / 1000) % 2);
+}

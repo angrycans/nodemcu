@@ -7,10 +7,10 @@ void HAL::Init()
     Serial.println("Version: " VERSION_SOFTWARE);
     Serial.println("Author: " VERSION_AUTHOR_NAME);
 
-    HAL::IMU_Init();
+    //  HAL::IMU_Init();
 }
 
 void HAL::Update()
 {
-    HAL::IMU_Update();
+    //  HAL::IMU_Update();
 }

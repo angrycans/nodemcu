@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"name": "RaceLapMcu",
+			"path": "."
+		},
+		{
+			"name": "testesp32c3",
+			"path": "../../../../PlatformIO/Projects/testesp32c3"
+		}
+	],
+	"settings": {}
+}

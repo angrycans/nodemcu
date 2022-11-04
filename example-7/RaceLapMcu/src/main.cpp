@@ -24,7 +24,7 @@
 #include "helper.hpp"
 #include "race.hpp"
 
-//#define LED D0 // Led in NodeMCU at pin GPIO16 (D0).
+#define LED 12 // Led in NodeMCU at pin GPIO16 (D0).
 
 #define OLED13
 //#define NEO_M10
@@ -96,6 +96,9 @@ void initWifi()
   // delay(250);
   const char *ssid = "RaceLap";      // Enter SSID here
   const char *password = "88888888"; // Enter Password here
+
+  logger.LogInfo("WiFi.softAP start");
+
   WiFi.softAP(ssid, password);
   // delay(250);
   logger.LogInfo("Soft-AP IP address = ");
@@ -179,6 +182,7 @@ void initSD()
 
   SPI.begin(CONFIG_SDCARD_SCK, CONFIG_SDCARD_MISO, CONFIG_SDCARD_MOSI, -1);
   // while (!SD.begin(SD_CS, SPI, 2000000))
+  // while (!SD.begin(CONFIG_SDCARD_CS, SPI, 2000000))
   while (!SD.begin(CONFIG_SDCARD_CS, SPI, 80000000))
   {
     Serial.println("init SD Card Failed");
@@ -189,16 +193,16 @@ void initSD()
 
   B_SD = true;
   logger.Begin(B_SD);
-  if (SD.mkdir("RLDATA"))
-  {
-    Serial.println("RLDATA dir is created.");
-  }
+  // if (SD.mkdir("RLDATA"))
+  // {
+  //   Serial.println("RLDATA dir is created.");
+  // }
 
-  // File root = SD.open("/RLDATA");
+  File root = SD.open("/RLDATA");
 
-  // printDirectory(root, 0);
+  printDirectory(root, 0);
 
-  // root.close();
+  root.close();
 
   // logger.LogInfo("print RLDATA Directory done!");
 
@@ -465,7 +469,7 @@ void recordGps()
 
 void initLed()
 {
-  // pinMode(LED, OUTPUT);
+  pinMode(LED, OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT);
 }
 
@@ -548,6 +552,7 @@ void setup()
 
 void loop()
 {
+  digitalWrite(LED, (millis() / 1000) % 2);
   digitalWrite(LED_BUILTIN, (millis() / 1000) % 2);
   showDisplay();
 
