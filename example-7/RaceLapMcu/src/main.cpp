@@ -191,6 +191,8 @@ void initSD()
     B_SD = false;
   }
 
+  ErrInfo = "";
+
   B_SD = true;
   logger.Begin(B_SD);
   // if (SD.mkdir("RLDATA"))

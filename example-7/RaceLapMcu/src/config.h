@@ -15,8 +15,11 @@
 // #define TXD1 0 //串口 1使用的TX PIN
 // #define RXD1 1 //串口 1使用的RX PIN
 
-#define TXD1 18 //串口 1使用的TX PIN
-#define RXD1 19 //串口 1使用的RX PIN
+// #define TXD1 18 //串口 1使用的TX PIN
+// #define RXD1 19 //串口 1使用的RX PIN
+
+#define TXD1 TX //串口 1使用的TX PIN
+#define RXD1 RX //串口 1使用的RX PIN
 
 #define gpsSerial Serial1
 
