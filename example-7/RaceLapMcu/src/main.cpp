@@ -257,7 +257,7 @@ void initGps()
   gpsSerial.begin(57600);
 #else
   // gpsSerial.begin(57600);
-  gpsSerial.begin(57600, SERIAL_8N1, RXD1, TXD1);
+  gpsSerial.begin(BUAD, SERIAL_8N1, RXD1, TXD1);
 #endif
 
   // int at = millis();
@@ -571,11 +571,11 @@ void loop()
     //       gpsFileTimer = millis();
     //     }
     // #endif
-
+    // Serial.print(inByte);
     if (gps.encode(inByte))
     {
       recordGps();
-      printData();
+      // printData();
     }
   }
 

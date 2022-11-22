@@ -79,24 +79,24 @@ void showDisplay()
     break;
   case d_Looping:
 
-    if (race.sessionActive)
-    {
-      if ((int)(millis() - race.getStatus().timer) < 5000)
-      {
-        setDisplayFrame(1);
-      }
-      else
-      {
-        setDisplayFrame(2);
-      }
-      // ui.enableAutoTransition();
-    }
-    else
-    {
-      // ui.disableAutoTransition();
-      setDisplayFrame(0);
-    }
-
+    // if (race.sessionActive)
+    // {
+    //   if ((int)(millis() - race.getStatus().timer) < 5000)
+    //   {
+    //     setDisplayFrame(1);
+    //   }
+    //   else
+    //   {
+    //     setDisplayFrame(2);
+    //   }
+    //   // ui.enableAutoTransition();
+    // }
+    // else
+    // {
+    //   // ui.disableAutoTransition();
+    //   setDisplayFrame(0);
+    // }
+    setDisplayFrame(0);
     break;
 
   case d_Recording:
