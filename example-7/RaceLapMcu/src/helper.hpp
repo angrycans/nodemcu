@@ -6,8 +6,8 @@ struct point_t
   double x, y;
 };
 
-char *formatTime(unsigned long milli);
-String formatTime2(unsigned long milli);
+// char *formatTime(unsigned long milli);
+// String formatTime2(unsigned long milli);
 
 char *formatTime(unsigned long milli)
 {
