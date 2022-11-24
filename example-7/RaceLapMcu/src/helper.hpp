@@ -1,5 +1,8 @@
+#ifndef Helper_hpp
+#define Helper_hpp
+
 #define D_TO_RADIANS (PI / 180.0f)
-float EARTH_RADIUS = 3956.0; // In miles.
+static float EARTH_RADIUS = 3956.0; // In miles.
 
 struct point_t
 {
@@ -9,7 +12,7 @@ struct point_t
 // char *formatTime(unsigned long milli);
 // String formatTime2(unsigned long milli);
 
-char *formatTime(unsigned long milli)
+static char *formatTime(unsigned long milli)
 {
   char *tmp = new char[10];
   // minutes
@@ -26,7 +29,7 @@ char *formatTime(unsigned long milli)
   return tmp;
 }
 
-char *formatTimeMs(unsigned long milli)
+static char *formatTimeMs(unsigned long milli)
 {
   char *tmp = new char[15];
 
@@ -47,7 +50,7 @@ char *formatTimeMs(unsigned long milli)
   return tmp;
 }
 
-String formatTime2(unsigned long milli)
+static String formatTime2(unsigned long milli)
 {
   // hours
   // int hr = (milli / (1000 * 60 * 60)) % 24;
@@ -77,7 +80,7 @@ String formatTime2(unsigned long milli)
 //   return tmp;
 // }
 
-void IntersectPoint1(const point_t fl_p0, const point_t fl_p1, const point_t p1, const point_t p2, point_t *i)
+static void IntersectPoint1(const point_t fl_p0, const point_t fl_p1, const point_t p1, const point_t p2, point_t *i)
 {
   float denom, numera, mua; // numerb, mub;
 
@@ -92,7 +95,7 @@ void IntersectPoint1(const point_t fl_p0, const point_t fl_p1, const point_t p1,
   i->y = p1.y + mua * (p2.y - p1.y);
 }
 
-void IntersectPoint(float lat1, float lon1, float lat2, float lon2, float finishLineLat1, float finishLineLon1, float finishLineLat2, float finishLineLon2, point_t *i)
+static void IntersectPoint(float lat1, float lon1, float lat2, float lon2, float finishLineLat1, float finishLineLon1, float finishLineLat2, float finishLineLon2, point_t *i)
 {
   float denom, numera, mua; // numerb, mub;
 
@@ -108,7 +111,7 @@ void IntersectPoint(float lat1, float lon1, float lat2, float lon2, float finish
 }
 
 /* static */
-double distanceBetween(double lat1, double long1, double lat2, double long2)
+static double distanceBetween(double lat1, double long1, double lat2, double long2)
 {
   // returns distance in meters between two positions, both specified
   // as signed decimal-degrees latitude and longitude. Uses great-circle
@@ -133,7 +136,7 @@ double distanceBetween(double lat1, double long1, double lat2, double long2)
   return delta * 6372795;
 }
 
-float Distance(const point_t t1, const point_t t2)
+static float Distance(const point_t t1, const point_t t2)
 {
   float Lat1, Long1, Lat2, Long2; // Coordinates in degrees.
   float dlat, dlon;               // Change in location.
@@ -167,7 +170,7 @@ float Distance(const point_t t1, const point_t t2)
   return d;
 }
 
-boolean segmentsIntersect(float lat1, float lon1, float lat2, float lon2, float finishLineLat1, float finishLineLon1, float finishLineLat2, float finishLineLon2)
+static boolean segmentsIntersect(float lat1, float lon1, float lat2, float lon2, float finishLineLat1, float finishLineLon1, float finishLineLat2, float finishLineLon2)
 {
   // does line(p1, p2) intersect line(p3, p4)
   float fDeltaX = lat2 - lat1;
@@ -214,3 +217,5 @@ boolean segmentsIntersect(float lat1, float lon1, float lat2, float lon2, float 
 //   sprintf(t, "%02d:%02d.%03d", min, sec, ms);
 //   return t;
 // }
+
+#endif

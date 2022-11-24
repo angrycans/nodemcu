@@ -3,6 +3,8 @@
 
 #include "HAL/HAL.h"
 
+bool B_SDCARDOK = false;
+
 void printDirectory(File dir, int numTabs)
 {
     while (true)
@@ -57,9 +59,10 @@ void HAL::SDCARD_Init()
         HAL::DISPLAY_Update();
     }
 
+    B_SDCARDOK = true;
     ErrInfo = "";
 
-    logger.Begin(true);
+    logger.Begin(B_SDCARDOK);
     // if (SD.mkdir("RLDATA"))
     // {
     //   Serial.println("RLDATA dir is created.");

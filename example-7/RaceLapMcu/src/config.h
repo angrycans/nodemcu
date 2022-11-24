@@ -18,7 +18,10 @@
 // #define TXD1 18 //串口 1使用的TX PIN
 // #define RXD1 19 //串口 1使用的RX PIN
 #define LED_RUN 12 // Led in NodeMCU at pin GPIO16 (D0).
-#define LED_DEV_BUILTIN 4
+//#define LED_DEV_BUILTIN 4
+
+#define BTN_KEY1 4
+#define BTN_KEY2 0
 
 #define TXD1 TX //串口 1使用的TX PIN
 #define RXD1 RX //串口 1使用的RX PIN

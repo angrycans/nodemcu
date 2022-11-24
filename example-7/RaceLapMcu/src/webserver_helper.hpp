@@ -1,5 +1,6 @@
 #ifndef webserver_helper_HPP
 #define webserver_helper_HPP
+#include "HAL/HAL.h"
 
 AsyncWebServer server(80);
 
@@ -173,8 +174,8 @@ void handleSysinfo(AsyncWebServerRequest *request)
   e["code"] = 1;
   JsonObject data = doc.createNestedObject("data");
   // String str =
-  data["datafilename"] = String(DataFileName);
-  data["RaceStatus"] = race.getStatus().status;
+  // data["datafilename"] = String(DataFileName);
+  // data["RaceStatus"] = race.getStatus().status;
   // data["RaceStatusEnum"] = "0 _Setup 1_preRecord 2_Recording 3_RecordToSleep 4_Sleep";
   // data["RAM"] = ESP.getFreeHeap();
   // data["FreeHeap"] = ESP.getMaxFreeBlockSize();
@@ -412,6 +413,7 @@ void initWebServer()
               if (request->hasParam("file"))
               {
                 String message = request->getParam("file")->value();
+                char logbuff[100];
                   snprintf(logbuff, sizeof(logbuff), "downfile %s",message.c_str());
                  logger.LogInfo(logbuff);
      
@@ -431,6 +433,8 @@ void initWebServer()
     if (request->hasParam("file"))
     {
       String message =  request->getParam("file")->value();
+      char logbuff[100];
+
        snprintf(logbuff, sizeof(logbuff), "delfile %s", message.c_str());
        logger.LogInfo(logbuff);
      

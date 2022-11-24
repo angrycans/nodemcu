@@ -12,39 +12,45 @@
 
 static BLECharacteristic *pCharacteristicTX;
 static BLECharacteristic *pCharacteristicRX;
+static bool deviceConnected = false;
 
-uint8_t updater[16384];
-uint8_t updater2[16384];
-static bool deviceConnected = false, sendMode = false, sendSize = true;
-static bool current = true;
-static int parts = 0, next = 0, cur = 0, MTU = 0;
-static int writeLen = 0, writeLen2 = 0;
-static bool writeFile = false, request = false;
+bool compareData(std::string received, std::string predefined)
+{
+    int receivedLength = received.length();
+    int predefinedLength = predefined.length();
+
+    if ((receivedLength / 2) != predefinedLength)
+    {
+        return false;
+    }
+
+    for (int i = 0; i < predefinedLength; i++)
+    {
+        if (received[i * 2] != predefined[i])
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
 
 class MyServerCallbacks : public BLEServerCallbacks
 {
     void onConnect(BLEServer *pServer)
     {
         deviceConnected = true;
+        logger.LogInfo("BLE Client Connected");
     }
     void onDisconnect(BLEServer *pServer)
     {
         deviceConnected = false;
+        logger.LogInfo("BLE Client Disconnect");
     }
 };
 
 class MyCallbacks : public BLECharacteristicCallbacks
 {
-
-    //    void onStatus(BLECharacteristic* pCharacteristic, Status s, uint32_t code) {
-    //      Serial.print("Status ");
-    //      Serial.print(s);
-    //      Serial.print(" on characteristic ");
-    //      Serial.print(pCharacteristic->getUUID().toString().c_str());
-    //      Serial.print(" with code ");
-    //      Serial.println(code);
-    //    }
-
     void onNotify(BLECharacteristic *pCharacteristic)
     {
         uint8_t *pData;
@@ -69,8 +75,8 @@ class MyCallbacks : public BLECharacteristicCallbacks
     void onWrite(BLECharacteristic *pCharacteristic)
     {
         uint8_t *pData;
-        std::string value = pCharacteristic->getValue();
-        int len = value.length();
+        std::string rxValue = pCharacteristic->getValue();
+        int len = rxValue.length();
         pData = pCharacteristic->getData();
         if (pData != NULL)
         {
@@ -78,7 +84,15 @@ class MyCallbacks : public BLECharacteristicCallbacks
             Serial.print(pCharacteristic->getUUID().toString().c_str());
             Serial.print(" of data length ");
             Serial.println(len);
+            Serial.print("Cmd: ");
+            Serial.println(rxValue.c_str());
             Serial.print("RX  ");
+            std::string lwnCommand = "lwn";
+
+            if (compareData(rxValue, lwnCommand))
+            {
+                Serial.println("lwn command received");
+            }
             for (int i = 0; i < len; i++)
             { // leave this commented
                 Serial.printf("%02X ", pData[i]);
@@ -112,5 +126,5 @@ void HAL::BLE_Init()
     pAdvertising->setMinPreferred(0x06); // functions that help with iPhone connections issue
     pAdvertising->setMinPreferred(0x12);
     BLEDevice::startAdvertising();
-    Serial.println("Characteristic defined! Now you can read it in your phone!");
+    logger.LogInfo("Xlap BLE Service starting");
 }

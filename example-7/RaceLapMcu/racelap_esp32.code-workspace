@@ -12,5 +12,20 @@
 			"path": "../../../../PlatformIO/Projects/testesp32c3"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"files.associations": {
+			"__bit_reference": "cpp",
+			"bitset": "cpp",
+			"chrono": "cpp",
+			"deque": "cpp",
+			"__memory": "cpp",
+			"filesystem": "cpp",
+			"limits": "cpp",
+			"random": "cpp",
+			"ratio": "cpp",
+			"tuple": "cpp",
+			"type_traits": "cpp",
+			"vector": "cpp"
+		}
+	}
 }
