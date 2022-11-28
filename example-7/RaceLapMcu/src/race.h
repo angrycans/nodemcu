@@ -4,8 +4,8 @@
   Released with MIT.
 */
 
-#ifndef RACE_hpp
-#define RACE_hpp
+#ifndef RACE_h
+#define RACE_h
 
 #include "HAL/HAL.h"
 #include "Arduino.h"
@@ -16,6 +16,7 @@
 #include <sys/time.h> // struct timeval
 #include "helper.hpp"
 
+// class Race;
 enum DeviesStatus
 {
   d_Setup,         //系统初始化

@@ -213,9 +213,9 @@ void Race::computerLapinfo(TinyGPSPlus *_gps)
         bestLap = currentLap;
       }
 #if defined(DEBUG)
-      snprintf(logbuff, sizeof(logbuff), "[%s]currlap %d,totol %d,maxspeed:%f,bestlap:%d,bestsession:%lu", formatTime(millis()), race.currentLap, race.totalLap, race.maxspeed, race.bestLap, race.bestSessionTime);
+      snprintf(logbuff, sizeof(logbuff), "[%s]currlap %d,totol %d,maxspeed:%f,bestlap:%d,bestsession:%lu", formatTime(millis()), currentLap, totalLap, maxspeed, bestLap, bestSessionTime);
       logger.LogInfo(logbuff);
-      lapinfo.dump();
+      lapinfo.dump(&logger);
 #endif
 
       // reset the session
@@ -280,13 +280,13 @@ String Race::getHeader(int year, int month, int day, int hour, int minute, int s
   header += DataFileName;
   header += F("=\n");
   header += F("#U==");
-  header += race.UID;
+  header += UID;
   header += F("=\n");
   header += F("#N=");
-  header += race.UNAME;
+  header += UNAME;
   header += F("=\n");
   header += F("#M=");
-  header += race.UNAME;
+  header += UNAME;
   header += F("=\n");
   header += F("#H=");
   header += VERSION_HARDWARE;
@@ -295,7 +295,7 @@ String Race::getHeader(int year, int month, int day, int hour, int minute, int s
   header += VERSION_SOFTWARE;
   header += F("=\n");
   header += F("#T=");
-  header += race.TrackName;
+  header += TrackName;
   header += F("=\n");
   return header;
 }

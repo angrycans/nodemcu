@@ -15,14 +15,15 @@
 #include "OLEDDisplayUi.h"
 
 #include "config.h"
-#include "helper.hpp"
 
+#include "helper.hpp"
+#include "../race.h"
 #include "HAL_Def.h"
 #include "SDLogger.h"
 
+class Race;
+extern Race race;
 extern char logbuff[100];
-
-#include "race.h"
 
 extern String ErrInfo;
 extern SDLogger logger;
@@ -37,8 +38,6 @@ extern double RecordKmph;
 extern File dataFile;
 extern bool isSetTime;
 extern double KMPH;
-
-extern Race race;
 
 namespace HAL
 {
