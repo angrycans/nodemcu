@@ -20,7 +20,9 @@
 #include "HAL_Def.h"
 #include "SDLogger.h"
 
-#include "race.hpp"
+extern char logbuff[100];
+
+#include "race.h"
 
 extern String ErrInfo;
 extern SDLogger logger;
@@ -28,13 +30,15 @@ extern TinyGPSPlus gps;
 extern Battery battery;
 
 extern char DataFileName[64];
-extern Race race;
+
 extern bool B_SDCARDOK;
 
 extern double RecordKmph;
 extern File dataFile;
 extern bool isSetTime;
 extern double KMPH;
+
+extern Race race;
 
 namespace HAL
 {

@@ -3,6 +3,8 @@
 String ErrInfo = "";
 SDLogger logger;
 char DataFileName[64] = "";
+
+char logbuff[100];
 Race race;
 
 void HAL::Init()
@@ -11,6 +13,7 @@ void HAL::Init()
     Serial.println(VERSION_FIRMWARE_NAME);
     Serial.println("Version: " VERSION_SOFTWARE);
     Serial.println("Author: " VERSION_AUTHOR_NAME);
+    race.setStatus(d_Setup);
 
     HAL::LED_Init();
     HAL::BTN_Init();
@@ -20,6 +23,7 @@ void HAL::Init()
     HAL::BLE_Init();
     HAL::GPS_Init();
     HAL::POWER_Init();
+    race.setStatus(d_gps_searching);
 }
 
 void HAL::Update()
@@ -27,6 +31,6 @@ void HAL::Update()
     HAL::LED_Update();
     HAL::DISPLAY_Update();
     HAL::BTN_Update();
-    HAL::GPS_Update();
     HAL::POWER_Update();
+    HAL::GPS_Update();
 }

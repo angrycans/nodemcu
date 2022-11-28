@@ -8,7 +8,7 @@ int preRecordCd = 3;
 int recordtoLoopCd = 10;
 char buffer[120];
 double KMPH = 0; // current speed
-double RecordKmph = 30;
+double RecordKmph = 3;
 char DataFileDir[24] = "/RLDATA/";
 
 void recordGps()
@@ -16,7 +16,7 @@ void recordGps()
 
     if ((race.getStatus().status == d_gps_searching) && ((int)(millis() - race.getStatus().timer) > 5000 && gps.charsProcessed() < 10))
     {
-        ErrInfo = "No GPS data received,reboot";
+        ErrInfo = "No GPS data received, please reboot";
 #if defined(DEBUG)
         snprintf(logbuff, sizeof(logbuff), "No GPS data received");
         logger.LogInfo(logbuff);
@@ -53,7 +53,7 @@ void recordGps()
             return;
         }
 
-        race.computerSession(&gps);
+        // race.computerSession(&gps);
 
         snprintf(buffer, sizeof(buffer),
                  "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%lu,%d",
@@ -80,6 +80,32 @@ void recordGps()
                     logger.LogInfo(logbuff);
 #endif
                     dataFile = SD.open(DataFileName, FILE_WRITE);
+
+                    String header = F("<table>#V=");
+                    header += VERSION_FIRMWARE_NAME;
+                    header += F("=\n");
+                    header += F("#D=");
+                    header += DataFileName;
+                    header += F("=\n");
+                    header += F("#U==");
+                    header += race.UID;
+                    header += F("=\n");
+                    header += F("#N=");
+                    header += race.UNAME;
+                    header += F("=\n");
+                    header += F("#M=");
+                    header += race.UNAME;
+                    header += F("=\n");
+                    header += F("#H=");
+                    header += VERSION_HARDWARE;
+                    header += F("=\n");
+                    header += F("#B=");
+                    header += VERSION_SOFTWARE;
+                    header += F("=\n");
+                    header += F("#T=");
+                    header += race.TrackName;
+                    header += F("=\n");
+                    dataFile.println(header);
                 }
                 if (dataFile)
                 {

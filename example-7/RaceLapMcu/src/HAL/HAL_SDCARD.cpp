@@ -52,7 +52,8 @@ void HAL::SDCARD_Init()
     SPI.begin(CONFIG_SDCARD_SCK, CONFIG_SDCARD_MISO, CONFIG_SDCARD_MOSI, -1);
     // while (!SD.begin(SD_CS, SPI, 2000000))
     // while (!SD.begin(CONFIG_SDCARD_CS, SPI, 2000000))
-    while (!SD.begin(CONFIG_SDCARD_CS, SPI, 80000000))
+    // while (!SD.begin(CONFIG_SDCARD_CS, SPI, 80000000))
+    while (!SD.begin(CONFIG_SDCARD_CS, SPI, 160000000))
     {
         Serial.println("init SD Card Failed");
         ErrInfo += "SD CARD FAILED\n";
