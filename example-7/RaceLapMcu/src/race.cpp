@@ -270,6 +270,32 @@ void Race::getTrackInfo()
   file.close();
 }
 
-void Race::getHeader(int year, int month, int day, int hour, int minute, int second)
+String Race::getHeader(int year, int month, int day, int hour, int minute, int second)
 {
+
+  String header = F("<table>#V=");
+  header += VERSION_FIRMWARE_NAME;
+  header += F("=\n");
+  header += F("#D=");
+  header += DataFileName;
+  header += F("=\n");
+  header += F("#U==");
+  header += race.UID;
+  header += F("=\n");
+  header += F("#N=");
+  header += race.UNAME;
+  header += F("=\n");
+  header += F("#M=");
+  header += race.UNAME;
+  header += F("=\n");
+  header += F("#H=");
+  header += VERSION_HARDWARE;
+  header += F("=\n");
+  header += F("#B=");
+  header += VERSION_SOFTWARE;
+  header += F("=\n");
+  header += F("#T=");
+  header += race.TrackName;
+  header += F("=\n");
+  return header;
 }

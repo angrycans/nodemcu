@@ -118,7 +118,7 @@ public:
 
   void getTrackInfo();
 
-  void getHeader(int year, int month, int day, int hour, int minute, int second);
+  String getHeader(int year, int month, int day, int hour, int minute, int second);
 };
 
 #endif

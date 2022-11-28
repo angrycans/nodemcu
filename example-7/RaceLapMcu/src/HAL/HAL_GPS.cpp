@@ -81,31 +81,7 @@ void recordGps()
 #endif
                     dataFile = SD.open(DataFileName, FILE_WRITE);
 
-                    String header = F("<table>#V=");
-                    header += VERSION_FIRMWARE_NAME;
-                    header += F("=\n");
-                    header += F("#D=");
-                    header += DataFileName;
-                    header += F("=\n");
-                    header += F("#U==");
-                    header += race.UID;
-                    header += F("=\n");
-                    header += F("#N=");
-                    header += race.UNAME;
-                    header += F("=\n");
-                    header += F("#M=");
-                    header += race.UNAME;
-                    header += F("=\n");
-                    header += F("#H=");
-                    header += VERSION_HARDWARE;
-                    header += F("=\n");
-                    header += F("#B=");
-                    header += VERSION_SOFTWARE;
-                    header += F("=\n");
-                    header += F("#T=");
-                    header += race.TrackName;
-                    header += F("=\n");
-                    dataFile.println(header);
+                    dataFile.println(race.getHeader(year, month, day, hour, minute, second));
                 }
                 if (dataFile)
                 {
