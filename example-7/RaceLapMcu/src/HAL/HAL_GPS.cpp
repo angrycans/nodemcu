@@ -57,9 +57,9 @@ void recordGps()
         // race.computerSession(&gps);
 
         snprintf(buffer, sizeof(buffer),
-                 "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%lu,%d",
+                 "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%.2f,%.2f,%lu,%d",
                  year,
-                 month, day, hour, minute, second, csecond, lat, lng, altitude, KMPH, deg, millis(), satls);
+                 month, day, hour, minute, second, csecond, lng, lat, altitude, KMPH, deg, 0, 0, millis(), satls);
 
 #if defined(DEBUG)
         Serial.println(buffer);

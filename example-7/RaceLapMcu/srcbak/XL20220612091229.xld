@@ -1,4 +1,4 @@
-//year month day hour minute  second csecond, lat, lng, altitude, KMPH, deg,angle,G,satls,millis()
+//year month day hour minute  second csecond,lng, lat,  altitude, KMPH, deg,angle,G,satls,millis()
 //年月日时分秒毫秒,经度,纬度,高度,速度,gps角度,mpu倾角,mpu加速度,卫星数,mcu毫秒
 /*
 #V 文件格式版本
