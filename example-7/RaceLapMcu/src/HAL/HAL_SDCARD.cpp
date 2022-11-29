@@ -51,9 +51,10 @@ void HAL::SDCARD_Init()
 
     SPI.begin(CONFIG_SDCARD_SCK, CONFIG_SDCARD_MISO, CONFIG_SDCARD_MOSI, -1);
     // while (!SD.begin(SD_CS, SPI, 2000000))
-    while (!SD.begin(CONFIG_SDCARD_CS, SPI, 2000000))
+    // while (!SD.begin(CONFIG_SDCARD_CS, SPI, 2000000))
     // while (!SD.begin(CONFIG_SDCARD_CS, SPI, 80000000))
     // while (!SD.begin(CONFIG_SDCARD_CS, SPI, 160000000))
+    while (!SD.begin(CONFIG_SDCARD_CS))
     {
         Serial.println("init SD Card Failed");
         ErrInfo += "SD CARD FAILED\n";
@@ -64,22 +65,27 @@ void HAL::SDCARD_Init()
     ErrInfo = "";
 
     logger.Begin(B_SDCARDOK);
-    // if (SD.mkdir("RLDATA"))
+    // if (SD.mkdir("XLAPDATA"))
     // {
-    //   Serial.println("RLDATA dir is created.");
+    //   Serial.println("XLAPDATA dir is created.");
     // }
 
-    File root = SD.open("/RLDATA");
+    File root = SD.open("/XLAPDATA");
 
     printDirectory(root, 0);
 
     root.close();
 
-    // logger.LogInfo("print RLDATA Directory done!");
+    logger.LogInfo("getTrackInfo");
+    race.getTrackInfo();
+
+    // logger.LogInfo(race.getHeader(2022, 11, 29, 15, 16, 30));
+
+    // logger.LogInfo("print XLAPDATA Directory done!");
 
 #if defined(DEBUG)
-    // SD.remove("/RLDATA/gps.txt");
-    // gpsFile = SD.open("/RLDATA/gps.txt", FILE_WRITE);
+    // SD.remove("/XLAPDATA/gps.txt");
+    // gpsFile = SD.open("/XLAPDATA/gps.txt", FILE_WRITE);
 #endif
 
     // getTrack();

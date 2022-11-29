@@ -4,9 +4,9 @@
 /*=========================
    Application configuration
  *=========================*/
-#define VERSION_FIRMWARE_NAME "RaceLap"
-#define VERSION_SOFTWARE "v0.1"
-#define VERSION_HARDWARE "v0.1"
+#define VERSION_FIRMWARE_NAME "XLAP"
+#define VERSION_SOFTWARE "v0.2"
+#define VERSION_HARDWARE "v0.2"
 #define VERSION_AUTHOR_NAME "Angrycans"
 /*=========================
    Hardware Configuration

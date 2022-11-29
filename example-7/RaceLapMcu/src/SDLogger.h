@@ -20,7 +20,7 @@ public:
   void LogInfo(const char *info);
 
 private:
-  String logFilePath;
+  // String logFilePath;
   File logFile;
 
   void WriteToSD(String data);

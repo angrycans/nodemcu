@@ -4,10 +4,9 @@
   Released with MIT.
 */
 
-#include "Arduino.h"
-#include <SD.h>
-#include <SPI.h>
 #include "SDLogger.h"
+
+#include "./HAL/HAL.h"
 
 SDLogger::SDLogger()
 {
@@ -18,12 +17,16 @@ void SDLogger::Begin(bool sd)
 
   if (sd)
   {
-    if (SD.mkdir("RLDATA"))
+    if (SD.mkdir("XLAPDATA"))
     {
-      Serial.println("RLLOG is created.");
+      Serial.println("XLAPDATA Dir is created.");
     }
-    Serial.println("RLLOG init.");
-    logFile = SD.open("/RLDATA/log.txt", FILE_WRITE);
+    else
+    {
+      Serial.println("XLAPDATA Dir create error");
+    }
+    Serial.println("XLAPDATA log init ...");
+    logFile = SD.open("/XLAPDATA/log.txt", FILE_WRITE);
 
     if (logFile)
     {
@@ -33,22 +36,25 @@ void SDLogger::Begin(bool sd)
       Serial.println(1 * 1024 * 1024);
       if (logFile.size() > 1 * 1024 * 1024.0)
       {
-        SD.remove("/RLDATA/log.txt");
+        SD.remove("/XLAPDATA/log.txt");
         delay(250);
-        logFile = SD.open(logFilePath, FILE_WRITE);
+
+        logFile = SD.open("/XLAPDATA/log.txt", FILE_WRITE);
         delay(250);
       }
     }
 
     if (logFile)
     {
-      Serial.println("RLLOG init ok have SDCARD");
+      Serial.println("XLAPLOG init ok have SDCARD");
       logFile.println("\r\n\r\n-----------------------------------------------------------\r\n\r\n");
       logFile.flush();
     }
     else
     {
-      Serial.println("RLLOG init error");
+      Serial.println("XLAPLOG init error");
+      ErrInfo += "XLAPLOG init error\n";
+      // HAL::DISPLAY_Update();
     }
   }
   else

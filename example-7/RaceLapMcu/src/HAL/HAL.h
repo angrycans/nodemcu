@@ -19,13 +19,13 @@
 #include "helper.hpp"
 #include "../race.h"
 #include "HAL_Def.h"
+extern String ErrInfo;
 #include "SDLogger.h"
 
 class Race;
 extern Race race;
 extern char logbuff[100];
 
-extern String ErrInfo;
 extern SDLogger logger;
 extern TinyGPSPlus gps;
 extern Battery battery;

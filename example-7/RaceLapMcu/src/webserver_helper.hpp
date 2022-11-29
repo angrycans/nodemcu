@@ -30,7 +30,7 @@ String file_size(int bytes)
 String ListDirectoryJSON()
 {
 
-  File dir = SD.open("/RLDATA");
+  File dir = SD.open("/XLAPDATA");
   String tree = "";
   int count = 0;
   while (true)
@@ -64,7 +64,7 @@ String ListDirectoryJSON()
 String ListDirectory()
 {
 
-  File dir = SD.open("/RLDATA");
+  File dir = SD.open("/XLAPDATA");
   String tree = F("<table>");
 
   while (true)
@@ -132,7 +132,7 @@ void notFound(AsyncWebServerRequest *request)
 
 void handleGetMcuCfg(AsyncWebServerRequest *request)
 {
-  File file = SD.open("/RLDATA/track.txt");
+  File file = SD.open("/XLAPDATA/track.txt");
 
   StaticJsonDocument<200> doc;
 
@@ -245,9 +245,9 @@ void handleSetLocation(AsyncWebServerRequest *request)
 
   JsonObject e = doc.createNestedObject("e");
 
-  SD.remove("/RLDATA/track.json");
+  SD.remove("/XLAPDATA/track.json");
 
-  File file = SD.open("/RLDATA/track.json", FILE_WRITE);
+  File file = SD.open("/XLAPDATA/track.json", FILE_WRITE);
   if (!file)
   {
     e["code"] = 1;
@@ -322,7 +322,7 @@ void handleSetSpeed(AsyncWebServerRequest *request)
 
 void getTrack()
 {
-  File file = SD.open("/RLDATA/track.json");
+  File file = SD.open("/XLAPDATA/track.json");
 
   StaticJsonDocument<1024> doc;
   DeserializationError error = deserializeJson(doc, file);
@@ -439,7 +439,7 @@ void initWebServer()
        logger.LogInfo(logbuff);
      
       // request->send(200, "text/plain", "Params ok");
-      // root = SD.open("/RLDATA");
+      // root = SD.open("/XLAPDATA");
       
       if (SD.remove(message)){
             request->send(200, "text/plain", "{\"e\":{\"code\":1}}");

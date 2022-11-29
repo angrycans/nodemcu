@@ -13,12 +13,14 @@ void HAL::Init()
     Serial.println(VERSION_FIRMWARE_NAME);
     Serial.println("Version: " VERSION_SOFTWARE);
     Serial.println("Author: " VERSION_AUTHOR_NAME);
+    Serial.print("CPU:");
+    Serial.println(ESP.getCpuFreqMHz());
     race.setStatus(d_Setup);
-
-    HAL::LED_Init();
-    HAL::BTN_Init();
     HAL::DISPLAY_Init();
     HAL::SDCARD_Init();
+    HAL::LED_Init();
+    HAL::BTN_Init();
+
     HAL::WIFI_Init();
     HAL::BLE_Init();
     HAL::GPS_Init();

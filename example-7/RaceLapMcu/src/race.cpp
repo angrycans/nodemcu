@@ -229,7 +229,7 @@ void Race::computerLapinfo(TinyGPSPlus *_gps)
 void Race::getTrackInfo()
 {
 
-  File file = SD.open("/RLDATA/track.json");
+  File file = SD.open("/XLAPDATA/track.json");
 
   StaticJsonDocument<1024> doc;
   DeserializationError error = deserializeJson(doc, file);
@@ -273,11 +273,13 @@ void Race::getTrackInfo()
 String Race::getHeader(int year, int month, int day, int hour, int minute, int second)
 {
 
-  String header = F("<table>#V=");
+  char tmp[100];
+  snprintf(tmp, 20, "%04d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
+  String header = F("#V=");
   header += VERSION_FIRMWARE_NAME;
   header += F("=\n");
   header += F("#D=");
-  header += DataFileName;
+  header += tmp;
   header += F("=\n");
   header += F("#U==");
   header += UID;
@@ -297,5 +299,13 @@ String Race::getHeader(int year, int month, int day, int hour, int minute, int s
   header += F("#T=");
   header += TrackName;
   header += F("=\n");
+  header += F("<tracksector>\n");
+  for (int i = 0; i < trackplan_size; i++)
+  {
+    sprintf(tmp, "%.8lf,%.8lf,%.8lf,%.8lf\n", i, trackplan[i][0], trackplan[i][1], trackplan[i][2], trackplan[i][3]);
+    header += tmp;
+  }
+
+  header += F("</tracksector>");
   return header;
 }

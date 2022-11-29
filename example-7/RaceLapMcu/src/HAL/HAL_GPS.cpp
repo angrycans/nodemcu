@@ -10,7 +10,7 @@ int recordtoLoopCd = 10;
 char buffer[120];
 double KMPH = 0; // current speed
 double RecordKmph = 3;
-char DataFileDir[24] = "/RLDATA/";
+char DataFileDir[24] = "/XLAPDATA/";
 
 void recordGps()
 {
@@ -74,7 +74,7 @@ void recordGps()
                 {
                     if (strcmp(DataFileName, "") == 0)
                     {
-                        sprintf(DataFileName, "%sRL%04d%02d%02d%02d%02d%02d.txt", DataFileDir, year, month, day, hour, minute, second);
+                        sprintf(DataFileName, "%sxlap%04d%02d%02d%02d%02d%02d.txt", DataFileDir, year, month, day, hour, minute, second);
                     }
 #if defined(DEBUG)
                     snprintf(logbuff, sizeof(logbuff), "[%s]new DataFileName recording %s", formatTime(millis()), DataFileName);
