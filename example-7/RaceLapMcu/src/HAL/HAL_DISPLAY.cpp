@@ -151,15 +151,6 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
         display->drawString(x, 12 + y, ErrInfo);
         return;
     }
-    drawBattery(display, 104, 1, battery.level());
-
-    if (race.getStatus().status == d_gps_searching)
-    {
-        drawGpsSearchingTime(display);
-    }
-    drawSatles(display, 0, 1, gps.satellites.isValid() ? (int)gps.satellites.value() : -1);
-
-    display->drawLine(0, 12, 0 + 128, 12);
 
     // draw debug battery
     display->setTextAlignment(TEXT_ALIGN_LEFT);
@@ -168,7 +159,7 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
     display->drawString(x + 22, 20 + y, (String)(battery.voltage()));
 
     display->drawString(x + 52, 10 + y, (String)(100 - usage));
-    display->drawString(x + 65, 10 + y, (String)(voltage));
+    display->drawString(x + 70, 10 + y, (String)(voltage));
 
     // draw debug mpu
 
@@ -180,12 +171,20 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
 
     if (digitalRead(CONFIG_BATDET_PIN) == LOW)
     {
-        display->drawString(x + 0, 10 + y, "charge");
+        drawBattery(display, 104, 1, -1);
     }
     else
     {
-        display->drawString(x + 0, 10 + y, "no charge");
+        drawBattery(display, 104, 1, battery.level());
     }
+
+    if (race.getStatus().status == d_gps_searching)
+    {
+        drawGpsSearchingTime(display);
+    }
+    drawSatles(display, 0, 1, gps.satellites.isValid() ? (int)gps.satellites.value() : -1);
+
+    display->drawLine(0, 12, 0 + 128, 12);
 
     if (strcmp(DataFileName, "") > 0 && dataFile)
     {
