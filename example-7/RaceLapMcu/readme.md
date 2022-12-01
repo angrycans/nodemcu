@@ -14,3 +14,5 @@ connect to WiFi and offer WebServer to retrieve recorded laps from the tracker
 analyse recorded laps in APP
 OTA update over wifi
 
+
+

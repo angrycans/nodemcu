@@ -1,11 +1,12 @@
 
 #include "HAL/HAL.h"
 
-Battery battery(3400, 4200, 4);
+Battery battery(3000, 4200, CONFIG_BATTERY_PIN);
 
 void HAL::POWER_Init()
 {
-    battery.begin(5000, 1.0);
+    pinMode(CONFIG_BATDET_PIN, INPUT_PULLUP);
+    battery.begin(1200, 1.0);
 }
 
 void HAL::POWER_Update()

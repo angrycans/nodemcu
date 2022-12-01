@@ -25,7 +25,11 @@
 			"ratio": "cpp",
 			"tuple": "cpp",
 			"type_traits": "cpp",
-			"vector": "cpp"
+			"vector": "cpp",
+			"istream": "cpp",
+			"locale": "cpp",
+			"memory": "cpp",
+			"thread": "cpp"
 		}
 	}
 }

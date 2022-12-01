@@ -41,7 +41,7 @@ void HAL::DISPLAY_Init()
 {
 
     logger.LogInfo("HAL::DISPLAY_Init");
-    ui.setTargetFPS(30);
+    ui.setTargetFPS(60);
 
     ui.setFrameAnimation(SLIDE_LEFT);
 
@@ -151,7 +151,7 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
         display->drawString(x, 12 + y, ErrInfo);
         return;
     }
-    drawBattery(display, 104, 1, 100);
+    drawBattery(display, 104, 1, battery.level());
 
     if (race.getStatus().status == d_gps_searching)
     {
@@ -160,10 +160,30 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
     drawSatles(display, 0, 1, gps.satellites.isValid() ? (int)gps.satellites.value() : -1);
 
     display->drawLine(0, 12, 0 + 128, 12);
-    display->setTextAlignment(TEXT_ALIGN_CENTER);
+
+    // draw debug battery
+    display->setTextAlignment(TEXT_ALIGN_LEFT);
     display->setFont(ArialMT_Plain_10);
-    display->drawString(x + 40, 20 + y, (String)(battery.level()));
-    display->drawString(x + 80, 20 + y, (String)(battery.voltage()));
+    display->drawString(x, 20 + y, (String)(battery.level()));
+    display->drawString(x + 22, 20 + y, (String)(battery.voltage()));
+
+    // draw debug mpu
+
+    // float last_ay, last_roll;
+    // mpu.read();
+    display->drawString(x + 58, 20 + y, (String)(mpu.getAccelY()));
+    display->drawString(x + 83, 20 + y, (String)(mpu.getRoll()));
+    display->drawString(x + 100, 10 + y, (String)(mpu.getTemperature()));
+
+    if (digitalRead(CONFIG_BATDET_PIN) == LOW)
+    {
+        display->drawString(x + 0, 10 + y, "charge");
+    }
+    else
+    {
+        display->drawString(x + 0, 10 + y, "no charge");
+    }
+
     if (strcmp(DataFileName, "") > 0 && dataFile)
     {
         (millis() / 1000) % 2 ? display->drawString(64 + 24, 0, "Rec") : display->drawString(64 + 24, 0, "");

@@ -28,11 +28,16 @@
 #define TXD1 TX //串口 1使用的TX PIN
 #define RXD1 RX //串口 1使用的RX PIN
 
+// #define TXD1 18 //串口 1使用的TX PIN
+// #define RXD1 19 //串口 1使用的RX PIN
+
 #define OLED13
 
 #define gpsSerial Serial1
 
 #define BUAD 115200
+
+//#define BUAD 57600
 
 // Sdcard luat esp32-c3
 #define CONFIG_SDCARD_SCK 2
@@ -63,6 +68,8 @@
 
 /* Power */
 #define CONFIG_POWER_EN_PIN 21
+#define CONFIG_BATTERY_PIN 1
+#define CONFIG_BATDET_PIN 7
 
 /* Debug USART */
 #define CONFIG_DEBUG_SERIAL Serial

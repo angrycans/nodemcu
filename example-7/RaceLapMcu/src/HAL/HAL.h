@@ -12,6 +12,7 @@
 #include <LittleFS.h> // This file system is used.
 #include <Battery.h>
 
+#include "GY521.h"
 #include "OLEDDisplayUi.h"
 
 #include "config.h"
@@ -39,6 +40,8 @@ extern File dataFile;
 extern bool isSetTime;
 extern double KMPH;
 
+extern GY521 mpu;
+
 namespace HAL
 {
 
@@ -57,8 +60,10 @@ namespace HAL
     void I2C_Init(bool startScan);
 
     /* IMU */
+
     void IMU_Init();
     void IMU_Update();
+    void IMU_Calibration();
 
     /* SDCARD*/
     void SDCARD_Init();

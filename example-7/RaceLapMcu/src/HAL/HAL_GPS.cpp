@@ -7,9 +7,9 @@ File dataFile;
 bool isSetTime = false;
 int preRecordCd = 3;
 int recordtoLoopCd = 10;
-char buffer[120];
-double KMPH = 0; // current speed
-double RecordKmph = 3;
+char buffer[140];
+double KMPH = 3; // current speed
+double RecordKmph = 1;
 char DataFileDir[24] = "/XLAPDATA/";
 
 void recordGps()
@@ -54,15 +54,15 @@ void recordGps()
             return;
         }
 
-        // race.computerSession(&gps);
+        race.computerSession(&gps);
 
         snprintf(buffer, sizeof(buffer),
-                 "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%.2f,%.2f,%lu,%d",
+                 "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%.2f,%.2f,%lu,%02d",
                  year,
-                 month, day, hour, minute, second, csecond, lng, lat, altitude, KMPH, deg, 0, 0, millis(), satls);
+                 month, day, hour, minute, second, csecond, lng, lat, altitude, KMPH, deg, 0.0f, 0.0f, millis(), satls);
 
 #if defined(DEBUG)
-        Serial.println(buffer);
+        // Serial.println(buffer);
 #endif
 
         if (B_SDCARDOK)

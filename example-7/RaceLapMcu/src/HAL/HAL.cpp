@@ -15,6 +15,7 @@ void HAL::Init()
     Serial.println("Author: " VERSION_AUTHOR_NAME);
     Serial.print("CPU:");
     Serial.println(ESP.getCpuFreqMHz());
+
     race.setStatus(d_Setup);
     HAL::DISPLAY_Init();
     HAL::SDCARD_Init();
@@ -25,6 +26,7 @@ void HAL::Init()
     HAL::BLE_Init();
     HAL::GPS_Init();
     HAL::POWER_Init();
+    HAL::IMU_Init();
     race.setStatus(d_gps_searching);
 }
 
@@ -34,5 +36,8 @@ void HAL::Update()
     HAL::DISPLAY_Update();
     HAL::BTN_Update();
     HAL::POWER_Update();
+    HAL::IMU_Update();
     HAL::GPS_Update();
+
+    //  HAL::IMU_Calibration();
 }

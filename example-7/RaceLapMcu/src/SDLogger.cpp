@@ -17,7 +17,7 @@ void SDLogger::Begin(bool sd)
 
   if (sd)
   {
-    if (SD.mkdir("XLAPDATA"))
+    if (SD.mkdir("/XLAPDATA"))
     {
       Serial.println("XLAPDATA Dir is created.");
     }

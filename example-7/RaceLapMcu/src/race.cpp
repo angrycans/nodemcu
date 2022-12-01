@@ -155,7 +155,7 @@ void Race::computerSession(TinyGPSPlus *_gps)
   avespeed = (avespeed + speed) / 2;
   lapavespeed = (lapavespeed + speed) / 2;
 
-  computerLapinfo(_gps);
+  // computerLapinfo(_gps);
 
   last_gps = *_gps;
 }
