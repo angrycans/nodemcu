@@ -167,12 +167,15 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
     display->drawString(x, 20 + y, (String)(battery.level()));
     display->drawString(x + 22, 20 + y, (String)(battery.voltage()));
 
+    display->drawString(x + 52, 10 + y, (String)(100 - usage));
+    display->drawString(x + 65, 10 + y, (String)(voltage));
+
     // draw debug mpu
 
     // float last_ay, last_roll;
     // mpu.read();
-    display->drawString(x + 58, 20 + y, (String)(mpu.getAccelY()));
-    display->drawString(x + 83, 20 + y, (String)(mpu.getRoll()));
+    display->drawString(x + 55, 20 + y, (String)(mpu.getAccelY()));
+    display->drawString(x + 80, 20 + y, (String)(mpu.getRoll()));
     display->drawString(x + 100, 10 + y, (String)(mpu.getTemperature()));
 
     if (digitalRead(CONFIG_BATDET_PIN) == LOW)

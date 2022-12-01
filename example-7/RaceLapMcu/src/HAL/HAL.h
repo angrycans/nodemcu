@@ -42,6 +42,8 @@ extern double KMPH;
 
 extern GY521 mpu;
 
+extern int voltage, usage;
+
 namespace HAL
 {
 
@@ -86,6 +88,7 @@ namespace HAL
     /*POWER*/
     void POWER_Init();
     void POWER_Update();
+    void Power_GetInfo();
 
 }
 
