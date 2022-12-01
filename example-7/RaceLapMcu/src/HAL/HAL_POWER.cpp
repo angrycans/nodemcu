@@ -14,7 +14,7 @@
 #define BATT_MAX_VOLTAGE 4200
 #define BATT_FULL_CHARGE_VOLTAGE 4100
 
-Battery battery(3000, 4200, CONFIG_BATTERY_PIN);
+Battery battery(3300, 4200, CONFIG_BATTERY_PIN);
 
 int voltage, usage;
 
@@ -31,7 +31,7 @@ void HAL::POWER_Init()
 {
     pinMode(CONFIG_BATDET_PIN, INPUT_PULLUP);
     pinMode(CONFIG_BATTERY_PIN, INPUT);
-    battery.begin(3300, 1.0);
+    battery.begin(1200, 1.47);
 }
 
 void HAL::Power_GetInfo()

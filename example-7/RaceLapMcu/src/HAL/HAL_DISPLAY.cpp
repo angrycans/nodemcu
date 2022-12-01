@@ -158,7 +158,7 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
     display->drawString(x, 20 + y, (String)(battery.level()));
     display->drawString(x + 22, 20 + y, (String)(battery.voltage()));
 
-    display->drawString(x + 52, 10 + y, (String)(100 - usage));
+    display->drawString(x + 42, 10 + y, (String)(100 - usage));
     display->drawString(x + 70, 10 + y, (String)(voltage));
 
     // draw debug mpu
