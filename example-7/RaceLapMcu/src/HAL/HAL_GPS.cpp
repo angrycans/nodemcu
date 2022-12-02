@@ -59,7 +59,7 @@ void recordGps()
         snprintf(buffer, sizeof(buffer),
                  "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%.2f,%.2f,%lu,%02d",
                  year,
-                 month, day, hour, minute, second, csecond, lng, lat, altitude, KMPH, deg, 0.0f, 0.0f, millis(), satls);
+                 month, day, hour, minute, second, csecond, lng, lat, altitude, KMPH, deg, 0.0f, (ypr[1] * 180 / M_PI), millis(), satls);
 
 #if defined(DEBUG)
         // Serial.println(buffer);
@@ -74,7 +74,7 @@ void recordGps()
                 {
                     if (strcmp(DataFileName, "") == 0)
                     {
-                        sprintf(DataFileName, "%sxlap%04d%02d%02d%02d%02d%02d.txt", DataFileDir, year, month, day, hour, minute, second);
+                        sprintf(DataFileName, "%s%04d%02d%02d%02d%02d%02d.xld", DataFileDir, year, month, day, hour, minute, second);
                     }
 #if defined(DEBUG)
                     snprintf(logbuff, sizeof(logbuff), "[%s]new DataFileName recording %s", formatTime(millis()), DataFileName);

@@ -13,6 +13,48 @@ void handleSysinfo(AsyncWebServerRequest *request);
 void handleGetLocation(AsyncWebServerRequest *request);
 void handleSetSpeed(AsyncWebServerRequest *request);
 
+// file utils
+void listDir(fs::FS &fs, const char *dirname, uint8_t levels);
+
+void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
+{
+  Serial.printf("Listing directory: %s\r\n", dirname);
+
+  File root = fs.open(dirname);
+  if (!root)
+  {
+    Serial.println("- failed to open directory");
+    return;
+  }
+  if (!root.isDirectory())
+  {
+    Serial.println(" - not a directory");
+    return;
+  }
+
+  File file = root.openNextFile();
+  while (file)
+  {
+    if (file.isDirectory())
+    {
+      Serial.print("  DIR : ");
+      Serial.println(file.name());
+      if (levels)
+      {
+        listDir(fs, file.path(), levels - 1);
+      }
+    }
+    else
+    {
+      Serial.print("  FILE: ");
+      Serial.print(file.name());
+      Serial.print("\tSIZE: ");
+      Serial.println(file.size());
+    }
+    file = root.openNextFile();
+  }
+}
+
 String file_size(int bytes)
 {
   String fsize = "";
@@ -469,6 +511,14 @@ void initWebServer()
   server.on("/setspeed", HTTP_GET, handleSetSpeed);
 
   server.begin();
+
+  logger.LogInfo("list littleFS");
+
+  if (LittleFS.begin())
+  {
+    logger.LogInfo("LittleFS mounted");
+  }
+  listDir(LittleFS, "/", 3);
 }
 
 #endif

@@ -2,23 +2,37 @@
 // #include "Wire.h"
 #include "HAL/HAL.h"
 
+#include "I2Cdev.h"
+
+#include "MPU6050_6Axis_MotionApps20.h"
+
 // Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
 // is used in I2Cdev.h
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
 #include "Wire.h"
 #endif
 
-// SoftWire sw(CONFIG_MCU_SDA, CONFIG_MCU_SCL);
+// extern MPU6050 mpu;
+//  SoftWire sw(CONFIG_MCU_SDA, CONFIG_MCU_SCL);
 
 // MPU9250Setting setting;
 // static MPU9250_<SoftWire> mpu;
-GY521 mpu(0x68);
+MPU6050 mpu;
+bool dmpReady = false; // set true if DMP init was successful
+uint8_t mpuIntStatus;  // holds actual interrupt status byte from MPU
+uint8_t devStatus;     // return status after each device operation (0 = success, !0 = error)
+uint16_t packetSize;   // expected DMP packet size (default is 42 bytes)
 
-uint32_t counter = 0;
+uint16_t fifoCount;     // count of all bytes currently in FIFO
+uint8_t fifoBuffer[64]; // FIFO storage buffer
 
-float ax, ay, az;
-float gx, gy, gz;
-float t;
+// orientation/motion vars
+Quaternion q;        // [w, x, y, z]         quaternion container
+VectorInt16 aa;      // [x, y, z]            accel sensor measurements
+VectorInt16 aaReal;  // [x, y, z]            gravity-free accel sensor measurements
+VectorInt16 aaWorld; // [x, y, z]            world-frame accel sensor measurements
+VectorFloat gravity; // [x, y, z]            gravity vector
+float ypr[3];        // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
 void HAL::I2C_Init(bool startScan)
 {
@@ -70,128 +84,71 @@ void HAL::IMU_Init()
     // delay(1000);
     Wire.begin(CONFIG_MCU_SDA, CONFIG_MCU_SCL);
 
-    delay(100);
-    while (mpu.wakeup() == false)
+    // if (!mpu.setup(0x68, setting, sw))
+    mpu.initialize();
+
+    // verify connection
+    logger.LogInfo("Testing device connections...");
+    logger.LogInfo(mpu.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
+    logger.LogInfo("PID tuning Each Dot = 100 readings");
+
+    Serial.println(F("Initializing DMP..."));
+    devStatus = mpu.dmpInitialize();
+
+    if (devStatus == 0)
     {
-        Serial.print(millis());
-        Serial.println("\tCould not connect to GY521");
-        delay(1000);
+        // Calibration Time: generate offsets and calibrate our MPU6050
+        mpu.CalibrateAccel(6);
+        mpu.CalibrateGyro(6);
+        mpu.PrintActiveOffsets();
+        // turn on the DMP, now that it's ready
+        Serial.println(F("Enabling DMP..."));
+        mpu.setDMPEnabled(true);
+
+        mpuIntStatus = mpu.getIntStatus();
+
+        // set our DMP Ready flag so the main loop() function knows it's okay to use it
+        Serial.println(F("DMP ready! Waiting for first interrupt..."));
+        dmpReady = true;
+
+        // get expected DMP packet size for later comparison
+        packetSize = mpu.dmpGetFIFOPacketSize();
     }
-    mpu.setAccelSensitivity(0); // 8g
-    mpu.setGyroSensitivity(1);  // 500 degrees/s
-
-    // mpu.setThrottle();
-
-    mpu.axe = 0;
-    mpu.aye = 0;
-    mpu.aze = 0;
-    mpu.gxe = 0;
-    mpu.gye = 0;
-    mpu.gze = 0;
-
-    Serial.println("mpu start...");
-}
-
-void HAL::IMU_Calibration()
-{
-    ax = ay = az = 0;
-    gx = gy = gz = 0;
-    t = 0;
-    for (int i = 0; i < 20; i++)
+    else
     {
-        mpu.read();
-        ax -= mpu.getAccelX();
-        ay -= mpu.getAccelY();
-        az -= mpu.getAccelZ();
-        gx -= mpu.getGyroX();
-        gy -= mpu.getGyroY();
-        gz -= mpu.getGyroZ();
-        t += mpu.getTemperature();
+        // ERROR!
+        // 1 = initial memory load failed
+        // 2 = DMP configuration updates failed
+        // (if it's going to break, usually the code will be 1)
+        Serial.print(F("DMP Initialization failed (code "));
+        Serial.print(devStatus);
+        Serial.println(F(")"));
     }
-
-    if (counter % 10 == 0)
-    {
-        Serial.println("\n\tACCELEROMETER\t\tGYROSCOPE\t\tTEMPERATURE");
-        Serial.print('\t');
-        Serial.print(mpu.axe, 3);
-        Serial.print('\t');
-        Serial.print(mpu.aye, 3);
-        Serial.print('\t');
-        Serial.print(mpu.aze, 3);
-        Serial.print('\t');
-        Serial.print(mpu.gxe, 3);
-        Serial.print('\t');
-        Serial.print(mpu.gye, 3);
-        Serial.print('\t');
-        Serial.print(mpu.gze, 3);
-        Serial.print('\n');
-        Serial.println("\taxe\taye\taze\tgxe\tgye\tgze\tT");
-    }
-
-    Serial.print(counter);
-    Serial.print('\t');
-    Serial.print(ax * 0.05, 3);
-    Serial.print('\t');
-    Serial.print(ay * 0.05, 3);
-    Serial.print('\t');
-    Serial.print(az * 0.05, 3);
-    Serial.print('\t');
-    Serial.print(gx * 0.05, 3);
-    Serial.print('\t');
-    Serial.print(gy * 0.05, 3);
-    Serial.print('\t');
-    Serial.print(gz * 0.05, 3);
-    Serial.print('\t');
-    Serial.print(t * 0.05, 2);
-    Serial.println();
-
-    // adjust calibration errors so table should get all zero's.
-    mpu.axe += ax * 0.05;
-    mpu.aye += ay * 0.05;
-    mpu.aze += az * 0.05;
-    mpu.gxe += gx * 0.05;
-    mpu.gye += gy * 0.05;
-    mpu.gze += gz * 0.05;
-
-    counter++;
-    delay(100);
 }
 
 void HAL::IMU_Update()
 {
+    if (!dmpReady)
+        return;
+    // read a packet from FIFO
+    if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer))
+    { // Get the Latest packet
 
-    mpu.read();
-    // IMU_Info_t imuInfo;
-    // accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+        // display Euler angles in degrees
+        mpu.dmpGetQuaternion(&q, fifoBuffer);
+        mpu.dmpGetGravity(&gravity, &q);
+        mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+        // Serial.print("ypr\t");
+        // Serial.print(ypr[0] * 180 / M_PI);
+        // Serial.print("\t");
+        // Serial.print(ypr[1] * 180 / M_PI);
+        // Serial.print("\t");
+        // Serial.println(ypr[2] * 180 / M_PI);
 
-    // display tab-separated accel/gyro x/y/z values
-    // Serial.print("a/g:\t");
-    // Serial.print(ax);
-    // Serial.print("\t");
-    // Serial.print(ay);
-    // Serial.print("\t");
-    // Serial.print(az);
-    // Serial.print("\t");
-    // Serial.println(round((float)gx / 32768 * 180));
-    // Serial.print("\t");
-    //  Serial.print(gy);
-    //  Serial.print("\t");
-    //  Serial.println(gz);
-
-    // mpu.update();
-
-    // imuInfo.ax = mpu.getAccX();
-    // imuInfo.ay = mpu.getAccY();
-    // imuInfo.az = mpu.getAccZ();
-    // imuInfo.gx = mpu.getGyroX();
-    // imuInfo.gy = mpu.getGyroY();
-    // imuInfo.gz = mpu.getGyroZ();
-    // imuInfo.mx = mpu.getMagX();
-    // imuInfo.my = mpu.getMagY();
-    // imuInfo.mz = mpu.getMagZ();
-    // imuInfo.roll = mpu.getRoll();
-    // imuInfo.yaw = mpu.getYaw();
-    // imuInfo.pitch = mpu.getPitch();
-
-    // Serial.println(imuInfo.ay);
+        // display real acceleration, adjusted to remove gravity
+        mpu.dmpGetQuaternion(&q, fifoBuffer);
+        mpu.dmpGetAccel(&aa, fifoBuffer);
+        mpu.dmpGetGravity(&gravity, &q);
+        mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
+    }
 }

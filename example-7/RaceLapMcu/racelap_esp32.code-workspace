@@ -29,7 +29,8 @@
 			"istream": "cpp",
 			"locale": "cpp",
 			"memory": "cpp",
-			"thread": "cpp"
+			"thread": "cpp",
+			"mpu6050.h": "c"
 		}
 	}
 }

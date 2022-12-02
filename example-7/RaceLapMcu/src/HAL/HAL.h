@@ -12,7 +12,6 @@
 #include <LittleFS.h> // This file system is used.
 #include <Battery.h>
 
-#include "GY521.h"
 #include "OLEDDisplayUi.h"
 
 #include "config.h"
@@ -40,9 +39,18 @@ extern File dataFile;
 extern bool isSetTime;
 extern double KMPH;
 
-extern GY521 mpu;
-
+// battery
 extern int voltage, usage;
+
+// #include "GY521.h"
+// extern GY521 mpu;
+
+#include "helper_3dmath.h"
+
+extern VectorInt16 aaReal;  // [x, y, z]            gravity-free accel sensor measurements
+extern VectorInt16 aaWorld; // [x, y, z]            world-frame accel sensor measurements
+// extern VectorFloat gravity; // [x, y, z]            gravity vector
+extern float ypr[3]; // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
 namespace HAL
 {
