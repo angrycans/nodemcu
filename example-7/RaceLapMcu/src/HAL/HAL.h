@@ -51,7 +51,7 @@ extern VectorInt16 aaReal;  // [x, y, z]            gravity-free accel sensor me
 extern VectorInt16 aaWorld; // [x, y, z]            world-frame accel sensor measurements
 extern VectorFloat gravity; // [x, y, z]            gravity vector
 extern float ypr[3];        // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
-
+extern float gforce;
 namespace HAL
 {
 

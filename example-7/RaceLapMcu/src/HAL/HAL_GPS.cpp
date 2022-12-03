@@ -11,6 +11,7 @@ char buffer[150];
 double KMPH = 3; // current speed
 double RecordKmph = 1;
 char DataFileDir[24] = "/XLAPDATA/";
+float gforce;
 
 void recordGps()
 {
@@ -56,10 +57,12 @@ void recordGps()
 
         race.computerSession(&gps);
 
+        gforce = sqrt(gravity.x * gravity.x + gravity.y * gravity.y + gravity.z * gravity.z);
+
         snprintf(buffer, sizeof(buffer),
                  "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d,%d,%d,%lu", year,
                  month, day, hour, minute, second, csecond,
-                 lat, lng, (ypr[1] * 180 / M_PI), (ypr[1] * 180 / M_PI), gravity.y, gravity.y, KMPH, KMPH, satls, 1, 1, millis());
+                 lat, lng, (ypr[1] * 180 / M_PI), (ypr[1] * 180 / M_PI), gforce, gforce, KMPH, KMPH, satls, 1, 1, millis());
 
         // snprintf(buffer, sizeof(buffer),
         //          "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%.2f,%.2f,%lu,%02d",
