@@ -98,8 +98,8 @@ void HAL::IMU_Init()
     if (devStatus == 0)
     {
         // Calibration Time: generate offsets and calibrate our MPU6050
-        mpu.CalibrateAccel(6);
-        mpu.CalibrateGyro(6);
+        // mpu.CalibrateAccel(6);
+        // mpu.CalibrateGyro(6);
         mpu.PrintActiveOffsets();
         // turn on the DMP, now that it's ready
         Serial.println(F("Enabling DMP..."));
@@ -146,9 +146,15 @@ void HAL::IMU_Update()
         // Serial.println(ypr[2] * 180 / M_PI);
 
         // display real acceleration, adjusted to remove gravity
-        mpu.dmpGetQuaternion(&q, fifoBuffer);
+        //  mpu.dmpGetQuaternion(&q, fifoBuffer);
         mpu.dmpGetAccel(&aa, fifoBuffer);
-        mpu.dmpGetGravity(&gravity, &q);
+        // mpu.dmpGetGravity(&gravity, &q);
         mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
+
+        // mpu.dmpGetQuaternion(&q, fifoBuffer);
+        mpu.dmpGetAccel(&aa, fifoBuffer);
+        // mpu.dmpGetGravity(&gravity, &q);
+        mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
+        mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
     }
 }

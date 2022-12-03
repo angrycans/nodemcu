@@ -91,8 +91,14 @@ String ListDirectoryJSON()
       String str = entry.name();
       if (strcmp(DataFileName, str.c_str()) != 0)
       {
-        tree = tree + "/" + dir.name() + "/" + entry.name() + "_" + entry.size() + ",";
-        count++;
+        if (str.indexOf("track.json") > -1 || str.indexOf("log.txt") > -1)
+        {
+        }
+        else
+        {
+          tree = tree + "/" + dir.name() + "/" + entry.name() + "_" + entry.size() + ",";
+          count++;
+        }
       }
     }
     entry.close();

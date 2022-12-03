@@ -274,14 +274,14 @@ String Race::getHeader(int year, int month, int day, int hour, int minute, int s
 {
 
   char tmp[100];
-  snprintf(tmp, 20, "%04d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
+  snprintf(tmp, 20, "%02d-%02d-%04d %02d:%02d:%02d", month, day, year, hour, minute, second);
   String header = F("#V=");
   header += VERSION_FIRMWARE_NAME;
   header += F("=\n");
   header += F("#D=");
   header += tmp;
   header += F("=\n");
-  header += F("#U==");
+  header += F("#U=");
   header += UID;
   header += F("=\n");
   header += F("#N=");

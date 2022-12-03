@@ -49,8 +49,8 @@ extern int voltage, usage;
 
 extern VectorInt16 aaReal;  // [x, y, z]            gravity-free accel sensor measurements
 extern VectorInt16 aaWorld; // [x, y, z]            world-frame accel sensor measurements
-// extern VectorFloat gravity; // [x, y, z]            gravity vector
-extern float ypr[3]; // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+extern VectorFloat gravity; // [x, y, z]            gravity vector
+extern float ypr[3];        // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
 namespace HAL
 {

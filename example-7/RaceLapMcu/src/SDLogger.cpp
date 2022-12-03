@@ -93,6 +93,14 @@ void SDLogger::LogInfo(const char *info)
   WriteToSD(info);
 }
 
+void SDLogger::LogInfo(const char *fmt, va_list args)
+{
+
+  char tmp[150];
+  sniprintf(tmp, 150, fmt, args);
+  WriteToSD(tmp);
+}
+
 void SDLogger::WriteToSD(String data)
 {
 

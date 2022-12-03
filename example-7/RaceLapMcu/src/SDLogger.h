@@ -18,6 +18,7 @@ public:
   void Begin(bool sd);
   void LogInfo(String info);
   void LogInfo(const char *info);
+  void LogInfo(const char *fmt, va_list arg);
 
 private:
   // String logFilePath;

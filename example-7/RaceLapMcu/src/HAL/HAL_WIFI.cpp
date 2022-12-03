@@ -15,6 +15,7 @@ void HAL::WIFI_Init()
     // delay(250);
     logger.LogInfo("Soft-AP IP address = ");
     logger.LogInfo(WiFi.softAPIP().toString().c_str());
+
     // delay(250);
 
     // Serial.print("DHCP status:");
@@ -29,16 +30,17 @@ void HAL::WIFI_Init()
     // WiFi.begin("wifi-acans", "85750218");
 
     // WiFi.begin("yunweizu", "yunweizubangbangda");
-    // //   WiFi.begin("qianmi-mobile", "qianmi123");
+    //------------
 
-    // // WiFi.begin("wifi-acans", "85750218");
+    // WiFi.begin("qianmi-mobile", "qianmi123");
+    // // // WiFi.begin("wifi-acans", "85750218");
     // logger.LogInfo("Connecting");
 
     // while (WiFi.status() != WL_CONNECTED)
     // {
-    //   delay(500);
+    //     delay(500);
 
-    //   logger.LogInfo(".");
+    //     logger.LogInfo(".");
     // }
 
     // logger.LogInfo("Connected, IP address: ");

@@ -7,7 +7,7 @@ File dataFile;
 bool isSetTime = false;
 int preRecordCd = 3;
 int recordtoLoopCd = 10;
-char buffer[140];
+char buffer[150];
 double KMPH = 3; // current speed
 double RecordKmph = 1;
 char DataFileDir[24] = "/XLAPDATA/";
@@ -57,9 +57,14 @@ void recordGps()
         race.computerSession(&gps);
 
         snprintf(buffer, sizeof(buffer),
-                 "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%.2f,%.2f,%lu,%02d",
-                 year,
-                 month, day, hour, minute, second, csecond, lng, lat, altitude, KMPH, deg, 0.0f, (ypr[1] * 180 / M_PI), millis(), satls);
+                 "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d,%d,%d,%lu", year,
+                 month, day, hour, minute, second, csecond,
+                 lat, lng, (ypr[1] * 180 / M_PI), (ypr[1] * 180 / M_PI), gravity.y, gravity.y, KMPH, KMPH, satls, 1, 1, millis());
+
+        // snprintf(buffer, sizeof(buffer),
+        //          "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%.2f,%.2f,%lu,%02d",
+        //          year,
+        //          month, day, hour, minute, second, csecond, lng, lat, altitude, KMPH, deg, gravity.y, (ypr[1] * 180 / M_PI), millis(), satls);
 
 #if defined(DEBUG)
         // Serial.println(buffer);
