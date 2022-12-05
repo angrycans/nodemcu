@@ -167,7 +167,7 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
     // mpu.read();
     display->drawString(x + 55, 20 + y, (String)(gravity.x));
     display->drawString(x + 80, 20 + y, (String)(gforce));
-    display->drawString(x + 100, 10 + y, (String)(ypr[1] * 180 / M_PI));
+    display->drawString(x + 100, 10 + y, (String)(90.0 - ypr[1] * 180 / M_PI));
 
     if (digitalRead(CONFIG_BATDET_PIN) == LOW)
     {

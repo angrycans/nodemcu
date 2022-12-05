@@ -52,6 +52,7 @@ extern VectorInt16 aaWorld; // [x, y, z]            world-frame accel sensor mea
 extern VectorFloat gravity; // [x, y, z]            gravity vector
 extern float ypr[3];        // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 extern float gforce;
+extern float gforce_last;
 namespace HAL
 {
 
