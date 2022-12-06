@@ -63,7 +63,7 @@ void recordGps()
         snprintf(buffer, sizeof(buffer),
                  "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d,%d,%d,%lu", year,
                  month, day, hour, minute, second, csecond,
-                 lat, lng, (ypr[1] * 180 / M_PI), 90.0 - (ypr[1] * 180 / M_PI), gforce, gforce - gforce_last, KMPH, 0, satls, 1, 1, millis());
+                 lat, lng, (ypr[1] * 180 / M_PI), 90.0 - (ypr[1] * 180 / M_PI), gforce, gforce - gforce_last, KMPH, 0.0f, satls, 1, 1, millis());
 
         gforce_last = gforce;
 
