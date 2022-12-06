@@ -12,6 +12,9 @@
 #define CHARACTERISTIC_UUID_RX "fb1e4002-54ae-4a28-9f74-dfccb248601d"
 #define CHARACTERISTIC_UUID_TX "fb1e4003-54ae-4a28-9f74-dfccb248601d"
 
+static BLEUUID serviceUUID("0000ff00-0000-1000-8000-00805f9b34fb");
+static BLEUUID aa((uint16_t)0x1805); // gatt "Current Time Service", "org.bluetooth.service.current_time"
+
 static BLECharacteristic *pCharacteristicTX;
 static BLECharacteristic *pCharacteristicRX;
 static bool deviceConnected = false;

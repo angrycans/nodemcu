@@ -1,19 +1,21 @@
 //year month day hour minute  second csecond,lng, lat,  altitude, KMPH, deg,angle,G,satls,millis()
-//年月日时分秒毫秒,经度,纬度,高度,速度,gps角度,mpu倾角,mpu加速度,卫星数,mcu毫秒
+//年月日时分秒毫秒,经度,纬度,高度,速度,gps角度,mpu倾角,mpu加速度,卫星数,
 /*
-1. Latitude
-2. Longitude
+0.年月日时分秒毫秒
+1. Latitude 纬度
+2. Longitude 经度
 3. Angle (positive=right, negative=left)
 4. Angle
 5. G (positive=acceleration, negative=braking)
 6. G
 7. Speed
 8. Max angle of the previous turn (-255=filler
- number)
-9. Number of satellites locked
-10. Validity of signal
+ number) 。每段 最大倾角 没用上
+9. Number of satellites locked 卫星数
+10. Validity of signal  默认1
 11. FL/Sector crossed (F=FL, 1=Sector 1,
- 0=filler number)
+ 0=filler number) 默认 1
+ 12.mcu毫秒
  */
 /*
 #V 文件格式版本

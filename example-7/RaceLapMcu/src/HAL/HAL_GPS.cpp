@@ -9,7 +9,7 @@ int preRecordCd = 3;
 int recordtoLoopCd = 15;
 char buffer[150];
 double KMPH = 0; // current speed
-double RecordKmph = 30;
+double RecordKmph = 3;
 char DataFileDir[12] = "/XLAPDATA/";
 float gforce = 0.0f;
 float gforce_last = 0.0f;
@@ -27,7 +27,7 @@ void recordGps()
     }
 
     // if (gps.location.isUpdated())
-    if (gps.location.isValid())
+    if (gps.location.isValid() && gps.satellites.value() > 3)
     {
         if (race.getStatus().status == d_gps_searching && gps.date.isValid())
         {
@@ -63,7 +63,7 @@ void recordGps()
         snprintf(buffer, sizeof(buffer),
                  "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d,%d,%d,%lu", year,
                  month, day, hour, minute, second, csecond,
-                 lat, lng, (ypr[1] * 180 / M_PI), 90.0 - (ypr[1] * 180 / M_PI), gforce, gforce - gforce_last, KMPH, KMPH, satls, 1, 1, millis());
+                 lat, lng, (ypr[1] * 180 / M_PI), 90.0 - (ypr[1] * 180 / M_PI), gforce, gforce - gforce_last, KMPH, 0, satls, 1, 1, millis());
 
         gforce_last = gforce;
 
@@ -133,7 +133,7 @@ void recordGps()
             race.resetSession();
             race.setStatus(d_Recording);
 #if defined(DEBUG)
-            snprintf(logbuff, sizeof(logbuff), "[%s]d_preRecord to d_Recording >preRecordCd %d", formatTime(millis()), preRecordCd);
+            snprintf(logbuff, sizeof(logbuff), "[%s]d_preRecord to d_Recording >preRecordCd %d kmph %.2f", formatTime(millis()), preRecordCd, KMPH);
             logger.LogInfo(logbuff);
 #endif
         }
