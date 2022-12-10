@@ -182,7 +182,7 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
     {
         drawGpsSearchingTime(display);
     }
-    drawSatles(display, 0, 1, gps.satellites.isValid() ? (int)gps.satellites.value() : -1);
+    drawSatles(display, 0, 1, (int)gps.satellites.value());
 
     display->drawLine(0, 12, 0 + 128, 12);
 
@@ -203,7 +203,7 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
     //   snprintf(logbuff, sizeof(logbuff), "satellites d", gps.satellites.value());
     //   Serial.println(logbuff);
     // #endif
-    if ((!gps.location.isValid()) && (int)gps.satellites.value() < 3)
+    if ((!gps.location.isValid()) || (int)gps.satellites.value() < 3)
     {
 
         display->setTextAlignment(TEXT_ALIGN_CENTER);
@@ -212,6 +212,11 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
 
         return;
     }
+
+    // #if defined(DEBUG)
+    //     snprintf(logbuff, sizeof(logbuff), "satellites %d", gps.satellites.value());
+    //     logger.LogInfo(logbuff);
+    // #endif
 
     display->setFont(ArialMT_Plain_10);
     display->setTextAlignment(TEXT_ALIGN_LEFT);
