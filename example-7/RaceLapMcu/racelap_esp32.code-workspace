@@ -30,7 +30,10 @@
 			"locale": "cpp",
 			"memory": "cpp",
 			"thread": "cpp",
-			"mpu6050.h": "c"
+			"mpu6050.h": "c",
+			"array": "cpp",
+			"string": "cpp",
+			"string_view": "cpp"
 		}
 	}
 }

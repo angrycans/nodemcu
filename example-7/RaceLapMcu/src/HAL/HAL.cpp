@@ -22,11 +22,11 @@ void HAL::Init()
     HAL::LED_Init();
     HAL::BTN_Init();
 
-    HAL::WIFI_Init();
+    // HAL::WIFI_Init();
     HAL::BLE_Init();
     HAL::GPS_Init();
     HAL::POWER_Init();
-    HAL::IMU_Init();
+    // HAL::IMU_Init();
     race.setStatus(d_gps_searching);
 }
 
@@ -36,8 +36,8 @@ void HAL::Update()
     HAL::DISPLAY_Update();
     HAL::BTN_Update();
     HAL::POWER_Update();
-    HAL::IMU_Update();
+    // HAL::IMU_Update();
     HAL::GPS_Update();
-
+    HAL::BLE_Update();
     //  HAL::IMU_Calibration();
 }

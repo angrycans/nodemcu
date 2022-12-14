@@ -37,7 +37,7 @@
 
 // #define BUAD 115200
 
-#define BUAD 57600
+#define BUAD 115200
 
 // Sdcard luat esp32-c3
 #define CONFIG_SDCARD_SCK 2
