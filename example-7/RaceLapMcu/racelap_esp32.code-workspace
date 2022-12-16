@@ -33,7 +33,13 @@
 			"mpu6050.h": "c",
 			"array": "cpp",
 			"string": "cpp",
-			"string_view": "cpp"
+			"string_view": "cpp",
+			"typeinfo": "cpp",
+			"regex": "cpp",
+			"sstream": "cpp",
+			"queue": "cpp",
+			"stack": "cpp",
+			"fstream": "cpp"
 		}
 	}
 }

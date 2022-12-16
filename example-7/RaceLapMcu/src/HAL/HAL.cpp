@@ -16,7 +16,7 @@ void HAL::Init()
     Serial.print("CPU:");
     Serial.println(ESP.getCpuFreqMHz());
 
-    race.setStatus(d_Setup);
+       race.setStatus(d_Setup);
     HAL::DISPLAY_Init();
     HAL::SDCARD_Init();
     HAL::LED_Init();

@@ -10,6 +10,7 @@
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h> // This file system is used.
+
 #include <Battery.h>
 
 #include "OLEDDisplayUi.h"
@@ -22,6 +23,8 @@
 extern String ErrInfo;
 #include "SDLogger.h"
 
+// extern void boot_print_reset_reason();
+
 class Race;
 extern Race race;
 extern char logbuff[100];
@@ -31,6 +34,7 @@ extern TinyGPSPlus gps;
 extern Battery battery;
 
 extern char DataFileName[64];
+extern char DataFileDir[12];
 
 extern bool B_SDCARDOK;
 
@@ -53,6 +57,7 @@ extern VectorFloat gravity; // [x, y, z]            gravity vector
 extern float ypr[3];        // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 extern float gforce;
 extern float gforce_last;
+
 namespace HAL
 {
 

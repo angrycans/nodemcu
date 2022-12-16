@@ -2,13 +2,17 @@
 #include <WiFi.h>
 
 #include "config.h"
+#include "reset_reason.hpp"
 
 #include "HAL/HAL.h"
 
 void setup()
 {
   Serial.begin(BUAD);
-  delay(3000);
+
+  delay(2000);
+  boot_print_reset_reason();
+
   HAL::Init();
 }
 
