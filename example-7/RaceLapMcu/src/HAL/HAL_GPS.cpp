@@ -38,7 +38,7 @@ int preRecordCd = 3;
 int recordtoLoopCd = 15;
 char buffer[150];
 double KMPH = 0; // current speed
-double RecordKmph = 1;
+double RecordKmph = 0;
 char DataFileDir[12] = "/XLAPDATA/";
 float gforce = 0.0f;
 float gforce_last = 0.0f;
@@ -112,7 +112,7 @@ void recordGps()
         //          month, day, hour, minute, second, csecond, lng, lat, altitude, KMPH, deg, gravity.y, (ypr[1] * 180 / M_PI), millis(), satls);
 
 #if defined(DEBUG)
-        // Serial.println(buffer);
+         Serial.println(buffer);
 #endif
 
         if (B_SDCARDOK)
