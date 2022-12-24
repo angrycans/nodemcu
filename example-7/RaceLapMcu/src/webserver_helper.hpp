@@ -239,34 +239,34 @@ void handleSysinfo(AsyncWebServerRequest *request)
 void handleGetLocation(AsyncWebServerRequest *request)
 {
 
-  if (gps.location.isValid())
-  {
+  // if (gps.location.isValid())
+  // {
 
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    StaticJsonDocument<200> doc;
+  //   AsyncResponseStream *response = request->beginResponseStream("application/json");
+  //   StaticJsonDocument<200> doc;
 
-    JsonObject e = doc.createNestedObject("e");
-    e["code"] = 1;
-    JsonObject data = doc.createNestedObject("data");
-    data["lat"] = gps.location.lat();
-    data["lng"] = gps.location.lng();
+  //   JsonObject e = doc.createNestedObject("e");
+  //   e["code"] = 1;
+  //   JsonObject data = doc.createNestedObject("data");
+  //   data["lat"] = gps.location.lat();
+  //   data["lng"] = gps.location.lng();
 
-    serializeJson(doc, *response);
-    request->send(response);
-  }
-  else
-  {
+  //   serializeJson(doc, *response);
+  //   request->send(response);
+  // }
+  // else
+  // {
 
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    StaticJsonDocument<200> doc;
+  //   AsyncResponseStream *response = request->beginResponseStream("application/json");
+  //   StaticJsonDocument<200> doc;
 
-    JsonObject e = doc.createNestedObject("e");
-    e["code"] = 0;
-    e["msg"] = "Gps not valid";
+  //   JsonObject e = doc.createNestedObject("e");
+  //   e["code"] = 0;
+  //   e["msg"] = "Gps not valid";
 
-    serializeJson(doc, *response);
-    request->send(response);
-  }
+  //   serializeJson(doc, *response);
+  //   request->send(response);
+  // }
 }
 
 void handleSetLocation(AsyncWebServerRequest *request)

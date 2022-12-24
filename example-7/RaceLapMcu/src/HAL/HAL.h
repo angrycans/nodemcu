@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <Arduino.h>
-#include <TinyGPS++.h>
+// #include <TinyGPS++.h>
 #include <TimeLib.h>
 #include <ArduinoJson.h>
 #include <HardwareSerial.h>
@@ -11,6 +11,7 @@
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h> // This file system is used.
 
+#include "../ublox/ublox.h"
 #include <Battery.h>
 
 #include "OLEDDisplayUi.h"
@@ -18,6 +19,7 @@
 #include "config.h"
 
 #include "helper.hpp"
+
 #include "../race.h"
 #include "HAL_Def.h"
 extern String ErrInfo;
@@ -30,7 +32,12 @@ extern Race race;
 extern char logbuff[100];
 
 extern SDLogger logger;
-extern TinyGPSPlus gps;
+// extern TinyGPSPlus gps;
+extern GPS_t gps_data;
+extern GPS_t gps_data_last;
+
+extern UTC_TIME_t gps_time;
+extern UTC_TIME_t gps_time_last;
 extern Battery battery;
 
 extern char DataFileName[64];

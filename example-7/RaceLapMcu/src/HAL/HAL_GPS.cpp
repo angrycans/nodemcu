@@ -1,37 +1,8 @@
 
 #include "HAL.h"
-#include "../gps_helper.hpp"
 
-// const uint8_t UBLOX_INIT[] PROGMEM = {
-//     // Rate (pick one)
-//     0xB5, 0x62, 0x06, 0x08, 0x06, 0x00, 0x64, 0x00, 0x01, 0x00, 0x01, 0x00, 0x7A, 0x12, //(10Hz)
-//     // 0xB5,0x62,0x06,0x08,0x06,0x00,0xC8,0x00,0x01,0x00,0x01,0x00,0xDE,0x6A, //(5Hz)
-//     // 0xB5,0x62,0x06,0x08,0x06,0x00,0xE8,0x03,0x01,0x00,0x01,0x00,0x01,0x39, //(1Hz)
-//     // Disable specific NMEA sentences
-//     // 0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x24, // GxGGA off
-//     0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x2B, // GxGLL off
-//     0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x32, // GxGSA off
-//     // 0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0x39, // GxGSV off
-//     // 0xB5,0x62,0x06,0x01,0x08,0x00,0xF0,0x04,0x00,0x00,0x00,0x00,0x00,0x01,0x04,0x40, // GxRMC off
-//     0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x05, 0x47, // GxVTG off
-//     // 57600
-//     0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x00, 0xE1,
-//     0x00, 0x00, 0x07, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0xDD, 0xC3};
-// // 0xb5, 0x62, 0x06, 0x00, 0x01, 0x00, 0x01, 0x08, 0x22};
+// TinyGPSPlus gps;
 
-const uint8_t UBLOX_INIT[] PROGMEM = {
-    // 四模搜星
-    // 0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x24, // GxGGA off
-    0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x2B, // GxGLL off
-    0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x32, // GxGSA off
-    // 0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0x39, // GxGSV off
-    // 0xB5,0x62,0x06,0x01,0x08,0x00,0xF0,0x04,0x00,0x00,0x00,0x00,0x00,0x01,0x04,0x40, // GxRMC off
-    0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0xF0, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x05, 0x47, // GxVTG off
-    // 四模搜星
-    0xB5, 0x62, 0x06, 0x8A, 0x0E, 0x00, 0x01, 0x01, 0x00, 0x00, 0x22, 0x00, 0x31, 0x10, 0x01, 0x25, 0x00, 0x31, 0x10, 0x01, 0x6B, 0x50, 0xB5, 0x62, 0x06, 0x8B, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x31, 0x00, 0xC8, 0xEC};
-// 0xb5, 0x62, 0x06, 0x00, 0x01, 0x00, 0x01, 0x08, 0x22};
-
-TinyGPSPlus gps;
 File dataFile;
 bool isSetTime = false;
 int preRecordCd = 3;
@@ -46,56 +17,56 @@ float gforce_last = 0.0f;
 void recordGps()
 {
 
-    if ((race.getStatus().status == d_gps_searching) && ((int)(millis() - race.getStatus().timer) > 5000 && gps.charsProcessed() < 10))
-    {
-        ErrInfo = "No GPS data received, please reboot";
-#if defined(DEBUG)
-        snprintf(logbuff, sizeof(logbuff), "No GPS data received");
-        logger.LogInfo(logbuff);
-#endif
-    }
+    //     if ((race.getStatus().status == d_gps_searching) && ((int)(millis() - race.getStatus().timer) > 5000 && gps.charsProcessed() < 10))
+    //     {
+    //         ErrInfo = "No GPS data received, please reboot";
+    // #if defined(DEBUG)
+    //         snprintf(logbuff, sizeof(logbuff), "No GPS data received");
+    //         logger.LogInfo(logbuff);
+    // #endif
+    //     }
 
     // if (gps.location.isUpdated())
-    if (gps.location.isValid() && gps.satellites.value() > 2)
+    if (gps_data.numSV > 2)
     {
-        if (race.getStatus().status == d_gps_searching && gps.date.isValid())
+        if (race.getStatus().status == d_gps_searching && gps_data.numSV > 2)
         {
-            setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
+            setTime(gps_time.hour, gps_time.min, gps_time.sec, gps_time.day, gps_time.month, gps_time.year);
             adjustTime(8 * SECS_PER_HOUR);
             isSetTime = true;
             race.setStatus(d_Looping);
         }
         race.lastGpsUpdateTimer = millis();
-        double lat = gps.location.lat();
-        double lng = gps.location.lng();
-        double altitude = gps.altitude.meters();
-        KMPH = gps.speed.kmph();
-        int year = gps.date.year();
-        int month = gps.date.month();
-        int day = gps.date.day();
-        int hour = gps.time.hour();
-        int minute = gps.time.minute();
-        int second = gps.time.second();
-        int csecond = gps.time.centisecond() * 10;
-        double deg = gps.course.deg();
-        int satls = gps.satellites.value();
+        double lat = gps_data.latitude;
+        double lng = gps_data.longitude;
+        double altitude = gps_data.altitude;
+        KMPH = gps_data.speed;
+        int year = gps_time.year;
+        int month = gps_time.month;
+        int day = gps_time.day;
+        int hour = gps_time.hour;
+        int minute = gps_time.min;
+        int second = gps_time.sec;
+        int csecond = gps_data.time;
+        // double deg = gps.course.deg();
+        int satls = gps_data.numSV;
         int latlng = 0;
 
         // if (race.last_gps.location.lat() == lat && race.last_gps.location.lng() == lng)
-        if (race.last_gps.date.year() == gps.date.year() && race.last_gps.date.month() == gps.date.month() && race.last_gps.date.day() == gps.date.day() && race.last_gps.time.hour() == gps.time.hour() && race.last_gps.time.minute() == gps.time.minute() && race.last_gps.time.second() == gps.time.second() && race.last_gps.time.centisecond() == gps.time.centisecond())
-        {
-            // #if defined(DEBUG)
-            //             logger.LogInfo(buffer);
-            // #endif
-            return;
-        }
+        // if (race.last_gps.date.year() == gps.date.year() && race.last_gps.date.month() == gps.date.month() && race.last_gps.date.day() == gps.date.day() && race.last_gps.time.hour() == gps.time.hour() && race.last_gps.time.minute() == gps.time.minute() && race.last_gps.time.second() == gps.time.second() && race.last_gps.time.centisecond() == gps.time.centisecond())
+        // {
+        //     // #if defined(DEBUG)
+        //     //             logger.LogInfo(buffer);
+        //     // #endif
+        //     return;
+        // }
 
-        if (race.last_gps.location.lat() == lat && race.last_gps.location.lng() == lng)
+        if (gps_data_last.latitude == lat && gps_data_last.longitude == lng)
         {
             latlng = 1;
         }
 
-        race.computerSession(&gps);
+        race.computerSession(&gps_data);
 
         gforce = sqrt(gravity.x * gravity.x + gravity.y * gravity.y + gravity.z * gravity.z);
 
@@ -112,7 +83,7 @@ void recordGps()
         //          month, day, hour, minute, second, csecond, lng, lat, altitude, KMPH, deg, gravity.y, (ypr[1] * 180 / M_PI), millis(), satls);
 
 #if defined(DEBUG)
-         Serial.println(buffer);
+        Serial.println(buffer);
 #endif
 
         if (B_SDCARDOK)
@@ -247,24 +218,7 @@ void HAL::GPS_Init()
     logger.LogInfo("init GPS");
 
     gpsSerial.begin(BUAD, SERIAL_8N1, RXD1, TXD1);
-    smartDelay(1000);
-
-    if (gps.charsProcessed() < 10)
-    {
-        ErrInfo += "GPS init failed.\n";
-
-        logger.LogInfo("GPS init failed. No GPS data received: check wiring");
-    }
-    else
-    {
-        // delay(250);
-        // for (uint8_t i = 0; i < sizeof(UBLOX_INIT); i++)
-        // {
-        //     gpsSerial.write(pgm_read_byte(UBLOX_INIT + i));
-        // }
-
-        // delay(1000);
-    }
+    ublox_init();
     logger.LogInfo("init GPS ok");
 }
 
@@ -272,7 +226,9 @@ void HAL::GPS_Update()
 {
     while (gpsSerial.available() > 0)
     {
-        char inByte = gpsSerial.read();
+        uint8_t inByte = gpsSerial.read();
+        ublox_decode(inByte);
+        recordGps();
         // #if defined(DEBUG)
         //     Serial.print(inByte);
         //     // snprintf(logbuff, sizeof(logbuff), "satellites %d", (int)gps.satellites.value());
@@ -284,10 +240,10 @@ void HAL::GPS_Update()
         //     }
         // #endif
         // Serial.print(inByte);
-        if (gps.encode(inByte))
-        {
-            recordGps();
-            // printData();
-        }
+        // if (gps.encode(inByte))
+        // {
+        //     recordGps();
+        //     // printData();
+        // }
     }
 }

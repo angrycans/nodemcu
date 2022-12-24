@@ -9,24 +9,24 @@
 
 #include "HAL/HAL.h"
 #include "Arduino.h"
-#include <TinyGPS++.h>
 #include <LinkedList.h>
 #include "SDLogger.h"
 #include <TimeLib.h>
 #include <sys/time.h> // struct timeval
 #include "helper.hpp"
+#include "./HAL/HAL.h"
 
 // class Race;
 enum DeviesStatus
 {
-  d_Setup,         //系统初始化
+  d_Setup,         // 系统初始化
   d_gps_searching, // gps模块搜星中
-  d_Looping,       //系统loop中 等待记录中
-  d_preRecord,     //速度>RecordKmph cd=preRecordCd 准备记录中
-  d_Recording,     //数据记录中
-  d_RecordToStop,  //速度<RecordKmph cd=recordtoLoopCd 记录准备停止中
-  d_Stop,          //记录停止
-  d_Unknown        //未知状态
+  d_Looping,       // 系统loop中 等待记录中
+  d_preRecord,     // 速度>RecordKmph cd=preRecordCd 准备记录中
+  d_Recording,     // 数据记录中
+  d_RecordToStop,  // 速度<RecordKmph cd=recordtoLoopCd 记录准备停止中
+  d_Stop,          // 记录停止
+  d_Unknown        // 未知状态
 };
 
 struct RaceStatuS
@@ -83,7 +83,7 @@ public:
   int trackplan_size = 0;
   double **trackplan;
   unsigned long lastGpsUpdateTimer = 0;
-  TinyGPSPlus last_gps;
+  // TinyGPSPlus last_gps;
 
   bool sessionActive = false;
 
@@ -112,10 +112,10 @@ public:
 
   bool nearTarck(float lat, float lon);
 
-  //计算圈速
-  void computerSession(TinyGPSPlus *_gps);
+  // 计算圈速
+  void computerSession(GPS_t *_gps);
 
-  void computerLapinfo(TinyGPSPlus *_gps);
+  // void computerLapinfo(GPS_t *_gps);
 
   void getTrackInfo();
 

@@ -182,7 +182,7 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
     {
         drawGpsSearchingTime(display);
     }
-    drawSatles(display, 0, 1, (int)gps.satellites.value());
+    drawSatles(display, 0, 1, (int)gps_data.numSV);
 
     display->drawLine(0, 12, 0 + 128, 12);
 
@@ -203,7 +203,7 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
     //   snprintf(logbuff, sizeof(logbuff), "satellites d", gps.satellites.value());
     //   Serial.println(logbuff);
     // #endif
-    if ((!gps.location.isValid()) || (int)gps.satellites.value() < 3)
+    if ((int)gps_data.numSV < 3)
     {
 
         display->setTextAlignment(TEXT_ALIGN_CENTER);
@@ -221,17 +221,17 @@ void clockFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int1
     display->setFont(ArialMT_Plain_10);
     display->setTextAlignment(TEXT_ALIGN_LEFT);
 
-    if (!race.nearTarck(gps.location.lat(), gps.location.lng()))
-    // if (false)
-    {
-        (millis() / 1000) % 2 ? display->drawString(x, 20 + y, "no track") : display->drawString(+x, 20 + y, "");
-    }
-    else
-    {
-        display->drawString(x, 20 + y, "LAP");
-        display->setFont(ArialMT_Plain_16);
-        display->drawString(22 + x, 16 + y, String(race.totalLap));
-    }
+    // if (!race.nearTarck(gps.location.lat(), gps.location.lng()))
+    // // if (false)
+    // {
+    //     (millis() / 1000) % 2 ? display->drawString(x, 20 + y, "no track") : display->drawString(+x, 20 + y, "");
+    // }
+    // else
+    // {
+    //     display->drawString(x, 20 + y, "LAP");
+    //     display->setFont(ArialMT_Plain_16);
+    //     display->drawString(22 + x, 16 + y, String(race.totalLap));
+    // }
 
     display->setFont(ArialMT_Plain_16);
     display->setTextAlignment(TEXT_ALIGN_RIGHT);
