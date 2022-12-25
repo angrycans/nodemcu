@@ -17,6 +17,15 @@ float gforce_last = 0.0f;
 void recordGps()
 {
 
+#if defined(DEBUG)
+    Serial.print("fixed :");
+    Serial.print(gps_data.fixed);
+    Serial.print("numSV :");
+    Serial.print(gps_data.numSV);
+    Serial.print("time :");
+    Serial.println(gps_data.time);
+#endif
+
     //     if ((race.getStatus().status == d_gps_searching) && ((int)(millis() - race.getStatus().timer) > 5000 && gps.charsProcessed() < 10))
     //     {
     //         ErrInfo = "No GPS data received, please reboot";
