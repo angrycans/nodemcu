@@ -90,7 +90,7 @@ static void ublox_payload_decode(UBLOX_RAW_t raw_data)
         switch (raw_data.id)
         {
         case UBLOX_NAV_PVT:
-            gps_data.time = (float)raw_data.payload.pvt.iTOW / 1000;
+            gps_data.time = raw_data.payload.pvt.iTOW;
             gps_data.latitude = (double)raw_data.payload.pvt.lat * (double)1e-7;  // 单位:deg
             gps_data.longitude = (double)raw_data.payload.pvt.lon * (double)1e-7; // 单位:deg
             gps_data.altitude = (float)raw_data.payload.pvt.hMSL * 0.001f;        // 单位:m

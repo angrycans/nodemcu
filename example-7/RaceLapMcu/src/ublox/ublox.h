@@ -48,7 +48,7 @@
 
 typedef struct
 {
-    float time;       // 时间
+    uint32_t time;    // 时间
     double latitude;  // 纬度
     double longitude; // 经度
     float altitude;   // 高度

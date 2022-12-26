@@ -9,7 +9,7 @@ int preRecordCd = 3;
 int recordtoLoopCd = 15;
 char buffer[150];
 double KMPH = 0; // current speed
-double RecordKmph = 0;
+double RecordKmph = 3;
 char DataFileDir[12] = "/XLAPDATA/";
 float gforce = 0.0f;
 float gforce_last = 0.0f;
@@ -18,12 +18,12 @@ void recordGps()
 {
 
 #if defined(DEBUG)
-    Serial.print("fixed :");
-    Serial.print(gps_data.fixed);
-    Serial.print("numSV :");
-    Serial.print(gps_data.numSV);
-    Serial.print("time :");
-    Serial.println(gps_data.time);
+    // Serial.print("fixed :");
+    // Serial.print(gps_data.fixed);
+    // Serial.print("numSV :");
+    // Serial.print(gps_data.numSV);
+    // Serial.print("time :");
+    // Serial.println(gps_data.time);
 #endif
 
     //     if ((race.getStatus().status == d_gps_searching) && ((int)(millis() - race.getStatus().timer) > 5000 && gps.charsProcessed() < 10))
@@ -62,13 +62,21 @@ void recordGps()
         int latlng = 0;
 
         // if (race.last_gps.location.lat() == lat && race.last_gps.location.lng() == lng)
-        // if (race.last_gps.date.year() == gps.date.year() && race.last_gps.date.month() == gps.date.month() && race.last_gps.date.day() == gps.date.day() && race.last_gps.time.hour() == gps.time.hour() && race.last_gps.time.minute() == gps.time.minute() && race.last_gps.time.second() == gps.time.second() && race.last_gps.time.centisecond() == gps.time.centisecond())
+        // if (gps_time.year == gps_time_last.year &&gps_time.month == gps_time_last.month &&gps_time.day == gps_time_last.day &&gps_time.hour == gps_time_last.hour &&gps_time.min = gps_time_last.min && gps_time.sec == gps_time_last.sec && gps_data.time == gps_data_last.time)
         // {
         //     // #if defined(DEBUG)
         //     //             logger.LogInfo(buffer);
         //     // #endif
         //     return;
         // }
+
+        if (gps_data.time == gps_data_last.time)
+        {
+            // #if defined(DEBUG)
+            //             logger.LogInfo(buffer);
+            // #endif
+            return;
+        }
 
         if (gps_data_last.latitude == lat && gps_data_last.longitude == lng)
         {
@@ -77,14 +85,19 @@ void recordGps()
 
         race.computerSession(&gps_data);
 
-        gforce = sqrt(gravity.x * gravity.x + gravity.y * gravity.y + gravity.z * gravity.z);
+        // gforce = sqrt(gravity.x * gravity.x + gravity.y * gravity.y + gravity.z * gravity.z);
+
+        // snprintf(buffer, sizeof(buffer),
+        //          "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d,%d,%d,%lu,%d", year,
+        //          month, day, hour, minute, second, csecond,
+        //          lat, lng, (ypr[1] * 180 / M_PI), 90.0 - (ypr[1] * 180 / M_PI), gforce, gforce - gforce_last, KMPH, 0.0f, satls, 1, 1, millis(), latlng);
+
+        // gforce_last = gforce;
 
         snprintf(buffer, sizeof(buffer),
                  "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d,%d,%d,%lu,%d", year,
                  month, day, hour, minute, second, csecond,
-                 lat, lng, (ypr[1] * 180 / M_PI), 90.0 - (ypr[1] * 180 / M_PI), gforce, gforce - gforce_last, KMPH, 0.0f, satls, 1, 1, millis(), latlng);
-
-        gforce_last = gforce;
+                 lat, lng, 0.0, 0.0, 0.0, 0.0, KMPH, 0.0f, satls, 1, 1, millis(), latlng);
 
         // snprintf(buffer, sizeof(buffer),
         //          "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%.2f,%.2f,%lu,%02d",
@@ -92,7 +105,7 @@ void recordGps()
         //          month, day, hour, minute, second, csecond, lng, lat, altitude, KMPH, deg, gravity.y, (ypr[1] * 180 / M_PI), millis(), satls);
 
 #if defined(DEBUG)
-        Serial.println(buffer);
+        // Serial.println(buffer);
 #endif
 
         if (B_SDCARDOK)
