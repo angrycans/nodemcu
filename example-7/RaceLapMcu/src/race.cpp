@@ -158,7 +158,6 @@ void Race::computerSession(GPS_t *_gps)
   // computerLapinfo(_gps);
 
   gps_data_last = *_gps;
-  gps_time_last = gps_time;
 }
 
 // void Race::computerLapinfo(TinyGPSPlus *_gps)

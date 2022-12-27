@@ -39,7 +39,8 @@
 			"sstream": "cpp",
 			"queue": "cpp",
 			"stack": "cpp",
-			"fstream": "cpp"
+			"fstream": "cpp",
+			"__locale": "cpp"
 		}
 	}
 }

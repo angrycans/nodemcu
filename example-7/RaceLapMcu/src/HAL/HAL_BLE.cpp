@@ -413,23 +413,23 @@ class MyCallbacks : public BLECharacteristicCallbacks
 {
     void onNotify(BLECharacteristic *pCharacteristic)
     {
-        uint8_t *pData;
-        std::string value = pCharacteristic->getValue();
-        int len = value.length();
-        pData = pCharacteristic->getData();
-        if (pData != NULL)
-        {
-            //        Serial.print("Notify callback for characteristic ");
-            //        Serial.print(pCharacteristic->getUUID().toString().c_str());
-            //        Serial.print(" of data length ");
-            //        Serial.println(len);
-            Serial.print("TX  ");
-            for (int i = 0; i < len; i++)
-            {
-                Serial.printf("%02X ", pData[i]);
-            }
-            Serial.println();
-        }
+        // uint8_t *pData;
+        // std::string value = pCharacteristic->getValue();
+        // int len = value.length();
+        // pData = pCharacteristic->getData();
+        // if (pData != NULL)
+        // {
+        //     //        Serial.print("Notify callback for characteristic ");
+        //     //        Serial.print(pCharacteristic->getUUID().toString().c_str());
+        //     //        Serial.print(" of data length ");
+        //     //        Serial.println(len);
+        //     Serial.print("TX  ");
+        //     for (int i = 0; i < len; i++)
+        //     {
+        //         Serial.printf("%02X ", pData[i]);
+        //     }
+        //     Serial.println();
+        // }
     }
 
     void onWrite(BLECharacteristic *pCharacteristic)
@@ -521,7 +521,7 @@ void HAL::BLE_Init()
     BLEDevice::startAdvertising();
     logger.LogInfo("Xlap BLE Service starting");
 
-    test_crc32_string();
+    // test_crc32_string();
 }
 
 void HAL::BLE_Update()
