@@ -348,7 +348,7 @@ class CmdCallbacks : public BLECharacteristicCallbacks
         std::string rxValue = pCharacteristic->getValue();
 
         StaticJsonDocument<128> doc;
-        DeserializationError error = deserializeJson(doc, rxValue);
+        DeserializationError error = deserializeJson(doc, rxValue.c_str());
 
         // Test if parsing succeeded.
         if (error)
@@ -401,9 +401,23 @@ class CmdCallbacks : public BLECharacteristicCallbacks
                     1,                   /*任务的优先级*/
                     0);                  /*任务句柄*/
             }
+            else if (cmd == "battery")
+            {
+                // const char *params = doc["params"];
+                pCharacteristicCMD->setValue(("battery:" + (String)(100 - usage)).c_str());
+                pCharacteristicCMD->notify();
+            }
+            else if (cmd == "poweroff")
+            {
+                // const char *params = doc["params"];
+                pCharacteristicCMD->setValue("poweroff:1");
+                pCharacteristicCMD->notify();
+            }
             else
             {
                 logger.LogInfo("cmd unknown" + cmd);
+                pCharacteristicCMD->setValue(("unknown:" + cmd).c_str());
+                pCharacteristicCMD->notify();
             }
         }
     }
@@ -479,7 +493,17 @@ void HAL::BLE_Init()
 {
     Serial.println("Starting BLE work!");
 
-    BLEDevice::init("XLAPBLE01");
+    uint64_t chipid;
+
+    // chipid = ESP.getEfuseMac();                                      // The chip ID is essentially its MAC address(length: 6 bytes).
+    // Serial.printf("ESP32 Chip ID = %04X", (uint16_t)(chipid >> 32)); // print High 2 bytes
+    // Serial.printf("%08X\n", (uint32_t)chipid);                       // print Low 4bytes.
+
+    // Serial.println(WiFi.macAddress());
+    // Serial.println(("XLAPBLE_" + WiFi.macAddress().substring(0, 2) + WiFi.macAddress().substring(3, 5) + WiFi.macAddress().substring(6, 8) + WiFi.macAddress().substring(9, 11) + WiFi.macAddress().substring(12, 14) + WiFi.macAddress().substring(15, 17)).c_str());
+    BLEDevice::init(("XLAP_" + WiFi.macAddress().substring(0, 2) + WiFi.macAddress().substring(3, 5) + WiFi.macAddress().substring(6, 8) + WiFi.macAddress().substring(9, 11) + WiFi.macAddress().substring(12, 14) + WiFi.macAddress().substring(15, 17)).c_str());
+    // BLEDevice::init(("XLAPBLE_" + WiFi.macAddress()).c_str());
+
     pServer = BLEDevice::createServer();
     pServer->setCallbacks(new MyServerCallbacks());
 
