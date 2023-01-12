@@ -329,7 +329,6 @@ static void ublox_payload_decode(UBLOX_RAW_t raw_data)
             gps_data.date.min = raw_data.payload.pvt.min;
             gps_data.date.sec = raw_data.payload.pvt.sec;
             gps_data.date.msec = (gps_data.time % 1000);
-
             recordGps();
             break;
 

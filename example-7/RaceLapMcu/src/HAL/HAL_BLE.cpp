@@ -115,6 +115,7 @@ uint32_t crc32_string(String str)
         charcnt++;
         // Serial.println(length);
         // Serial.println((uint8_t)str[i], HEX);
+        // Serial.println((uint8_t)str[i]);
         oldcrc32 = updateCRC32((uint8_t)str[i], oldcrc32);
     }
 
@@ -190,7 +191,7 @@ void taskOne(void *parameter)
                 else
                 {
 
-                    String tree = DataFileDir + str + "_" + entry.size();
+                    String tree = DataFileDir + str; // + "_" + entry.size();
                     count++;
                     pCharacteristicListDir->setValue(tree.c_str());
                     pCharacteristicListDir->notify();
@@ -241,6 +242,42 @@ void taskDelfile(void *parameter)
     vTaskDelete(NULL);
 }
 
+void taskTrackInfo(void *parameter)
+{
+
+    logger.LogInfo("taskTrackInfo run");
+
+    File file = SD.open("/XLAPDATA/track.json");
+
+    if (!file)
+    {
+        String rst = "taskTrackInfo:trackinfo_not_found";
+        pCharacteristicCMD->setValue(rst.c_str());
+        pCharacteristicCMD->notify();
+    }
+    else
+    {
+        StaticJsonDocument<1024> doc;
+        DeserializationError error = deserializeJson(doc, file);
+        if (!error)
+        {
+
+            String output;
+            serializeJson(doc, output);
+            pCharacteristicCMD->setValue(output.c_str());
+            pCharacteristicCMD->notify();
+        }
+        else
+        {
+            String rst = "taskTrackInfo:deserializefailed";
+            pCharacteristicCMD->setValue(rst.c_str());
+            pCharacteristicCMD->notify();
+        }
+    }
+
+    vTaskDelete(NULL);
+}
+
 void taskdDownloadfile(void *parameter)
 {
 
@@ -287,6 +324,7 @@ void taskdDownloadfile(void *parameter)
 
             oldcrc32 = crc32_string(line);
 
+            delay(10);
             pCharacteristicDownloadFile->setValue(line.c_str());
             pCharacteristicDownloadFile->notify();
         }
@@ -304,8 +342,8 @@ void taskdDownloadfile(void *parameter)
 
     logger.LogInfo(rst);
 
-    pCharacteristicCMD->setValue(rst.c_str());
-    pCharacteristicCMD->notify();
+    pCharacteristicDownloadFile->setValue(rst.c_str());
+    pCharacteristicDownloadFile->notify();
 
     vTaskDelete(NULL);
 }
@@ -401,11 +439,24 @@ class CmdCallbacks : public BLECharacteristicCallbacks
                     1,                   /*任务的优先级*/
                     0);                  /*任务句柄*/
             }
-            else if (cmd == "battery")
+            else if (cmd == "baseinfo")
             {
                 // const char *params = doc["params"];
-                pCharacteristicCMD->setValue(("battery:" + (String)(100 - usage)).c_str());
+                pCharacteristicCMD->setValue(("battery:" + (String)(100 - usage) + ";satellites:" + (String)(gps_data.numSV) + ";").c_str());
+
                 pCharacteristicCMD->notify();
+            }
+            else if (cmd == "trackinfo")
+            {
+                // const char *params = doc["params"];
+
+                xTaskCreate(
+                    taskTrackInfo,   /*任务函数*/
+                    "taskTrackInfo", /*带任务名称的字符串*/
+                    10000,           /*堆栈大小，单位为字节*/
+                    NULL,            /*作为任务输入传递的参数*/
+                    1,               /*任务的优先级*/
+                    0);              /*任务句柄*/
             }
             else if (cmd == "poweroff")
             {
