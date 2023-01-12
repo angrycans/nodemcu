@@ -326,7 +326,7 @@ void taskdDownloadfile(void *parameter)
 
             oldcrc32 = crc32_string(line);
 
-            vTaskDelay(10);
+            vTaskDelay(2);
             pCharacteristicDownloadFile->setValue(line.c_str());
             pCharacteristicDownloadFile->notify();
         }
@@ -386,6 +386,9 @@ class CmdCallbacks : public BLECharacteristicCallbacks
 
         uint8_t *pData;
         std::string rxValue = pCharacteristic->getValue();
+
+        Serial.print("resv rxValue ");
+        Serial.println(rxValue.c_str());
 
         StaticJsonDocument<128> doc;
         DeserializationError error = deserializeJson(doc, rxValue.c_str());
@@ -503,6 +506,9 @@ class MyCallbacks : public BLECharacteristicCallbacks
     {
         uint8_t *pData;
         std::string rxValue = pCharacteristic->getValue();
+
+        // Serial.print("resv rxValue ");
+        // Serial.println(rxValue.c_str());
 
         StaticJsonDocument<1024> doc;
         DeserializationError error = deserializeJson(doc, rxValue);
