@@ -40,7 +40,8 @@
 			"queue": "cpp",
 			"stack": "cpp",
 			"fstream": "cpp",
-			"__locale": "cpp"
+			"__locale": "cpp",
+			"iosfwd": "cpp"
 		}
 	}
 }

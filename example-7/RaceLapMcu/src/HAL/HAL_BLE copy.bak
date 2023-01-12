@@ -146,16 +146,19 @@ void test_crc32_string()
 // static StaticQueue_t xStaticQueue;
 // static QueueHandle_t queue_handle; // Send queue handle
 
-// void init_queue()
-// {
-//     queue_handle = xQueueCreate(5, sizeof(String));
-//     if (queue_handle == NULL)
-//     {
-//         logger.LogInfo("Queue initialisation failed...");
-//     }
+QueueHandle_t xQueue_file_handle;
+bool isDownloading = false;
 
-//     logger.LogInfo("Send queue initialised.");
-// }
+void init_queue()
+{
+    xQueue_file_handle = xQueueCreate(5, sizeof(int));
+    if (xQueue_file_handle == NULL)
+    {
+        logger.LogInfo("Queue initialisation failed...");
+    }
+
+    logger.LogInfo("Send queue initialised.");
+}
 
 void taskOne(void *parameter)
 {
@@ -282,7 +285,7 @@ void taskdDownloadfile(void *parameter)
 {
 
     logger.LogInfo("taskdDownloadfile run");
-
+    isDownloading = true;
     char params[36];
     sprintf(params, (char *)parameter);
 
@@ -290,62 +293,65 @@ void taskdDownloadfile(void *parameter)
     String rst = "downloadfile:";
     rst.concat(params);
 
-    // File f = SD.open(params, "r");
-    // if (!f)
-    // {
-    //     Serial.println("Failed to open file.");
-    //     return;
-    // }
-    // Serial.println("Calculating CRC...");
-    // uint32_t len;
-    // uint32_t crc = crc32(f, len);
-    // f.close();
-    // Serial.print("CRC32 is 0x");
-    // Serial.println(crc, HEX);
-    // Serial.print("File length was ");
-    // Serial.println(len);
-
     File myFile = SD.open(params, "r");
     String line;
     oldcrc32 = 0xFFFFFFFF;
     charcnt = 0;
-
     unsigned long startMillis = millis();
     if (myFile)
     {
-        // String fileinfo = "";
-        // fileinfo += myFile.size();
 
-        // pCharacteristicDownloadFile->setValue(fileinfo.c_str());
-        // pCharacteristicDownloadFile->notify();
-        // char filebuff[128];
+        pCharacteristicDownloadFile->setValue((rst + ":start").c_str());
+        pCharacteristicDownloadFile->notify();
 
-        while (myFile.available())
-        { // execute while file is available
-            line = myFile.readStringUntil('\n') + "\n";
+        long intReceivedValue;
+        while (1)
+        {
 
-            oldcrc32 = crc32_string(line);
+            if (xQueueReceive(xQueue_file_handle, &intReceivedValue, 2000 / portTICK_PERIOD_MS) == pdPASS)
+            {
+                // Serial.print("Received = ");
+                // Serial.println(intReceivedValue);
+                if (!myFile.available())
+                {
+                    Serial.print("CRC32 is 0x");
+                    Serial.println(~oldcrc32, HEX);
 
-            vTaskDelay(10);
-            pCharacteristicDownloadFile->setValue(line.c_str());
-            pCharacteristicDownloadFile->notify();
+                    rst += ":crc32:" + String(~oldcrc32) + ":" + String(millis() - startMillis);
+                    pCharacteristicDownloadFile->setValue(rst.c_str());
+                    pCharacteristicDownloadFile->notify();
+                    break;
+                }
+                line = myFile.readStringUntil('\n') + "\n";
+                oldcrc32 = crc32_string(line);
+                pCharacteristicDownloadFile->setValue(line.c_str());
+                pCharacteristicDownloadFile->notify();
+                // startMillis = millis();
+            }
+            else
+            {
+                // Serial.println("xQueueReceive break");
+                rst.concat(":xQueueReceive_timeout");
+                pCharacteristicDownloadFile->setValue(rst.c_str());
+                pCharacteristicDownloadFile->notify();
+                break;
+            }
+
+            taskYIELD();
         }
-        Serial.print("CRC32 is 0x");
-        Serial.println(~oldcrc32, HEX);
-
-        rst += ":crc32:" + String(~oldcrc32) + ":" + String(millis() - startMillis);
     }
     else
     {
-        rst += ":error";
+        rst += ":openfile_error";
+        pCharacteristicCMD->setValue(rst.c_str());
+        pCharacteristicCMD->notify();
     }
+
     myFile.close();
-    //  oldcrc32 = crc32_string("\n");
+    isDownloading = false;
 
+    rst += ":ok:" + String((millis() - startMillis));
     logger.LogInfo(rst);
-
-    pCharacteristicDownloadFile->setValue(rst.c_str());
-    pCharacteristicDownloadFile->notify();
 
     vTaskDelete(NULL);
 }
@@ -430,16 +436,25 @@ class CmdCallbacks : public BLECharacteristicCallbacks
             }
             else if (cmd == "downloadfile")
             {
-                const char *params = doc["params"];
-                //  char name[36] = "";
-                // name = params.c_str();
-                xTaskCreate(
-                    taskdDownloadfile,   /*任务函数*/
-                    "taskdDownloadfile", /*带任务名称的字符串*/
-                    10000,               /*堆栈大小，单位为字节*/
-                    (void *)params,      /*作为任务输入传递的参数*/
-                    1,                   /*任务的优先级*/
-                    0);                  /*任务句柄*/
+
+                if (!isDownloading)
+                {
+                    const char *params = doc["params"];
+
+                    xTaskCreate(
+                        taskdDownloadfile,   /*任务函数*/
+                        "taskdDownloadfile", /*带任务名称的字符串*/
+                        10000,               /*堆栈大小，单位为字节*/
+                        (void *)params,      /*作为任务输入传递的参数*/
+                        1,                   /*任务的优先级*/
+                        0);                  /*任务句柄*/
+                }
+                else
+                {
+                    pCharacteristicCMD->setValue(String("downloadfile:error:has_file_downloading").c_str());
+
+                    pCharacteristicCMD->notify();
+                }
             }
             else if (cmd == "baseinfo")
             {
@@ -473,6 +488,26 @@ class CmdCallbacks : public BLECharacteristicCallbacks
                 pCharacteristicCMD->notify();
             }
         }
+    }
+};
+
+class downloadfileCallbacks : public BLECharacteristicCallbacks
+{
+    void onNotify(BLECharacteristic *pCharacteristic)
+    {
+    }
+
+    void onWrite(BLECharacteristic *pCharacteristic)
+    {
+        uint8_t *pData;
+        std::string rxValue = pCharacteristic->getValue();
+
+        int val = stoi(rxValue);
+
+        xQueueSend(xQueue_file_handle, &val, portMAX_DELAY);
+        // Serial.print("resv file count = ");
+        // Serial.println(val);
+        taskYIELD();
     }
 };
 
@@ -565,7 +600,7 @@ void HAL::BLE_Init()
     pCharacteristicCMD = pService->createCharacteristic(SERVICE_UUID("0001"), BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR);
     pCharacteristicTrackInfo = pService->createCharacteristic(SERVICE_UUID("0002"), BLECharacteristic::PROPERTY_NOTIFY);
     pCharacteristicListDir = pService->createCharacteristic(SERVICE_UUID("0003"), BLECharacteristic::PROPERTY_NOTIFY);
-    pCharacteristicDownloadFile = pService->createCharacteristic(SERVICE_UUID("0004"), BLECharacteristic::PROPERTY_WRITE);
+    pCharacteristicDownloadFile = pService->createCharacteristic(SERVICE_UUID("0004"), BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
 
     // pCharacteristicTX = pService->createCharacteristic(SERVICE_UUID("0002"), BLECharacteristic::PROPERTY_NOTIFY);
     // pCharacteristicRX = pService->createCharacteristic(SERVICE_UUID("0003"), BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR);
@@ -574,7 +609,7 @@ void HAL::BLE_Init()
     pCharacteristicCMD->setCallbacks(new CmdCallbacks());
     pCharacteristicTrackInfo->setCallbacks(new MyCallbacks());
     pCharacteristicListDir->setCallbacks(new MyCallbacks());
-    // pCharacteristicDownloadFile->setCallbacks(new MyCallbacks());
+    pCharacteristicDownloadFile->setCallbacks(new downloadfileCallbacks());
 
     // pCharacteristicTX->addDescriptor(new BLE2902());
     // pCharacteristicTX->setNotifyProperty(true);
@@ -597,6 +632,8 @@ void HAL::BLE_Init()
     pAdvertising->setMinPreferred(0x12);
     BLEDevice::startAdvertising();
     logger.LogInfo("Xlap BLE Service starting");
+
+    init_queue();
 
     // test_crc32_string();
 }
