@@ -315,7 +315,7 @@ void taskdDownloadfile(void *parameter)
         pCharacteristicDownloadFile->notify();
         while (1)
         {
-            if (xQueueReceive(xQueue_file_handle, &intReceivedValue, 10000 / portTICK_PERIOD_MS) == pdPASS)
+            if (xQueueReceive(xQueue_file_handle, &intReceivedValue, 2000 / portTICK_PERIOD_MS) == pdPASS)
             {
                 // Serial.print("Received = ");
                 // Serial.println(intReceivedValue);
@@ -471,7 +471,7 @@ class CmdCallbacks : public BLECharacteristicCallbacks
             else if (cmd == "baseinfo")
             {
                 // const char *params = doc["params"];
-                pCharacteristicCMD->setValue(("battery:" + (String)(100 - usage) + ";satellites:" + (String)(gps_data.numSV) + ";").c_str());
+                pCharacteristicCMD->setValue(("battery:" + (String)(100 - usage) + ";satellites:" + (String)(gps_data_2.numSV) + ";").c_str());
 
                 pCharacteristicCMD->notify();
             }

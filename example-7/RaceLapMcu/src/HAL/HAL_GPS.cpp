@@ -1,7 +1,7 @@
 
 #include "HAL.h"
 
-GPS_t gps_data;
+GPS_t gps_data_2;
 GPS_t gps_data_last;
 
 static void ublox_parse_char(uint8_t data);
@@ -16,22 +16,58 @@ int preRecordCd = 3;
 int recordtoLoopCd = 15;
 char buffer[150];
 double KMPH = 0; // current speed
-double RecordKmph = 1;
+double RecordKmph = 30;
 char DataFileDir[12] = "/XLAPDATA/";
 float gforce = 0.0f;
 float gforce_last = 0.0f;
 
-void recordGps()
+void recordGps(GPS_t gps_data);
+
+QueueHandle_t xQueue_gps_handle;
+void taskWritefile(void *parameter);
+
+void init_gps_queue()
+{
+    xQueue_gps_handle = xQueueCreate(100, sizeof(GPS_t));
+    if (xQueue_gps_handle == NULL)
+    {
+        logger.LogInfo("xQueue_gps_handle init failed...");
+    }
+
+    logger.LogInfo("xQueue_gps_handle  init ok.");
+
+    xTaskCreate(
+        taskWritefile,   /*任务函数*/
+        "taskWritefile", /*带任务名称的字符串*/
+        10000,           /*堆栈大小，单位为字节*/
+        NULL,            /*作为任务输入传递的参数*/
+        1,               /*任务的优先级*/
+        0);              /*任务句柄*/
+    logger.LogInfo("Task taskWritefile start");
+}
+
+void taskWritefile(void *parameter)
 {
 
-#if defined(DEBUG)
-    // Serial.print("fixed :");
-    // Serial.print(gps_data.fixed);
-    // Serial.print("mcsec :");
-    // Serial.print(gps_data.date.msec);
-    // Serial.print("   time :");
-    // Serial.println(gps_data.time);
-#endif
+    logger.LogInfo("taskWritefile running ...");
+
+    GPS_t resv;
+
+    while (1)
+    {
+        if (xQueueReceive(xQueue_gps_handle, &resv, 100 / portTICK_PERIOD_MS) == pdPASS)
+        {
+            recordGps(resv);
+        }
+
+        taskYIELD();
+    }
+    logger.LogInfo("taskWritefile quit");
+    vTaskDelete(NULL);
+}
+
+void recordGps(GPS_t gps_data)
+{
 
     //     if ((race.getStatus().status == d_gps_searching) && ((int)(millis() - race.getStatus().timer) > 5000 && gps.charsProcessed() < 10))
     //     {
@@ -73,7 +109,8 @@ void recordGps()
             // #if defined(DEBUG)
             //             logger.LogInfo(buffer);
             // #endif
-            return;
+            // return;
+            logger.LogInfo("-----repeat data-----");
         }
 
         if (gps_data_last.latitude == lat && gps_data_last.longitude == lng)
@@ -81,7 +118,7 @@ void recordGps()
             latlng = 1;
         }
 
-        race.computerSession(&gps_data);
+        // race.computerSession(&gps_data);
 
         // gforce = sqrt(gravity.x * gravity.x + gravity.y * gravity.y + gravity.z * gravity.z);
 
@@ -101,10 +138,6 @@ void recordGps()
         //          "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%.2f,%.2f,%lu,%02d",
         //          year,
         //          month, day, hour, minute, second, csecond, lng, lat, altitude, KMPH, deg, gravity.y, (ypr[1] * 180 / M_PI), millis(), satls);
-
-#if defined(DEBUG)
-        // Serial.println(buffer);
-#endif
 
         if (B_SDCARDOK)
         {
@@ -127,6 +160,21 @@ void recordGps()
                 }
                 if (dataFile)
                 {
+                    // #if defined(DEBUG)
+
+                    //                     if (gps_data_last.date.msec == 900 && gps_data.date.msec == 0)
+                    //                     {
+                    //                     }
+                    //                     else if (gps_data_last.date.msec + 100 == gps_data.date.msec)
+                    //                     {
+                    //                     }
+                    //                     else
+                    //                     {
+
+                    //                         Serial.println("------------------------");
+                    //                     }
+                    //                     Serial.println(buffer);
+                    // #endif
                     dataFile.println(buffer);
                     dataFile.flush();
                     //  Serial.println(buffer);
@@ -134,7 +182,9 @@ void recordGps()
             }
         }
     }
-
+    //
+    gps_data_last = gps_data;
+    //
     switch (race.getStatus().status)
     {
     case d_Looping:
@@ -307,29 +357,31 @@ static void ublox_payload_decode(UBLOX_RAW_t raw_data)
         switch (raw_data.id)
         {
         case UBLOX_NAV_PVT:
-            gps_data.time = raw_data.payload.pvt.iTOW;
-            gps_data.latitude = (double)raw_data.payload.pvt.lat * (double)1e-7;  // 单位:deg
-            gps_data.longitude = (double)raw_data.payload.pvt.lon * (double)1e-7; // 单位:deg
-            gps_data.altitude = (float)raw_data.payload.pvt.hMSL * 0.001f;        // 单位:m
-            gps_data.hAcc = (float)raw_data.payload.pvt.hAcc * 0.001f;            // 单位:m
-            gps_data.vAcc = (float)raw_data.payload.pvt.vAcc * 0.001f;            // 单位:m
-            gps_data.velN = (float)raw_data.payload.pvt.velN * 0.001f;            // 单位:m/s
-            gps_data.velE = (float)raw_data.payload.pvt.velE * 0.001f;            // 单位:m/s
-            gps_data.velD = (float)raw_data.payload.pvt.velD * 0.001f;            // 单位:m/s
-            gps_data.speed = (float)raw_data.payload.pvt.gSpeed * 0.001f;         // 单位:m/s
-            gps_data.heading = (float)raw_data.payload.pvt.heading * 1e-5f;       // 单位:deg
-            gps_data.sAcc = (float)raw_data.payload.pvt.sAcc * 0.001f;            // 单位:m/s
-            gps_data.cAcc = (float)raw_data.payload.pvt.cAcc * 1e-5f;             // 单位:deg
-            gps_data.numSV = raw_data.payload.pvt.numSV;
-            gps_data.fixed = raw_data.payload.pvt.gpsFix;
-            gps_data.date.year = raw_data.payload.pvt.year;
-            gps_data.date.month = raw_data.payload.pvt.month;
-            gps_data.date.day = raw_data.payload.pvt.day;
-            gps_data.date.hour = raw_data.payload.pvt.hour;
-            gps_data.date.min = raw_data.payload.pvt.min;
-            gps_data.date.sec = raw_data.payload.pvt.sec;
-            gps_data.date.msec = (gps_data.time % 1000);
-            recordGps();
+            gps_data_2.time = raw_data.payload.pvt.iTOW;
+            gps_data_2.latitude = (double)raw_data.payload.pvt.lat * (double)1e-7;  // 单位:deg
+            gps_data_2.longitude = (double)raw_data.payload.pvt.lon * (double)1e-7; // 单位:deg
+            gps_data_2.altitude = (float)raw_data.payload.pvt.hMSL * 0.001f;        // 单位:m
+            gps_data_2.hAcc = (float)raw_data.payload.pvt.hAcc * 0.001f;            // 单位:m
+            gps_data_2.vAcc = (float)raw_data.payload.pvt.vAcc * 0.001f;            // 单位:m
+            gps_data_2.velN = (float)raw_data.payload.pvt.velN * 0.001f;            // 单位:m/s
+            gps_data_2.velE = (float)raw_data.payload.pvt.velE * 0.001f;            // 单位:m/s
+            gps_data_2.velD = (float)raw_data.payload.pvt.velD * 0.001f;            // 单位:m/s
+            gps_data_2.speed = (float)raw_data.payload.pvt.gSpeed * 0.001f;         // 单位:m/s
+            gps_data_2.heading = (float)raw_data.payload.pvt.heading * 1e-5f;       // 单位:deg
+            gps_data_2.sAcc = (float)raw_data.payload.pvt.sAcc * 0.001f;            // 单位:m/s
+            gps_data_2.cAcc = (float)raw_data.payload.pvt.cAcc * 1e-5f;             // 单位:deg
+            gps_data_2.numSV = raw_data.payload.pvt.numSV;
+            gps_data_2.fixed = raw_data.payload.pvt.gpsFix;
+            gps_data_2.date.year = raw_data.payload.pvt.year;
+            gps_data_2.date.month = raw_data.payload.pvt.month;
+            gps_data_2.date.day = raw_data.payload.pvt.day;
+            gps_data_2.date.hour = raw_data.payload.pvt.hour;
+            gps_data_2.date.min = raw_data.payload.pvt.min;
+            gps_data_2.date.sec = raw_data.payload.pvt.sec;
+            gps_data_2.date.msec = (gps_data_2.time % 1000);
+            // recordGps();
+            xQueueSend(xQueue_gps_handle, &gps_data_2, portMAX_DELAY);
+
             break;
 
         default:
@@ -662,6 +714,7 @@ static void ublox_cfg_nav5(void)
 void HAL::GPS_Init()
 {
     logger.LogInfo("init GPS");
+    init_gps_queue();
 
     gpsSerial.begin(BUAD, SERIAL_8N1, RXD1, TXD1);
     // ublox_init();

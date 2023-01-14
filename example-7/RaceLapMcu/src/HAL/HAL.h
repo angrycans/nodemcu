@@ -33,7 +33,7 @@ extern char logbuff[100];
 
 extern SDLogger logger;
 // extern TinyGPSPlus gps;
-extern GPS_t gps_data;
+extern GPS_t gps_data_2;
 extern GPS_t gps_data_last;
 
 extern Battery battery;
