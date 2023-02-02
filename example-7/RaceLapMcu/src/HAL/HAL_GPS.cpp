@@ -14,9 +14,9 @@ File dataFile;
 bool isSetTime = false;
 int preRecordCd = 3;
 int recordtoLoopCd = 15;
-char buffer[150];
+char buffer[100];
 double KMPH = 0; // current speed
-double RecordKmph = 30;
+double RecordKmph = 3;
 char DataFileDir[12] = "/XLAPDATA/";
 float gforce = 0.0f;
 float gforce_last = 0.0f;
@@ -55,7 +55,7 @@ void taskWritefile(void *parameter)
 
     while (1)
     {
-        if (xQueueReceive(xQueue_gps_handle, &resv, 100 / portTICK_PERIOD_MS) == pdPASS)
+        if (xQueueReceive(xQueue_gps_handle, &resv, 80 / portTICK_PERIOD_MS) == pdPASS)
         {
             recordGps(resv);
         }
@@ -160,21 +160,22 @@ void recordGps(GPS_t gps_data)
                 }
                 if (dataFile)
                 {
-                    // #if defined(DEBUG)
+#if defined(DEBUG)
 
-                    //                     if (gps_data_last.date.msec == 900 && gps_data.date.msec == 0)
-                    //                     {
-                    //                     }
-                    //                     else if (gps_data_last.date.msec + 100 == gps_data.date.msec)
-                    //                     {
-                    //                     }
-                    //                     else
-                    //                     {
+                    if (gps_data_last.date.msec == 900 && gps_data.date.msec == 0)
+                    {
+                    }
+                    else if (gps_data_last.date.msec + 100 == gps_data.date.msec)
+                    {
+                    }
+                    else
+                    {
 
-                    //                         Serial.println("------------------------");
-                    //                     }
-                    //                     Serial.println(buffer);
-                    // #endif
+                        // Serial.println("------------------------");
+                        dataFile.println("--------------");
+                    }
+                    // Serial.println(buffer);
+#endif
                     dataFile.println(buffer);
                     dataFile.flush();
                     //  Serial.println(buffer);

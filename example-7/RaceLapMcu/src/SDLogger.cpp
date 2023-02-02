@@ -25,6 +25,8 @@ void SDLogger::Begin(bool sd)
     {
       Serial.println("XLAPDATA Dir create error");
     }
+    // SD.remove("/XLAPDATA/log.txt");
+    // delay(250);
     Serial.println("XLAPDATA log init ...");
     logFile = SD.open("/XLAPDATA/log.txt", FILE_WRITE);
 
@@ -36,6 +38,7 @@ void SDLogger::Begin(bool sd)
       Serial.println(1 * 1024 * 1024);
       if (logFile.size() > 1 * 1024 * 1024.0)
       {
+        logFile.close();
         SD.remove("/XLAPDATA/log.txt");
         delay(250);
 
@@ -96,9 +99,9 @@ void SDLogger::LogInfo(const char *info)
 void SDLogger::LogInfo(const char *fmt, va_list args)
 {
 
-  char tmp[150];
-  sniprintf(tmp, 150, fmt, args);
-  WriteToSD(tmp);
+  // char tmp[150];
+  // sniprintf(tmp, 150, fmt, args);
+  // WriteToSD(tmp);
 }
 
 void SDLogger::WriteToSD(String data)

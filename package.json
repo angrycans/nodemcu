@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/angrycans/nodemcu/issues"
   },
-  "homepage": "https://github.com/angrycans/nodemcu#readme"
+  "homepage": "https://github.com/angrycans/nodemcu#readme",
+  "dependencies": {
+    "node-libcurl": "^3.0.0"
+  }
 }

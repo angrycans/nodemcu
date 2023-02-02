@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>back4app Example</title>
+    <script type="text/javascript" src="https://npmcdn.com/parse/dist/parse.min.js"></script>
+
+</head>
+
+<body>
+    <div>
+        Test back4app Example. To use:
+        <ul>
+            <li>back4app <a href="https://www.back4app.com/">https://www.back4app.com/</a>.</li>
+
+        </ul>
+    </div>
+    <div>
+        <button id="connect-button">Connect local</button>
+        <button id="connect-button2">Connect back4app</button>
+        <button id="connect-button3">Connect xlap.deno.dev</button>
+
+
+    </div>
+</body>
+<script type="text/javascript">
+    const connectButton = document.getElementById('connect-button');
+    const connectButton2 = document.getElementById('connect-button2');
+    const connectButton3 = document.getElementById('connect-button3');
+
+    Parse.initialize("KgHFOTuWepLcBnpzrcZY0wXedW5LHhcY2i4gMzin", "3lCU1D8IrhdXqOvykqqVJWDUKzgWJOOR2c4CUe0Z"); //PASTE HERE YOUR Back4App APPLICATION ID AND YOUR JavaScript KEY
+    //Parse.serverURL = "https://parseapi.back4app.com/";
+    // Parse.serverURL = "https://xlap.deno.dev/";
+
+
+
+    console.log("Parse init ok");
+
+    connectButton.addEventListener('click', function (event) {
+        Parse.serverURL = "http://127.0.0.1:3000/";
+
+        createParseUser2();
+    });
+
+    connectButton2.addEventListener('click', function (event) {
+        Parse.serverURL = "https://parseapi.back4app.com/";
+        createParseUser();
+    });
+
+    connectButton3.addEventListener('click', function (event) {
+        Parse.serverURL = "https://xlap.deno.dev/";
+        createParseUser2();
+    });
+
+
+    async function createParseUser() {
+        // Creates a new Parse "User" object, which is created by default in your Parse app
+        let user = new Parse.User();
+        // Set the input values to the new "User" object
+        user.set("username", "acans12");
+        user.set("email", "acans12@email.com");
+        user.set("password", "passwd");
+        try {
+            // Call the save method, which returns the saved object if successful
+            user = await user.save();
+            if (user !== null) {
+                // Notify the success by getting the attributes from the "User" object, by using the get method (the id attribute needs to be accessed directly, though)
+                console.log(
+                    `New object created with success! ObjectId: ${user.id
+                    }, ${user.get("username")}`
+                );
+            }
+        } catch (error) {
+            console.log(`Error: ${error.message}`);
+        }
+    }
+
+
+    async function createParseUser2() {
+
+        console.log("createParseUser2")
+        // Creates a new Parse "User" object, which is created by default in your Parse app
+        let user = new Parse.Object("SoccerPlayers");
+        // Set the input values to the new "User" object
+        user.set("username", "acans12");
+        user.set("email", "acans12@email.com");
+        user.set("password", "passwd");
+        try {
+            // Call the save method, which returns the saved object if successful
+            user = await user.save();
+            if (user !== null) {
+                // Notify the success by getting the attributes from the "User" object, by using the get method (the id attribute needs to be accessed directly, though)
+                console.log(
+                    `New object created with success! ObjectId: ${user.id
+                    }, ${user.get("username")}`
+                );
+            }
+        } catch (error) {
+            console.log(`Error: ${error.message}`);
+        }
+    }
+</script>
+
+</html>
