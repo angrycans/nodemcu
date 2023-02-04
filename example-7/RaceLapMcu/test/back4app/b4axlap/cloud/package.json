@@ -1,0 +1,6 @@
+{
+	"dependencies": {
+		 "mailgun-js": "^0.22.0",
+		 "node-fetch": "^2.6.9"
+	}
+}

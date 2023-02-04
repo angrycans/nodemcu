@@ -21,6 +21,11 @@
         <button id="connect-button3">Connect xlap.deno.dev</button>
 
 
+
+        <br />
+        <button id="sendmail-button">sendmail</button>
+        <button id="refreshtoken-button">refresh dropbox token</button>
+
     </div>
 </body>
 <script type="text/javascript">
@@ -29,7 +34,7 @@
     const connectButton3 = document.getElementById('connect-button3');
 
     Parse.initialize("KgHFOTuWepLcBnpzrcZY0wXedW5LHhcY2i4gMzin", "3lCU1D8IrhdXqOvykqqVJWDUKzgWJOOR2c4CUe0Z"); //PASTE HERE YOUR Back4App APPLICATION ID AND YOUR JavaScript KEY
-    //Parse.serverURL = "https://parseapi.back4app.com/";
+    Parse.serverURL = "https://parseapi.back4app.com/";
     // Parse.serverURL = "https://xlap.deno.dev/";
 
 
@@ -52,6 +57,48 @@
         createParseUser2();
     });
 
+    document.getElementById('sendmail-button').addEventListener('click', async function (event) {
+        Parse.serverURL = "https://xlap.deno.dev/";
+        const params = { toEmail: "angrycans@gmail.com", subject: "xlap signin code", body: "This is code 9999  Please replyTo!!!" }
+        const res = await Parse.Cloud.run('sendEmail', params);
+        console.log(res);
+
+    });
+
+    document.getElementById('refreshtoken-button').addEventListener('click', async function (event) {
+        Parse.serverURL = "https://xlap.deno.dev/";
+        const res = await Parse.Cloud.run('refresh_dropbox_token');
+        console.log(res);
+
+
+
+        // const q = new Parse.Query('Dropbox_token');
+
+        // q.equalTo("name", "access_token");
+        // const qret = await q.first();
+
+        // console.log("results", qret);
+        // qret.set("token", "ret.access_token");
+        // await qret.save();
+        // console.log("results", qret);
+
+        //    if (results){
+        //     results[0].set("token", "ret.access_token");
+        //     await results[0].save();
+        //    }
+
+
+        // const Dropbox_token = Parse.Object.extend("Dropbox_token");
+        // const token = new Dropbox_token();
+        // token.set("name", "access_token");
+        // token.set("token", "18426");
+        // let token_rst = await token.save();
+        // console.log("token_rst", token_rst);
+
+
+
+
+    });
 
     async function createParseUser() {
         // Creates a new Parse "User" object, which is created by default in your Parse app

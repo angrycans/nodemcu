@@ -1,0 +1,10 @@
+{
+  "applications": {
+    "_default": {
+      "link": "xlap"
+    },
+    "xlap": {
+      "applicationId": "KgHFOTuWepLcBnpzrcZY0wXedW5LHhcY2i4gMzin"
+    }
+  }
+}

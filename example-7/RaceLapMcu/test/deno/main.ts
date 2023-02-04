@@ -5,7 +5,29 @@ import { oakCors } from "https://deno.land/x/cors/mod.ts";
 
 const serverURL = "https://parseapi.back4app.com";
 
+(async ()=>{
 
+    console.log("test start");
+    const text=new URLSearchParams({
+        'grant_type': 'refresh_token',
+        'client_id': '054fu81io7bpqjm',
+        'client_secret': 'fkjvl5t718xyj16',
+        'refresh_token': '7n_Dt3I2izUAAAAAAAAAAbno9CplSr8CcdFYeMkA-1-Uuf-FX2fWks0ep8Xx7npL'
+    }).toString();
+    console.log("text",text);
+
+    const res=await fetch("https://api.dropboxapi.com/oauth2/token", {
+        "headers": {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        },
+        "body":text,
+        "method": "POST",
+      });
+    
+        console.log(await res.json());
+
+
+})();
 
 const app = new Application();
 app.use(oakCors()); 
@@ -31,7 +53,7 @@ app.use(async (ctx) => {
     "mode": "cors",
     "credentials": "omit"
   });
-  
+
     ctx.response.body=await res.json();
 
   });

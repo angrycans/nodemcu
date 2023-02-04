@@ -1,0 +1,187 @@
+== Info: Uses proxy env variable https_proxy == 'http://127.0.0.1:7890'
+== Info:   Trying 127.0.0.1:7890...
+== Info: Connected to 127.0.0.1 (127.0.0.1) port 7890 (#0)
+== Info: allocate connect buffer!
+== Info: Establish HTTP proxy tunnel to api.dropbox.com:443
+=> Send header, 122 bytes (0x7a)
+0000: CONNECT api.dropbox.com:443 HTTP/1.1
+0026: Host: api.dropbox.com:443
+0041: User-Agent: curl/7.79.1
+005a: Proxy-Connection: Keep-Alive
+0078: 
+<= Recv header, 37 bytes (0x25)
+0000: HTTP/1.1 200 Connection established
+<= Recv header, 2 bytes (0x2)
+0000: 
+== Info: Proxy replied 200 to CONNECT request
+== Info: CONNECT phase completed!
+== Info: ALPN, offering h2
+== Info: ALPN, offering http/1.1
+== Info: successfully set certificate verify locations:
+== Info:  CAfile: /etc/ssl/cert.pem
+== Info:  CApath: none
+== Info: (304) (OUT), TLS handshake, Client hello (1):
+=> Send SSL data, 320 bytes (0x140)
+0000: ...<..H.COe..9.U....:[i...Y/W>o.....#. d....._.!..c....l....F\..
+0040: ........b.......0.,.(.$.......k.9.................=.5...../.+.'.
+0080: #.......g.3...E...<./...A.......................+............3.&
+00c0: .$... f}...f..J.81..&..t...q..J...MY.d.........api.dropbox.com..
+0100: .....................................................h2.http/1.1
+== Info: (304) (IN), TLS handshake, Server hello (2):
+<= Recv SSL data, 96 bytes (0x60)
+0000: ...\..c...4)......;.,=3$..>.....T+.PA. .....v.(.......F.d......y
+0040: a.R.R.?.......................h2
+== Info: TLSv1.2 (IN), TLS handshake, Certificate (11):
+<= Recv SSL data, 3907 bytes (0xf43)
+0000: ...?..<..t0..p0..X..........S...b5d.`.Q..0...*.H........0O1.0...
+0040: U....US1.0...U....DigiCert Inc1)0'..U... DigiCert TLS RSA SHA256
+0080:  2020 CA10...220916000000Z..231011235959Z0n1.0...U....US1.0...U.
+00c0: ...California1.0...U....San Francisco1.0...U....Dropbox, Inc1.0.
+0100: ..U....api.dropboxapi.com0.."0...*.H.............0..............
+0140: |7L]....,..g.}.........C.&k..o....K...6..MEuH...|...........P...
+0180: .7.........VQa...f8...p.@.....A.G.........2...sFE.*.wvUg........
+01c0: ..... .....%...W....3|..v..e<(..Pj...~.......g....+"...9S...O.
+0200: .Yl.Ed.;8.Eh..j9.o.z.b...SyA...a..y..,...+..e>...Su..?..........
+0240: ..'0..#0...U.#..0....k......y........v..0...U......H..T...W!..t+
+0280: ....VX.0.....U......0.....api.dropboxapi.com..api.dropbox.com..a
+02c0: pi0.dropbox.com..api1.dropbox.com..api2.dropbox.com..api3.dropbo
+0300: x.com..api4.dropbox.com..api5.dropbox.com..api6.dropbox.com..api
+0340: 7.dropbox.com..api8.dropbox.com..api9.dropbox.com..api10.dropbox
+0380: .com..api11.dropbox.com..api12.dropbox.com..api13.dropbox.com..a
+03c0: pi14.dropbox.com..api15.dropbox.com..api16.dropbox.com..api17.dr
+0400: opbox.com..api18.dropbox.com..api19.dropbox.com..api20.dropbox.c
+0440: om..api21.dropbox.com..api22.dropbox.com..api23.dropbox.com..api
+0480: 24.dropbox.com..api25.dropbox.com..api26.dropbox.com..api27.drop
+04c0: box.com..api28.dropbox.com..api29.dropbox.com..api30.dropbox.com
+0500: ..notify.dropboxapi.com..api-notify0.dropbox.com..api-notify1.dr
+0540: opbox.com..api-notify2.dropbox.com..api-notify3.dropbox.com..api
+0580: -notify4.dropbox.com..api-notify5.dropbox.com..wopi.dropbox.com.
+05c0: .wopi-test.dropbox.com..www.api.dropboxapi.com..api-notify.dropb
+0600: ox.com..content.dropboxapi.com..cloud-docs-gdd-test.dropbox.com.
+0640: .cloud-docs-gdd.dropbox.com0...U...........0...U.%..0...+.......
+0680: ..+.......0....U.....0..0@.>.<.:http://crl3.digicert.com/DigiCer
+06c0: tTLSRSASHA2562020CA1-4.crl0@.>.<.:http://crl4.digicert.com/DigiC
+0700: ertTLSRSASHA2562020CA1-4.crl0>..U. .70503..g.....0)0'..+........
+0740: .http://www.digicert.com/CPS0..+........s0q0$..+.....0...http:/
+0780: /ocsp.digicert.com0I..+.....0..=http://cacerts.digicert.com/Digi
+07c0: CertTLSRSASHA2562020CA1-1.crt0...U....0.0..~..+.....y......n...j
+0800: .h.v..>..>..52.W(..k......k..i.w}m..n....G.kZ.....G0E. ND.8%~Vb.
+0840: N.@...~.......ki..=..(6.!...}...eK.E.a.%....Zec+....G|.!...w.5..
+0880: ...lW...LmB...' &Q.?.*....;.L....G.kG.....H0F.!...?.<.....x....H
+08c0: ....eO....p=.2s..!........Bt.[....B.OpQ.#......1....u..sw...P.c.
+0900: ......Jy-.g.......y6......G.ky.....F0D. p3....JQ.....} ip..kl.U.
+0940: ./=..@... B0.y.s].Ru.....<.....S..K/?...I.0...*.H.............x.
+0980: .....'[.&....p....Q.N.D.z.....svW}.9.=....q......F..M...%..2 ..
+09c0: ..^Q.]9....{..R,..a.\.7...N.#._....V....h..$V~.0...Bs:......B...
+0a00: q<X_.......?2..5t.6.M.:*.a.>..W../..F*.8.:...%T.....+.:.....w..
+0a40: ......N....wK......V....N....c1.../!r..1k....f|.........d.......
+0a80: .0...0...............XCF../.T"~.0...*.H........0a1.0...U....US1.
+0ac0: 0...U....DigiCert Inc1.0...U....www.digicert.com1 0...U....DigiC
+0b00: ert Global Root CA0...210414000000Z..310413235959Z0O1.0...U....U
+0b40: S1.0...U....DigiCert Inc1)0'..U... DigiCert TLS RSA SHA256 2020 
+0b80: CA10.."0...*.H.............0.........K.eGp..OX.....f..1.T.JfF.,.
+0bc0: .d....... ........z.....V...X.Q.,4.....V..y_....%.{.RAf.`OW.I..7
+0c00: g....KgL"Q......WQt&.}..b...#.%So.4X.......XI"{........|..Q....
+0c40: 7.6..Kb.I...g..>....^D..qB}X.........2...'.'.+t......d...S.V.x..
+0c80: I.)..IO.....\.Wmky.+.' ...=@.!0..............0..~0...U.......0..
+0cc0: .....0...U.......k......y........v..0...U.#..0.....P5V.L.f......
+0d00: ..=.U0...U...........0...U.%..0...+.........+.......0v..+.......
+0d40: .j0h0$..+.....0...http://ocsp.digicert.com0@..+.....0..4http://c
+0d80: acerts.digicert.com/DigiCertGlobalRootCA.crt0B..U...;0907.5.3.1h
+0dc0: ttp://crl3.digicert.com/DigiCertGlobalRootCA.crl0=..U. .6040...`
+0e00: .H...l..0...g....0...g.....0...g.....0...g.....0...*.H..........
+0e40: ....2.^..nZ
+0e4d: .........p..]...+u@.....1x.pK..X....k..~...X.Y....l...m.q.[.m.Z.
+0e8d: .{..C.*...A&_........o...t... ..O..g]].<..i.al....6....v.K.u....
+0ecd: U}&..w.>..|..{z.6o....q...s0.{..*Y.B.;...R....}.[rg.q.WGf...Je4^
+0f0d: ..*< .Q.L.R..k.+..~....6.C..*c.u?......<.0...L..6.s>..
+== Info: TLSv1.2 (IN), TLS handshake, Server key exchange (12):
+<= Recv SSL data, 300 bytes (0x12c)
+0000: ...(... .@SW?..T.F..=..'.'..:.........k....A..`X_.B..Z.e...2...
+0040: ..Z..X.C. .87Q.>....A...r.L.*V.`..A....?.~........Zz...,M..Y..b.
+0080: ..dw...h...<.Xx.T.V....H...$6<Q......L,....L.nV..@UT.....:..).>.
+00c0: .._...g..=i...".......E..~.Gw..d?..;E.+.J2+iX.!<.$\r.......%....
+0100: n.G....H...D..s-.@\..|.........+....".+c.y..
+== Info: TLSv1.2 (IN), TLS handshake, Server finished (14):
+<= Recv SSL data, 4 bytes (0x4)
+0000: ....
+== Info: TLSv1.2 (OUT), TLS handshake, Client key exchange (16):
+=> Send SSL data, 37 bytes (0x25)
+0000: ...! ..2....H......#0/.|9YP.H..3..J.j
+== Info: TLSv1.2 (OUT), TLS change cipher, Change cipher spec (1):
+=> Send SSL data, 1 bytes (0x1)
+0000: .
+== Info: TLSv1.2 (OUT), TLS handshake, Finished (20):
+=> Send SSL data, 16 bytes (0x10)
+0000: .....gV.6.Z.L.+g
+== Info: TLSv1.2 (IN), TLS change cipher, Change cipher spec (1):
+<= Recv SSL data, 1 bytes (0x1)
+0000: .
+== Info: TLSv1.2 (IN), TLS handshake, Finished (20):
+<= Recv SSL data, 16 bytes (0x10)
+0000: ....O..j.y.5f1..
+== Info: SSL connection using TLSv1.2 / ECDHE-RSA-CHACHA20-POLY1305
+== Info: ALPN, server accepted to use h2
+== Info: Server certificate:
+== Info:  subject: C=US; ST=California; L=San Francisco; O=Dropbox, Inc; CN=api.dropboxapi.com
+== Info:  start date: Sep 16 00:00:00 2022 GMT
+== Info:  expire date: Oct 11 23:59:59 2023 GMT
+== Info:  subjectAltName: host "api.dropbox.com" matched cert's "api.dropbox.com"
+== Info:  issuer: C=US; O=DigiCert Inc; CN=DigiCert TLS RSA SHA256 2020 CA1
+== Info:  SSL certificate verify ok.
+== Info: Using HTTP2, server supports multiplexing
+== Info: Connection state changed (HTTP/2 confirmed)
+== Info: Copying HTTP/2 data in stream buffer to connection buffer after upgrade: len=0
+== Info: Using Stream ID: 1 (easy handle 0x7f8a48012200)
+=> Send header, 160 bytes (0xa0)
+0000: POST /oauth2/token HTTP/2
+001b: Host: api.dropbox.com
+0032: user-agent: curl/7.79.1
+004b: accept: */*
+0058: content-length: 159
+006d: content-type: application/x-www-form-urlencoded
+009e: 
+=> Send data, 159 bytes (0x9f)
+0000: refresh_token=7n_Dt3I2izUAAAAAAAAAAbno9CplSr8CcdFYeMkA-1-Uuf-FX2
+0040: fWks0ep8Xx7npL&grant_type=refresh_token&client_id=054fu81io7bpqj
+0080: m&client_secret=fkjvl5t718xyj16
+== Info: We are completely uploaded and fine
+== Info: Connection state changed (MAX_CONCURRENT_STREAMS == 128)!
+<= Recv header, 13 bytes (0xd)
+0000: HTTP/2 200 
+<= Recv header, 52 bytes (0x34)
+0000: cache-control: no-cache, no-store, must-revalidate
+<= Recv header, 12 bytes (0xc)
+0000: expires: 0
+<= Recv header, 18 bytes (0x12)
+0000: pragma: no-cache
+<= Recv header, 33 bytes (0x21)
+0000: x-content-type-options: nosniff
+<= Recv header, 29 bytes (0x1d)
+0000: x-frame-options: SAMEORIGIN
+<= Recv header, 28 bytes (0x1c)
+0000: x-server-response-time: 30
+<= Recv header, 32 bytes (0x20)
+0000: content-type: application/json
+<= Recv header, 32 bytes (0x20)
+0000: accept-encoding: identity,gzip
+<= Recv header, 37 bytes (0x25)
+0000: date: Fri, 03 Feb 2023 03:52:08 GMT
+<= Recv header, 15 bytes (0xf)
+0000: server: envoy
+<= Recv header, 21 bytes (0x15)
+0000: content-length: 208
+<= Recv header, 23 bytes (0x17)
+0000: vary: Accept-Encoding
+<= Recv header, 39 bytes (0x27)
+0000: x-dropbox-response-origin: far_remote
+<= Recv header, 56 bytes (0x38)
+0000: x-dropbox-request-id: 10a617da5fbd46ea8747b3a064cb471e
+<= Recv header, 2 bytes (0x2)
+0000: 
+<= Recv data, 208 bytes (0xd0)
+0000: {"access_token": "sl.BYHskd6A5QLuzHJLCNuRcALWyeuujx7mELu0BnviG71
+0040: z0X_7iDgoxEIX2zHxvPhK_edhCXcCKmDOgCmV3m94zecRLY2vwKH_-uzA8GXzKLV
+0080: RtTR4IxUaX34TcRxqMeq8zWqobOCOU7G4", "token_type": "bearer", "exp
+00c0: ires_in": 14400}
+== Info: Connection #0 to host 127.0.0.1 left intact
