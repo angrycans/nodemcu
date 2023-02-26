@@ -88,7 +88,7 @@ void setup()
 {
 
   delay(5000);
-  Serial.begin(9600);
+ // Serial.begin(9600);
   //   Serial.begin(57600);
   //
   //       for (uint8_t i = 0; i < sizeof(UBLOX_INIT); i++)
@@ -97,7 +97,7 @@ void setup()
   //        }
 
   Serial.println("init ok0");
-    gpsSerial.begin(9600);
+    gpsSerial.begin(57600);
   delay(2000);
   while (1) {
     if (gpsSerial.available() > 0) {

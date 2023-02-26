@@ -1,0 +1,62 @@
+
+#include <Arduino.h>
+#include <Adafruit_GFX.h>    // Core graphics library
+#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
+
+#define TFT_CS_ST7789   2
+#define TFT_RST_ST7789  3   
+#define TFT_DC        6   
+
+Adafruit_ST7789 tft_ST7789 = Adafruit_ST7789(TFT_CS_ST7789, TFT_DC,8,5, TFT_RST_ST7789);
+
+#ifdef ESP32C3
+#define LED_RUN 4
+
+#else
+#define LED_RUN 1
+
+#endif
+
+
+void setup(void)
+{
+  // SPIバスとパネルの初期化を実行すると使用可能になります。
+delay(2000);
+  Serial.begin(115200);
+  
+
+  pinMode(LED_RUN,OUTPUT);
+
+  tft_ST7789.init(240, 280);
+  tft_ST7789.fillScreen(ST77XX_GREEN);
+  //tft_ST7789.setTextWrap(true);
+  tft_ST7789.setTextColor(ST77XX_RED);
+  
+
+  tft_ST7789.setCursor(100, 100);
+  tft_ST7789.print("Hello ESP32C3");
+
+  //  tft.init();
+  //   tft.fillScreen(TFT_GREEN);
+  //   Serial.println("screen init success.");
+  //  tft.setCursor(0, 0, 1);
+//tft.print("Hello World!");
+
+ #ifdef ESP32C3
+
+Serial.println("test esp32c3 tft....");
+#else
+
+Serial.println("test esp32s3 tft....");
+
+#endif
+ 
+}
+
+void loop(void)
+{
+
+      digitalWrite(LED_RUN, (millis() / 1000) % 2);
+
+  
+}
