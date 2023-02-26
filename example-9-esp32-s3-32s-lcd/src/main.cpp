@@ -1,6 +1,14 @@
 
+// #define LV_CONF_INCLUDE_SIMPLE 1
+// #define LV_CONF_PATH "lv_conf.h"
+
+#include <lvgl.h>
+
+//#define LV_CONF_INCLUDE_SIMPLE
+
 // v1.0.0 を有効にします(v0からの移行期間の特別措置です。これを書かない場合は旧v0系で動作します。)
 #define LGFX_USE_V1
+
 
 #include <LovyanGFX.hpp>
 
@@ -15,6 +23,9 @@
 #define TFT_HEIGHT 280
 
 #define LED_RUN 1 
+
+static lv_disp_draw_buf_t draw_buf;
+static lv_color_t buf[ TFT_WIDTH * 10 ];
 
 
 class LGFX : public lgfx::LGFX_Device
@@ -107,8 +118,35 @@ public:
 };
 
 // 準備したクラスのインスタンスを作成します。
-LGFX display;
+LGFX tft;
 
+/* Display flushing */
+void my_disp_flush( lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p )
+{
+   uint32_t w = ( area->x2 - area->x1 + 1 );
+   uint32_t h = ( area->y2 - area->y1 + 1 );
+
+   tft.startWrite();
+   tft.setAddrWindow( area->x1, area->y1, w, h );
+   //tft.pushColors( ( uint16_t * )&color_p->full, w * h, true );
+   tft.writePixels((lgfx::rgb565_t *)&color_p->full, w * h);
+   tft.endWrite();
+
+   lv_disp_flush_ready( disp );
+}
+
+
+void lv_example_get_started_1(void)
+{
+    lv_obj_t * btn = lv_btn_create(lv_scr_act());     /*Add a button the current screen*/
+    lv_obj_set_size(btn, 120, 50);                          /*Set its size*/
+    lv_obj_align(btn, LV_ALIGN_CENTER, 0,0);
+    //lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_ALL, NULL);           /*Assign a callback to the button*/
+
+    lv_obj_t * label = lv_label_create(btn);          /*Add a label to the button*/
+    lv_label_set_text(label, "Button");                     /*Set the labels text*/
+    lv_obj_center(label);
+}
 
 void setup(void)
 {
@@ -116,46 +154,40 @@ void setup(void)
 
   Serial.begin(115200);
   delay(1000);
-  Serial.println("test tft");
+  Serial.println("test tft lvgl");
 
   pinMode(LED_RUN,OUTPUT);
-  display.init();
+  tft.init();
+     tft.setRotation(1);
+   tft.setBrightness(255);
 
-  //display.setTextSize((std::max(display.width(), display.height()) + 255) >> 8);
+lv_init();
+   lv_disp_draw_buf_init( &draw_buf, buf, NULL, TFT_WIDTH * 10 );
+static lv_disp_drv_t disp_drv;
+   lv_disp_drv_init(&disp_drv);
 
-  // タッチが使用可能な場合のキャリブレーションを行います。（省略可）
+   /*Change the following line to your display resolution*/
+   disp_drv.hor_res = TFT_HEIGHT;
+   disp_drv.ver_res = TFT_WIDTH;
+   disp_drv.flush_cb = my_disp_flush;
+   disp_drv.draw_buf = &draw_buf;
+   lv_disp_drv_register(&disp_drv);
 
-  display.fillScreen(TFT_BLUE);
+   /*Initialize the (dummy) input device driver*/
+   static lv_indev_drv_t indev_drv;
+   lv_indev_drv_init(&indev_drv);
+   indev_drv.type = LV_INDEV_TYPE_POINTER;
+  // indev_drv.read_cb = my_touchpad_read;
+   lv_indev_drv_register(&indev_drv);
+
+   lv_example_get_started_1();
+
 }
 
-uint32_t count = ~0;
 void loop(void)
 {
+   lv_timer_handler(); /* let the GUI do its work */
 
       digitalWrite(LED_RUN, (millis() / 1000) % 2);
 
-  display.startWrite();
-  display.setRotation(++count & 7);
-  display.setColorDepth((count & 8) ? 16 : 24);
-
-  display.setTextColor(TFT_WHITE);
-  display.drawNumber(display.getRotation(), 16, 0);
-
-  display.setTextColor(0xFF0000U);
-  display.drawString("R", 30, 16);
-  display.setTextColor(0x00FF00U);
-  display.drawString("G", 40, 16);
-  display.setTextColor(0x0000FFU);
-  display.drawString("B", 50, 16);
-
-  display.drawRect(30, 30, display.width() - 60, display.height() - 60, count * 7);
-  display.drawFastHLine(0, 0, 10);
-
-  display.endWrite();
-
-  int32_t x, y;
-  if (display.getTouch(&x, &y))
-  {
-    display.fillRect(x - 2, y - 2, 5, 5, count * 7);
-  }
 }
