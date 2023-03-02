@@ -51,14 +51,14 @@ public:
 
       // SPIバスの設定
       
-      cfg.spi_host = SPI2_HOST; // 使用するSPIを選択  ESP32-S2,C3 : SPI2_HOST or SPI3_HOST / ESP32 : VSPI_HOST or HSPI_HOST
+      cfg.spi_host = SPI3_HOST; // 使用するSPIを選択  ESP32-S2,C3 : SPI2_HOST or SPI3_HOST / ESP32 : VSPI_HOST or HSPI_HOST
       // ※ ESP-IDFバージョンアップに伴い、VSPI_HOST , HSPI_HOSTの記述は非推奨になるため、エラーが出る場合は代わりにSPI2_HOST , SPI3_HOSTを使用してください。
       cfg.spi_mode = 3;                  // SPI通信モードを設定 (0 ~ 3)
       cfg.freq_write = 80000000;         // 送信時のSPIクロック (最大80MHz, 80MHzを整数で割った値に丸められます)
       cfg.freq_read = 16000000;          // 受信時のSPIクロック
       cfg.spi_3wire = true;              // 受信をMOSIピンで行う場合はtrueを設定
       cfg.use_lock = true;               // トランザクションロックを使用する場合はtrueを設定
-      cfg.dma_channel = 0; // 使用するDMAチャンネルを設定 (0=DMA不使用 / 1=1ch / 2=ch / SPI_DMA_CH_AUTO=自動設定)
+      cfg.dma_channel = SPI_DMA_CH_AUTO; // 使用するDMAチャンネルを設定 (0=DMA不使用 / 1=1ch / 2=ch / SPI_DMA_CH_AUTO=自動設定)
       // ※ ESP-IDFバージョンアップに伴い、DMAチャンネルはSPI_DMA_CH_AUTO(自動設定)が推奨になりました。1ch,2chの指定は非推奨になります。
       cfg.pin_sclk = TFT_SCL; // SPIのSCLKピン番号を設定
       cfg.pin_mosi = TFT_SDA; // SPIのMOSIピン番号を設定
@@ -87,8 +87,8 @@ public:
       cfg.dummy_read_pixel = 8; // ピクセル読出し前のダミーリードのビット数
       cfg.dummy_read_bits = 1;  // ピクセル以外のデータ読出し前のダミーリードのビット数
       cfg.readable = true;      // データ読出しが可能な場合 trueに設定
-      cfg.invert = false;        // パネルの明暗が反転してしまう場合 trueに設定
-      cfg.rgb_order = false;     // パネルの赤と青が入れ替わってしまう場合 trueに設定
+      cfg.invert = true;        // パネルの明暗が反転してしまう場合 trueに設定
+      cfg.rgb_order = true;     // パネルの赤と青が入れ替わってしまう場合 trueに設定
       cfg.dlen_16bit = false;   // 16bitパラレルやSPIでデータ長を16bit単位で送信するパネルの場合 trueに設定
       cfg.bus_shared = true;    // SDカードとバスを共有している場合 trueに設定(drawJpgFile等でバス制御を行います)
 
