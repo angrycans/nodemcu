@@ -1,0 +1,128 @@
+
+#include "Wire.h"
+#include "Arduino.h"
+
+#include "lvgl.h"
+#include "./HARDWARE-PORT/HARDWARE_PORT.h"
+#include "./CTP_driver/CTP_driver.hpp"
+
+#define LED_RUN 1 
+
+
+
+static void touchpad_init(void);
+static void touchpad_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data);
+static bool touchpad_is_pressed(void);
+static void touchpad_get_xy(lv_coord_t * x, lv_coord_t * y);
+
+        static int x_pos = 0;
+    static int y_pos = 0;
+
+lv_indev_t * indev_touchpad;
+
+CTP ctp;
+
+/*------------------
+ * Touchpad
+ * -----------------*/
+
+/*Initialize your touchpad*/
+static void touchpad_init(void)
+{
+    /*Your code comes here*/
+     Wire.begin(5, 8);
+
+    ctp.begin(&Wire);
+}
+
+/*Will be called by the library to read the touchpad*/
+static void touchpad_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
+{
+    // static lv_coord_t last_x = 0;
+    // static lv_coord_t last_y = 0;
+
+    static int x_pos = 0;
+    static int y_pos = 0;
+
+    /*Save the pressed coordinates and the state*/
+    // if(touchpad_is_pressed()) {
+    //     touchpad_get_xy(&last_x, &last_y);
+    //     data->state = LV_INDEV_STATE_PR;
+    // }
+    // else {
+    //     data->state = LV_INDEV_STATE_REL;
+    // }
+
+    if(ctp.is_touched()) {
+        ctp.get_touch_pos(&x_pos, &y_pos);
+        Serial.printf("X:%d Y:%d\n", x_pos, y_pos);
+        data->point.x = x_pos;
+        data->point.y = y_pos;
+        data->state = LV_INDEV_STATE_PR;
+    }
+    else {
+        data->state = LV_INDEV_STATE_REL;
+    }
+
+    /*Set the last pressed coordinates*/
+    // data->point.x = last_x;
+    // data->point.y = last_y;
+}
+
+/*Return true is the touchpad is pressed*/
+static bool touchpad_is_pressed(void)
+{
+    /*Your code comes here*/
+
+    return false;
+}
+
+/*Get the x and y coordinates if the touchpad is pressed*/
+static void touchpad_get_xy(lv_coord_t * x, lv_coord_t * y)
+{
+    /*Your code comes here*/
+
+    (*x) = 0;
+    (*y) = 0;
+}
+
+
+void setup(void)
+{
+  // SPIバスとパネルの初期化を実行すると使用可能になります。
+
+  Serial.begin(115200);
+  delay(1000);
+  Serial.println("test tft lvgl");
+
+  // pinMode(9,OUTPUT);
+
+  //  digitalWrite(9, 0);
+  //  delay(10);
+  //    digitalWrite(9, 1);
+  //  delay(50);
+
+  pinMode(LED_RUN,OUTPUT);
+
+  touchpad_init();
+
+
+
+
+}
+
+void loop(void)
+{
+ 
+      digitalWrite(LED_RUN, (millis() / 1000) % 2);
+
+ctp.print_coordinate() ;
+   
+
+    // if(ctp.is_touched()) {
+    //     ctp.get_touch_pos(&x_pos, &y_pos);
+    //     // Serial.printf("X:%d Y:%d\n", x_pos, y_pos);
+       
+    // }
+
+}
