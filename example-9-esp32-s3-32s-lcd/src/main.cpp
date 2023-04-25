@@ -1,6 +1,12 @@
 
 // #define LV_CONF_INCLUDE_SIMPLE 1
 // #define LV_CONF_PATH "lv_conf.h"
+#include "Wire.h"
+#include "Arduino.h"
+#include "FT5206.h"
+
+#include <SPI.h>
+#include <SD.h>
 
 #include <lvgl.h>
 
@@ -13,23 +19,36 @@
 
 #include <LovyanGFX.hpp>
 
-#define TFT_SDA 14 // SDA
-#define TFT_SCL 13 // SCL
-#define TFT_DC 3
+#define TFT_SDA 13 // SDA
+#define TFT_SCL 14 // SCL
+#define TFT_DC 48
 #define TFT_CS 47
-#define TFT_RST 48
+#define TFT_RST 12
 #define TFT_BCK_LT 45
 
 #define TFT_WIDTH 240
 #define TFT_HEIGHT 280
 
- #define CTP_INT 10
-#define CTP_SDA 11
-#define CTP_SCL 12
+#define CTP_INT 9
+#define CTP_SDA 10
+#define CTP_SCL 11
 
+
+#define CONFIG_SDCARD_SCK  15
+#define CONFIG_SDCARD_MISO 16
+#define CONFIG_SDCARD_MOSI 5
+#define CONFIG_SDCARD_CS 4
 
 
 #define LED_RUN 1 
+
+uint8_t registers[FT5206_REGISTERS];
+uint16_t new_coordinates[5][2];
+uint16_t old_coordinates[5][2]; 
+uint8_t current_touches = 0;
+uint8_t old_touches = 0;
+
+FT5206 cts = FT5206(CTP_INT);
 
 static lv_disp_draw_buf_t draw_buf;
 static lv_color_t buf[ TFT_WIDTH * 10 ];
@@ -118,17 +137,17 @@ public:
       _light_instance.config(cfg);
       _panel_instance.setLight(&_light_instance); // バックライトをパネルにセットします。
     }
-    
+  
 { // タッチスクリーン制御の設定を行います。（必要なければ削除）
       auto cfg = _touch_instance.config();
 
       cfg.x_min      = 0;    // タッチスクリーンから得られる最小のX値(生の値)
-      cfg.x_max      = 319;  // タッチスクリーンから得られる最大のX値(生の値)
+      cfg.x_max      = TFT_WIDTH;  // タッチスクリーンから得られる最大のX値(生の値)
       cfg.y_min      = 0;    // タッチスクリーンから得られる最小のY値(生の値)
-      cfg.y_max      = 479;  // タッチスクリーンから得られる最大のY値(生の値)
+      cfg.y_max      = TFT_HEIGHT;  // タッチスクリーンから得られる最大のY値(生の値)
       cfg.pin_int    =CTP_INT;   // INTが接続されているピン番号
       cfg.bus_shared = false; // 画面と共通のバスを使用している場合 trueを設定
-      cfg.offset_rotation = 1;// 表示とタッチの向きのが一致しない場合の調整 0~7の値で設定
+      cfg.offset_rotation = 0;// 表示とタッチの向きのが一致しない場合の調整 0~7の値で設定
 
 // I2C接続の場合
       cfg.i2c_port = 0;      // 使用するI2Cを選択 (0 or 1)
@@ -175,7 +194,7 @@ void lv_example_get_started_1(void)
     lv_obj_t * btn = lv_btn_create(lv_scr_act());     /*Add a button the current screen*/
     lv_obj_set_size(btn, 120, 50);                          /*Set its size*/
     lv_obj_align(btn, LV_ALIGN_CENTER, 0,0);
-   // lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_PRESSED, NULL);           /*Assign a callback to the button*/
+   lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_PRESSED, NULL);           /*Assign a callback to the button*/
 
     lv_obj_t * label = lv_label_create(btn);          /*Add a label to the button*/
     lv_label_set_text(label, "Button");                     /*Set the labels text*/
@@ -209,11 +228,81 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
    }
 }
 
+
+void printDirectory(File dir, int numTabs)
+{
+    while (true)
+    {
+
+        File entry = dir.openNextFile();
+        if (!entry)
+        {
+            // no more files
+            break;
+        }
+        for (uint8_t i = 0; i < numTabs; i++)
+        {
+            Serial.print('\t');
+        }
+        Serial.print(entry.name());
+        if (entry.isDirectory())
+        {
+            Serial.println("/");
+            printDirectory(entry, numTabs + 1);
+        }
+        else
+        {
+            // files have sizes, directories do not
+            Serial.print("\t\t");
+            Serial.println(entry.size(), DEC);
+            // time_t cr = entry.getCreationTime();
+            // time_t lw = entry.getLastWrite();
+            // struct tm *tmstruct = localtime(&cr);
+            // Serial.printf("\tCREATION: %d-%02d-%02d %02d:%02d:%02d", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
+            //  tmstruct = localtime(&lw);
+            // Serial.printf("\tLAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
+        }
+        entry.close();
+    }
+}
+
+void SDCARD_Init()
+{
+
+    // // keep checking the SD reader for valid SD card/format
+    delay(100);
+    Serial.println("init SD Card");
+
+    SPI.begin(CONFIG_SDCARD_SCK, CONFIG_SDCARD_MISO, CONFIG_SDCARD_MOSI, -1);
+    // while (!SD.begin(SD_CS, SPI, 2000000))
+    // while (!SD.begin(CONFIG_SDCARD_CS, SPI, 2000000))
+    // while (!SD.begin(CONFIG_SDCARD_CS, SPI, 80000000))
+    while (!SD.begin(CONFIG_SDCARD_CS, SPI, 80000000))
+    // while (!SD.begin(CONFIG_SDCARD_CS))
+    {
+        Serial.println("init SD Card Failed");
+      
+    }
+
+
+
+    File root = SD.open("/");
+
+    printDirectory(root, 0);
+
+    root.close();
+
+    
+}
+
+
 void setup(void)
 {
   // SPIバスとパネルの初期化を実行すると使用可能になります。
 
   Serial.begin(115200);
+
+  SDCARD_Init();
   delay(1000);
   Serial.println("test tft lvgl");
 
@@ -225,6 +314,9 @@ void setup(void)
   //  delay(50);
 
     pinMode(LED_RUN,OUTPUT);
+//      Wire.begin(CTP_SDA, CTP_SCL);
+// cts.begin(SAFE);
+// cts.setTouchLimit(1);//from 1 to 5
 
 
   tft.init();
@@ -257,8 +349,33 @@ void setup(void)
 
 void loop(void)
 {
+        digitalWrite(LED_RUN, (millis() / 1000) % 2);
+
    lv_timer_handler(); /* let the GUI do its work */
 
-      digitalWrite(LED_RUN, (millis() / 1000) % 2);
+
+  // if (cts.touched()){
+
+  //   uint8_t i;
+  //   uint16_t x,y;
+  //   cts.getTSregisters(registers);
+  //   current_touches = cts.getTScoordinates(new_coordinates, registers);
+  //   if (current_touches < 1) return;
+
+
+  //   for (i = 1; i <= current_touches; i++){// mark touches on screen
+  //     x = new_coordinates[i-1][0];
+  //     y = new_coordinates[i-1][1];
+ 
+  //  Serial.printf("X:%d Y:%d\n", x, y);
+  //     old_coordinates[i-1][0] = x;
+  //     old_coordinates[i-1][1] = y;
+  //   }
+  //   old_touches = current_touches;
+
+  //   cts.rearmISR();
+  // }
+
+
 
 }
