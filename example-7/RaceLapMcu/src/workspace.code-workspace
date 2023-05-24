@@ -26,6 +26,14 @@
 		{
 			"name": "Marlin-2.0.x",
 			"path": "../../../../Arduino/Marlin-2.0.x"
+		},
+		{
+			"name": "example-mpu6050",
+			"path": "../../../example-mpu6050"
+		},
+		{
+			"name": "RaceLapMcu",
+			"path": "../../../../github/nodemcu_esp32/example-7/RaceLapMcu"
 		}
 	],
 	"settings": {

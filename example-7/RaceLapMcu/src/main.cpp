@@ -381,7 +381,7 @@ void recordGps()
              month, day, hour, minute, second, csecond, lat, lng, altitude, KMPH, deg, millis(), satls);
 
 #if defined(DEBUG)
-    Serial.println(buffer);
+    // Serial.println(buffer);
 #endif
 
     if (B_SD)

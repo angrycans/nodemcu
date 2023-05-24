@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "../../../arduino/nodemcu"
+		},
+		{
+			"name": "example-9-esp32-s3-32s-lcd",
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"thread": "cpp"
+		}
+	}
+}
