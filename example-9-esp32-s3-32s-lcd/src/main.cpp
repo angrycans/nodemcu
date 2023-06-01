@@ -300,9 +300,10 @@ void setup(void)
 {
   // SPIバスとパネルの初期化を実行すると使用可能になります。
 
+  Serial.println("test tft lvgl start");
   Serial.begin(115200);
 
-  SDCARD_Init();
+  //SDCARD_Init();
   delay(1000);
   Serial.println("test tft lvgl");
 
