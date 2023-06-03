@@ -14,12 +14,18 @@
 #define CONFIG_SDCARD_MOSI 5
 #define CONFIG_SDCARD_CS 4
 
-#define UBLOX_RX RX
-#define UBLOX_TX TX
+// #define UBLOX_RX RX
+// #define UBLOX_TX TX
+
+#define UBLOX_RX 7
+#define UBLOX_TX 8
 
 #define gpsSerial Serial1
-
+#ifdef ESP32C3 
+#define LED_RUN 5
+#elif
 #define LED_RUN 1
+#endif
 
 void printDirectory(File dir, int numTabs)
 {
@@ -96,9 +102,15 @@ void GPS_Update()
 {
     while (gpsSerial.available() > 0)
     {
-        uint8_t inByte = gpsSerial.read();
-        //Serial.print(inByte);
-        ublox_decode(inByte);
+      uint8_t inByte = gpsSerial.read();
+       
+      ublox_decode(inByte);
+
+  //  String str = gpsSerial.readStringUntil('\n');
+
+  //  Serial.println(str);
+      
+
 
     }
 }
@@ -110,13 +122,18 @@ void setup(void)
 
   Serial.begin(115200);
 
-  SDCARD_Init();
+  //SDCARD_Init();
   delay(1000);
   Serial.println("test start");
 
  
 
   pinMode(LED_RUN, OUTPUT);
+
+  GPS_Init();
+  delay(1000);
+  
+  Serial.println("GPS init");
   //      Wire.begin(CTP_SDA, CTP_SCL);
   // cts.begin(SAFE);
   // cts.setTouchLimit(1);//from 1 to 5
@@ -125,4 +142,6 @@ void setup(void)
 void loop(void)
 {
   digitalWrite(LED_RUN, (millis() / 1000) % 2);
+
+  GPS_Update();
 }

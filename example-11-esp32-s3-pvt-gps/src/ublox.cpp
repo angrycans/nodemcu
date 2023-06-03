@@ -109,6 +109,8 @@ static void ublox_payload_decode(UBLOX_RAW_t raw_data)
             break;
 
         default:
+        Serial.println(raw_data.payload.other);
+     
             break;
         }
     }
@@ -238,6 +240,7 @@ static void ublox_parse_char(uint8_t data)
         break;
 
     default:
+   
         break;
     }
 }
