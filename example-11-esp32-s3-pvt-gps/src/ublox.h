@@ -46,23 +46,24 @@
 
 #define UBLOX_MAX_PAYLOAD   256
 
-typedef struct {
-    float   time;		  //时间
-    double	latitude;	  //纬度
-    double	longitude;    //经度
-    float	altitude;	  //高度
-    float	velN;		  //北向速度
-    float	velE;		  //东向速度
-    float	velD;		  //天向速度
-    float   speed;        //地面速度
-    float   heading;      //航向
-    float	hAcc;		  //水平定位精度
-    float   vAcc;         //垂直定位精度
-    float   sAcc;         //速度精度
-    float   cAcc;         //航向精度
-    uint8_t fixed;        //定位状态
-    uint8_t numSV;		  //卫星数量
-} GPS_t;
+// typedef struct {
+//     uint32_t   time;		  //时间
+//     double	latitude;	  //纬度
+//     double	longitude;    //经度
+//     float	altitude;	  //高度
+//     float	velN;		  //北向速度
+//     float	velE;		  //东向速度
+//     float	velD;		  //天向速度
+//     float   speed;        //地面速度
+//     float   heading;      //航向
+//     float	hAcc;		  //水平定位精度
+//     float   vAcc;         //垂直定位精度
+//     float   sAcc;         //速度精度
+//     float   cAcc;         //航向精度
+//     uint8_t fixed;        //定位状态
+//     uint8_t numSV;		  //卫星数量
+
+// } GPS_t;
 
 enum
 {
@@ -152,12 +153,31 @@ typedef struct {
     uint8_t    hour;
     uint8_t    min;
     uint8_t    sec;
+    uint32_t msec;
 } UBLOX_UTC_TIME_t;
 
 #pragma pack ()
 
 
 
+typedef struct {
+    uint32_t   time;		  //时间
+    double	latitude;	  //纬度
+    double	longitude;    //经度
+    float	altitude;	  //高度
+    float	velN;		  //北向速度
+    float	velE;		  //东向速度
+    float	velD;		  //天向速度
+    float   speed;        //地面速度
+    float   heading;      //航向
+    float	hAcc;		  //水平定位精度
+    float   vAcc;         //垂直定位精度
+    float   sAcc;         //速度精度
+    float   cAcc;         //航向精度
+    uint8_t fixed;        //定位状态
+    uint8_t numSV;		  //卫星数量
+    UBLOX_UTC_TIME_t date;
+} GPS_t;
 
 void ublox_init(void);
 

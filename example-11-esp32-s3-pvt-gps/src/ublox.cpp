@@ -7,7 +7,9 @@
 #define GPS_DEFAULT_BAUDRATE 115200
 
 GPS_t gps_data;
-UBLOX_UTC_TIME_t ublox_time;
+//UBLOX_UTC_TIME_t ublox_time;
+
+char buffer[100];
 
 static void ublox_parse_char(uint8_t data);
 static void ublox_enable_message(uint8_t class1, uint8_t id, uint8_t rate);
@@ -85,7 +87,7 @@ static void ublox_payload_decode(UBLOX_RAW_t raw_data)
         switch(raw_data.id)
         {
         case UBLOX_NAV_PVT:
-            gps_data.time      = (float)raw_data.payload.pvt.iTOW / 1000;  
+            gps_data.time      = raw_data.payload.pvt.iTOW ;  
             gps_data.latitude  = (double)raw_data.payload.pvt.lat * (double)1e-7; // 单位:deg
             gps_data.longitude = (double)raw_data.payload.pvt.lon * (double)1e-7; // 单位:deg  
             gps_data.altitude  = (float)raw_data.payload.pvt.hMSL * 0.001f;       // 单位:m
@@ -100,16 +102,23 @@ static void ublox_payload_decode(UBLOX_RAW_t raw_data)
             gps_data.cAcc      = (float)raw_data.payload.pvt.cAcc * 1e-5f;        // 单位:deg
             gps_data.numSV     = raw_data.payload.pvt.numSV;
             gps_data.fixed     = raw_data.payload.pvt.gpsFix;
-            ublox_time.year          = raw_data.payload.pvt.year;
-            ublox_time.month         = raw_data.payload.pvt.month;
-            ublox_time.day           = raw_data.payload.pvt.day;
-            ublox_time.hour          = raw_data.payload.pvt.hour;
-            ublox_time.min           = raw_data.payload.pvt.min;
-            ublox_time.sec           = raw_data.payload.pvt.sec;
+            gps_data.date.year          = raw_data.payload.pvt.year;
+            gps_data.date.month         = raw_data.payload.pvt.month;
+            gps_data.date.day           = raw_data.payload.pvt.day;
+            gps_data.date.hour          = raw_data.payload.pvt.hour;
+            gps_data.date.min           = raw_data.payload.pvt.min;
+            gps_data.date.sec           = raw_data.payload.pvt.sec;
+            gps_data.date.msec = (gps_data.time) % 1000;
+            snprintf(buffer, sizeof(buffer),
+                 "%d%02d%02d%02d%02d%02d%03d,%.8f,%.8f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d,%d,%d,%lu,%d", gps_data.date.year,
+                 gps_data.date.month, gps_data.date.day, gps_data.date.hour, gps_data.date.min, gps_data.date.sec, gps_data.date.msec,
+                 gps_data.latitude , gps_data.altitude, 0.0, 0.0, 0.0, 0.0, gps_data.speed, 0.0f, gps_data.numSV, 1, 1, millis(), 1);
+
+                 Serial.println(buffer);
             break;
 
         default:
-        Serial.println(raw_data.payload.other);
+       // Serial.println(raw_data.payload.other);
      
             break;
         }

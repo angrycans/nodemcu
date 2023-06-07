@@ -119,21 +119,18 @@ void GPS_Update()
 void setup(void)
 {
   // SPIバスとパネルの初期化を実行すると使用可能になります。
-
+ delay(3000);
+   Serial.println("test start");
   Serial.begin(115200);
+    pinMode(LED_RUN, OUTPUT);
 
-  //SDCARD_Init();
   delay(1000);
-  Serial.println("test start");
-
- 
-
-  pinMode(LED_RUN, OUTPUT);
-
-  GPS_Init();
-  delay(1000);
-  
+    
   Serial.println("GPS init");
+   GPS_Init();
+
+
+
   //      Wire.begin(CTP_SDA, CTP_SCL);
   // cts.begin(SAFE);
   // cts.setTouchLimit(1);//from 1 to 5
