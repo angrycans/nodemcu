@@ -16,7 +16,7 @@ B_MAX 刹车踏板上限值
 #define calibration_factor 100
 #define DOUT  1
 #define CLK  0
-#define SCALE_MIN 100
+#define SCALE_MIN 50
 #define SCALE_MAX 12000
 #define B_MIN 0
 #define B_MAX 4096
