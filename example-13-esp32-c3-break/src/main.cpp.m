@@ -30,8 +30,8 @@ T_MIN 油门踏板下限值
 T_MAX 油门踏板上限值
 */
 #define T_PIN A3
-#define T_INPUT_MIN 210
-#define T_INPUT_MAX 470
+#define T_INPUT_MIN 240
+#define T_INPUT_MAX 400
 #define T_MIN 0
 #define T_MAX 255
 
@@ -111,7 +111,7 @@ void loop() {
     //将油门值传入油门摇杆（Throttle）
     Throttle_ = analogRead(T_PIN);
     Throttle_ = map(Throttle_, T_INPUT_MIN, T_INPUT_MAX, T_MIN, T_MAX); //值映射
-    Throttle_ = T_MAX - Throttle_; //霍尔电压值反转，视磁铁布置方式而定
+    //Throttle_ = T_MAX - Throttle_; //霍尔电压值反转，视磁铁布置方式而定
     Joystick.setThrottle(Throttle_);
 
     //更新状态，设置循环延迟10ms
