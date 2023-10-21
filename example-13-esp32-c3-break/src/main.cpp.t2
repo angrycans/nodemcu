@@ -1,0 +1,74 @@
+//调用库来自：https://github.com/bogde/HX711
+#include <HX711.h>
+/*
+Throttle 496  464   Brake 1 Clutch 474      handBrake -335 1300
+         206           11000            212                    8000 14000
+
+*/
+
+/*
+定义称重传感器（刹车）相关参数
+calibration_factor 称重传感器标定系数
+DOUT 数据引脚
+CLK 时钟引脚
+*/
+#define calibration_factor 100
+#define DOUT  1
+#define CLK  0
+
+/*
+定义油门（Throttle）参数
+T_PIN 模拟电压量输入引脚
+*/
+#define T_PIN A3
+
+
+/*
+定义离合（XAxis）参数
+C_PIN 模拟电压量输入引脚
+*/
+#define C_PIN A2
+
+
+//创建Loadcell类，以阻塞模式启动
+HX711 Loadcell;
+HX711 Loadcell2;
+
+//声明各踏板所需的变量
+long int Brake_ = 0;
+long int handBrake_ = 0;
+int Throttle_ = 0;
+int Clutch_ = 0;
+String All_OutPut = "0";
+
+void setup() {
+
+    //设置HX711使用的引脚
+    Loadcell.begin(DOUT, CLK);
+    
+
+    //载入称重传感器标定数据
+    Loadcell.set_scale(calibration_factor);
+    Loadcell.tare();
+     Loadcell2.begin(6, 7);
+     Loadcell2.set_scale(calibration_factor);
+    Loadcell2.tare();
+}
+
+void loop() {
+    //读取称重传感器数据作为刹车值，若原始变量为负值，则需要使用负号： -Loadcell.get
+    Brake_ = Loadcell.get_units();
+
+  handBrake_ = Loadcell2.get_units();
+    //将离合值传入离合摇杆（XAxis）
+    Clutch_ = analogRead(C_PIN);
+
+    //将油门值传入油门摇杆（Throttle）
+    Throttle_ = analogRead(T_PIN);
+
+    delay(10);
+    
+    //将三个踏板的原始值输出到串口
+    All_OutPut =  String("Throttle ") + String(Throttle_) + String("\tBrake ") + String(Brake_) + String("\tClutch ") + String(Clutch_)+ String("\thandBrake ") + String(handBrake_);
+    Serial.println(All_OutPut);
+}

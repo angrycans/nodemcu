@@ -11,6 +11,9 @@ CLK 时钟引脚
 #define DOUT  1
 #define CLK  0
 
+//#define DOUT  6
+//#define CLK  0
+
 /*
 定义油门（Throttle）参数
 T_PIN 模拟电压量输入引脚
