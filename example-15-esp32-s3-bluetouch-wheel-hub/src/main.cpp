@@ -1,75 +1,68 @@
 /*
- * Shows how to use a 4 x 4 keypad, commonly seen in Arduino starter kits, with the library
- * https://www.aliexpress.com/item/32879638645.html
- * It maps the 16 buttons to the first 16 buttons of the controller
- * Only certain combinations work for multiple presses over 2 buttons
+ * This example turns the ESP32 into a Bluetooth LE gamepad that presses buttons and moves axis
+ *
+ * At the moment we are using the default settings, but they can be canged using a BleGamepadConfig instance as parameter for the begin function.
+ *
+ * Possible buttons are:
+ * BUTTON_1 through to BUTTON_16
+ * (16 buttons by default. Library can be configured to use up to 128)
+ *
+ * Possible DPAD/HAT switch position values are:
+ * DPAD_CENTERED, DPAD_UP, DPAD_UP_RIGHT, DPAD_RIGHT, DPAD_DOWN_RIGHT, DPAD_DOWN, DPAD_DOWN_LEFT, DPAD_LEFT, DPAD_UP_LEFT
+ * (or HAT_CENTERED, HAT_UP etc)
+ *
+ * bleGamepad.setAxes sets all axes at once. There are a few:
+ * (x axis, y axis, z axis, rx axis, ry axis, rz axis, slider 1, slider 2)
+ *
+ * Library can also be configured to support up to 5 simulation controls
+ * (rudder, throttle, accelerator, brake, steering), but they are not enabled by default.
+ *
+ * Library can also be configured to support different function buttons
+ * (start, select, menu, home, back, volume increase, volume decrease, volume mute)
+ * start and select are enabled by default
  */
 
 #include <Arduino.h>
-#include <Keypad.h>     // https://github.com/Chris--A/Keypad
-#include <BleGamepad.h> // https://github.com/lemmingDev/ESP32-BLE-Gamepad
+#include <BleGamepad.h>
 
-BleGamepad bleGamepad("ESP32 Keypad", "lemmingDev", 100); // Shows how you can customise the device name, manufacturer name and initial battery level
+#define LED_BUILTIN 10
 
-#define ROWS 4
-#define COLS 4
-uint8_t rowPins[ROWS] = {2, 13, 14, 25}; // ESP32 pins used for rows      --> adjust to suit --> Pinout on board: R1, R2, R3, R4
-uint8_t colPins[COLS] = {4, 23, 21, 22}; // ESP32 pins used for columns   --> adjust to suit --> Pinout on board: Q1, Q2, Q3, Q4
-uint8_t keymap[ROWS][COLS] =
-    {
-        {1, 2, 3, 4},    // Buttons  1,  2,  3,  4      --> Used for calulating the bitmask for sending to the library
-        {5, 6, 7, 8},    // Buttons  5,  6,  7,  8      --> Adjust to suit which buttons you want the library to send
-        {9, 10, 11, 12}, // Buttons  9, 10, 11, 12      -->
-        {13, 14, 15, 16} // Buttons 13, 14, 15, 16      --> Eg. The value 12 in the array refers to button 12
-};
-
-Keypad customKeypad = Keypad(makeKeymap(keymap), rowPins, colPins, ROWS, COLS);
-
-void KeypadUpdate();
+BleGamepad bleGamepad;
 
 void setup()
 {
 
-    delay(3000);
+    delay(2000);
+    pinMode(LED_BUILTIN, OUTPUT);
     Serial.begin(115200);
-    BleGamepadConfiguration bleGamepadConfig;
-    bleGamepadConfig.setAutoReport(false); // Disable auto reports --> You then need to force HID updates with bleGamepad.sendReport()
-    bleGamepad.begin();                    // Begin library with default buttons/hats/axes
-Serial.println("setup ok");
-    // changing bleGamepadConfig after the begin function has no effect, unless you call the begin function again
+    Serial.println("Starting BLE work!");
+    bleGamepad.begin();
+    // The default bleGamepad.begin() above enables 16 buttons, all axes, one hat, and no simulation controls or special buttons
 }
 
 void loop()
 {
-    KeypadUpdate();
-    delay(10);
 
-    Serial.println("loop ok");
-}
+    digitalWrite(LED_BUILTIN, HIGH);
+delay(2000);
 
-void KeypadUpdate()
-{
-    customKeypad.getKeys();
-
-    for (int i = 0; i < LIST_MAX; i++) // Scan the whole key list.      //LIST_MAX is provided by the Keypad library and gives the number of buttons of the Keypad instance
+Serial.println("loop");
+    if (bleGamepad.isConnected())
     {
-        if (customKeypad.key[i].stateChanged) // Only find keys that have changed state.
-        {
-            uint8_t keystate = customKeypad.key[i].kstate;
+        Serial.println("Press buttons 5, 16 and start. Move all enabled axes to max. Set DPAD (hat 1) to down right.");
+        bleGamepad.press(BUTTON_5);
+        bleGamepad.press(BUTTON_16);
+        bleGamepad.pressStart();
+        bleGamepad.setAxes(32767, 32767, 32767, 32767, 32767, 32767, 32767, 32767);
+        bleGamepad.setHat1(HAT_DOWN_RIGHT);
+        // All axes, sliders, hats etc can also be set independently. See the IndividualAxes.ino example
+        delay(500);
 
-            if (bleGamepad.isConnected())
-            {
-                if (keystate == PRESSED)
-                {
-                    bleGamepad.press(customKeypad.key[i].kchar);
-                } // Press or release button based on the current state
-                if (keystate == RELEASED)
-                {
-                    bleGamepad.release(customKeypad.key[i].kchar);
-                }
-
-                bleGamepad.sendReport(); // Send the HID report after values for all button states are updated, and at least one button state had changed
-            }
-        }
+        Serial.println("Release button 5 and start. Move all axes to min. Set DPAD (hat 1) to centred.");
+        bleGamepad.release(BUTTON_5);
+        bleGamepad.releaseStart();
+        bleGamepad.setHat1(HAT_CENTERED);
+        bleGamepad.setAxes(0, 0, 0, 0, 0, 0, 0, 0);
+        delay(500);
     }
 }
