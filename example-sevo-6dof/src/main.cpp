@@ -865,16 +865,16 @@ void loop()
     run_state = ST_HOMING;
     // homing_start ();
     delay4int(1000);
-#if 1
+    // #if 1
 
-    attachInterrupt(digitalPinToInterrupt(safe[0]), int_stop0, FALLING);
+    //     attachInterrupt(digitalPinToInterrupt(safe[0]), int_stop0, FALLING);
 
-    attachInterrupt(digitalPinToInterrupt(safe[1]), int_stop1, FALLING);
+    //     attachInterrupt(digitalPinToInterrupt(safe[1]), int_stop1, FALLING);
 
-    attachInterrupt(digitalPinToInterrupt(safe[2]), int_stop2, FALLING);
+    //     attachInterrupt(digitalPinToInterrupt(safe[2]), int_stop2, FALLING);
 
-    attachInterrupt(digitalPinToInterrupt(safe[3]), int_stop3, FALLING);
-#endif
+    //     attachInterrupt(digitalPinToInterrupt(safe[3]), int_stop3, FALLING);
+    // #endif
     break;
   case ST_HOMING:
   {
