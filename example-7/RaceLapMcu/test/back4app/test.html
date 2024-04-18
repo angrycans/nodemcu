@@ -25,6 +25,24 @@
         <br />
         <button id="sendmail-button">sendmail</button>
         <button id="refreshtoken-button">refresh dropbox token</button>
+        <br />
+        <br />
+        <button id="signup">signup</button>
+        <button id="loggin">signin</button>
+        <button id="gettoken">gettoken</button>
+        <button id="addobject">addobject</button>
+        <button id="logout">logout</button>
+        <button id="currentuser">currentuser</button>
+        <br />
+        <br />
+        <input type="file" id="file" name="myfile" />
+        <button id="uploadfile-button">uploadfile</button>
+        <button id="getfile-button">getfile</button>
+        <button id="delfile-button">delfile</button>
+        <br />
+        <br />
+        <button id="delfile-all-button">delALLfile</button>
+
 
     </div>
 </body>
@@ -33,7 +51,8 @@
     const connectButton2 = document.getElementById('connect-button2');
     const connectButton3 = document.getElementById('connect-button3');
 
-    Parse.initialize("KgHFOTuWepLcBnpzrcZY0wXedW5LHhcY2i4gMzin", "3lCU1D8IrhdXqOvykqqVJWDUKzgWJOOR2c4CUe0Z"); //PASTE HERE YOUR Back4App APPLICATION ID AND YOUR JavaScript KEY
+    //Parse.initialize("KgHFOTuWepLcBnpzrcZY0wXedW5LHhcY2i4gMzin", "3lCU1D8IrhdXqOvykqqVJWDUKzgWJOOR2c4CUe0Z", "0UjcbgZAoknQJvJzahVhgG89Mng2XZSNb2TpQtdO"); //PASTE HERE YOUR Back4App APPLICATION ID AND YOUR JavaScript KEY
+    Parse.initialize("KgHFOTuWepLcBnpzrcZY0wXedW5LHhcY2i4gMzin", "3lCU1D8IrhdXqOvykqqVJWDUKzgWJOOR2c4CUe0Z");
     Parse.serverURL = "https://parseapi.back4app.com/";
     // Parse.serverURL = "https://xlap.deno.dev/";
 
@@ -95,6 +114,231 @@
         // let token_rst = await token.save();
         // console.log("token_rst", token_rst);
 
+
+
+
+    });
+
+
+    document.getElementById('uploadfile-button').addEventListener('click', async function (event) {
+        Parse.serverURL = "https://xlap.deno.dev/";
+
+        // console.log("myfile", document.getElementById("file").files[0]);
+
+        const resultFile = document.getElementById("file").files[0];
+        if (resultFile) {
+            var reader = new FileReader();
+            reader.readAsDataURL(resultFile);
+            reader.onload = function (e) {
+                var fileData = this.result;
+                console.log("file", resultFile);
+                // console.log(fileData);
+
+                const parseFile = new Parse.File(resultFile.name, { base64: fileData });
+                // parseFile.addMetadata('createdById', 'angrycans@gmail.com');
+                // parseFile.addMetadata('name', 'resultFile.name');
+                // parseFile.addTag('groupId', 'xlap-group');
+
+                parseFile.save().then(function (f) {
+                    // The file has been saved to Parse.
+                    console.log("f", f);
+
+                    // const XlapFile = Parse.Object.extend("XlapFile");
+                    const xlapFile = new Parse.Object("XlapFile");
+                    xlapFile.set("userid", 'userid');
+                    xlapFile.set("user", "angrycans@gmail.com");
+                    xlapFile.set("meta", { name: resultFile.name });
+                    // xlapFile.set("meta",{name});
+                    xlapFile.set("file", f);
+                    xlapFile.setACL(new Parse.ACL(Parse.User.current()));
+                    xlapFile.save().then((r) => {
+                        // Execute any logic that should take place after the object is saved.
+                        console.log("r", r);
+
+                    }, (e) => {
+                        console.log("e", e);
+
+                    });
+
+
+                }, function (error) {
+                    console.log(error);
+                    // The file either could not be read, or could not be saved to Parse.
+                });
+            };
+        }
+    });
+
+    document.getElementById('getfile-button').addEventListener('click', async function (event) {
+        Parse.serverURL = "https://xlap.deno.dev/";
+
+        // console.log("myfile", document.getElementById("file").files[0]);
+
+
+        const q = new Parse.Query("XlapFile");
+
+        q.equalTo("userid", "userid");
+        let qret = await q.find();
+
+        console.log("results1", qret);
+
+        // qret = await q.get("exhwv6iLQS");
+        // console.log("results 2", qret.get("file"));
+
+        // const query = new Parse.Query("Parse.File");
+        // query.equalTo("fileName", "ff93ad057f772588b0b2dd4cffa1a81e_20230110100023.xld");
+        // query.find().then(function (results) {
+        //     const fileMetadata = results[0]; // assuming a single match was found
+        // });
+
+
+
+
+        //const fole = profile.get("qret");
+
+
+    });
+
+    document.getElementById('signup').addEventListener('click', async function (event) {
+        Parse.serverURL = "https://xlap.deno.dev/";
+        const user = new Parse.User();
+        user.set("username", "acans2");
+        user.set("password", "12345678");
+        user.set("email", "untosil@gmail.com");
+
+        try {
+            let ret = await user.signUp();
+            console.log("ret", ret);
+
+            // Hooray! Let them use the app now.
+        } catch (error) {
+            // Show the error message somewhere and let the user try again.
+            console.log("signup_and_loginin error", error)
+        }
+    });
+    document.getElementById('loggin').addEventListener('click', async function (event) {
+        Parse.serverURL = "https://xlap.deno.dev/";
+        const user = await Parse.User.logIn("acans", "12345678");
+        console.log("user", user)
+        console.log("currentUser ")
+        const currentUser = Parse.User.current();
+
+
+        console.log("getSessionToken", user.getSessionToken())
+        if (currentUser) {
+            // do stuff with the user
+            console.log("currentUser is ok");
+        } else {
+            // show the signup or login page
+            console.log("currentUser is timeout");
+        }
+
+
+
+    });
+    document.getElementById('gettoken').addEventListener('click', async function (event) {
+        Parse.serverURL = "https://xlap.deno.dev/";
+
+        const currentUser = Parse.User.current();
+
+        if (currentUser) {
+            // do stuff with the user
+            console.log("getSessionToken", currentUser, currentUser.getSessionToken())
+            console.log("currentUser is ok");
+        } else {
+            // show the signup or login page
+            console.log("currentUser is timeout");
+        }
+
+
+    });
+
+    document.getElementById('logout').addEventListener('click', async function (event) {
+        Parse.serverURL = "https://xlap.deno.dev/";
+        const ret = await Parse.User.logOut();
+        console.log("logout", ret)
+
+
+    });
+
+
+    document.getElementById('delfile-button').addEventListener('click', async function (event) {
+        Parse.serverURL = "https://xlap.deno.dev/";
+
+
+
+    });
+
+    document.getElementById('addobject').addEventListener('click', async function (event) {
+        Parse.serverURL = "https://xlap.deno.dev/";
+
+        const TestAcl = new Parse.Object("TestAcl");
+
+        console.log("Parse.User.current()", Parse.User.current());
+
+        TestAcl.setACL(new Parse.ACL(Parse.User.current()));
+        TestAcl.set("name", "t3");
+        TestAcl.set("age", 12);
+
+        const result = await TestAcl.save();
+        console.log('save data: ', result);
+
+        const qTestAcl = new Parse.Query("TestAcl");
+        //const query = new Parse.Query(Student);
+        // query.equalTo('name', '小明');
+        const qresult = await qTestAcl.find();
+        console.log('save data: ', qresult);
+
+    });
+
+
+    document.getElementById('currentuser').addEventListener('click', async function (event) {
+        Parse.serverURL = "https://xlap.deno.dev/";
+
+        console.log("Parse.User.current()", Parse.User.current());
+
+    });
+
+
+    document.getElementById('delfile-all-button').addEventListener('click', async function (event) {
+
+        Parse.initialize("KgHFOTuWepLcBnpzrcZY0wXedW5LHhcY2i4gMzin", "3lCU1D8IrhdXqOvykqqVJWDUKzgWJOOR2c4CUe0Z", "0UjcbgZAoknQJvJzahVhgG89Mng2XZSNb2TpQtdO"); //PASTE HERE YOUR Back4App APPLICATION ID AND YOUR JavaScript KEY
+        Parse.serverURL = "https://xlap.deno.dev/";
+
+
+        // 0UjcbgZAoknQJvJzahVhgG89Mng2XZSNb2TpQtdO
+
+        console.log("del-all  files");
+
+        const q = new Parse.Query("XlapFile");
+
+        // q.equalTo("userid", "userid");
+        let qfirst = await q.first();
+
+        console.log("qfirst", qfirst);
+
+
+
+        const f = qfirst.get("file");
+
+        qfirst.set("file", null);
+        const result = await qfirst.save();
+
+        console.log("qfirst save file null", result);
+
+        console.log("f", f);
+        let ret = await f.destroy({ useMasterKey: true });
+        console.log("del ret", ret);
+
+
+
+        // qret.forEach(async e => {
+        //     const f = e.get("file");
+        //     console.log("f", f);
+        //     let ret = await f.destroy({ useMasterKey: true });
+        //     console.log("del ret", ret);
+
+        // });
 
 
 

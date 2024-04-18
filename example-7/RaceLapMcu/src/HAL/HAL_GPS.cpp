@@ -727,6 +727,7 @@ void HAL::GPS_Update()
     while (gpsSerial.available() > 0)
     {
         uint8_t inByte = gpsSerial.read();
+        Serial.print(inByte);
         ublox_decode(inByte);
 
         // #if defined(DEBUG)
