@@ -1,30 +1,16 @@
 
-// #define LV_CONF_INCLUDE_SIMPLE 1
-// #define LV_CONF_PATH "lv_conf.h"
-#include "Wire.h"
-#include "Arduino.h"
-#include "FT5206.h"
-
-#include <SPI.h>
-#include <SD.h>
-
-#include <lvgl.h>
-
-
-//#define LV_CONF_INCLUDE_SIMPLE
-
-// v1.0.0 を有効にします(v0からの移行期間の特別措置です。これを書かない場合は旧v0系で動作します。)
-#define LGFX_USE_V1
-
-
 #include <LovyanGFX.hpp>
+#include "Arduino.h"
+// ESP32でLovyanGFXを独自設定で利用する場合の設定例
+
+/// 独自の設定を行うクラスを、LGFX_Deviceから派生して作成します。
 
 #define TFT_SDA 13 // SDA
 #define TFT_SCL 14 // SCL
-#define TFT_DC 48
-#define TFT_CS 47
-#define TFT_RST 12
-#define TFT_BCK_LT 45
+#define TFT_DC 9
+#define TFT_CS 10
+#define TFT_RST 3
+#define TFT_BCK_LT 46
 
 #define TFT_WIDTH 240
 #define TFT_HEIGHT 280
@@ -33,39 +19,65 @@
 #define CTP_SDA 10
 #define CTP_SCL 11
 
-
-#define CONFIG_SDCARD_SCK  15
-#define CONFIG_SDCARD_MISO 16
-#define CONFIG_SDCARD_MOSI 5
-#define CONFIG_SDCARD_CS 4
-
-
-#define LED_RUN 1 
-
-uint8_t registers[FT5206_REGISTERS];
-uint16_t new_coordinates[5][2];
-uint16_t old_coordinates[5][2]; 
-uint8_t current_touches = 0;
-uint8_t old_touches = 0;
-
-FT5206 cts = FT5206(CTP_INT);
-
-static lv_disp_draw_buf_t draw_buf;
-static lv_color_t buf[ TFT_WIDTH * 10 ];
-
+#define LED_RUN 1
 
 class LGFX : public lgfx::LGFX_Device
 {
-  
+  /*
+   クラス名は"LGFX"から別の名前に変更しても構いません。
+   AUTODETECTと併用する場合は"LGFX"は使用されているため、LGFX以外の名前に変更してください。
+   また、複数枚のパネルを同時使用する場合もそれぞれに異なる名前を付けてください。
+   ※ クラス名を変更する場合はコンストラクタの名前も併せて同じ名前に変更が必要です。
+
+   名前の付け方は自由に決めて構いませんが、設定が増えた場合を想定し、
+   例えばESP32 DevKit-CでSPI接続のILI9341の設定を行った場合、
+    LGFX_DevKitC_SPI_ILI9341
+   のような名前にし、ファイル名とクラス名を一致させておくことで、利用時に迷いにくくなります。
+  //*/
+
+  // 接続するパネルの型にあったインスタンスを用意します。
+  // lgfx::Panel_GC9A01      _panel_instance;
+  // lgfx::Panel_GDEW0154M09 _panel_instance;
+  // lgfx::Panel_HX8357B     _panel_instance;
+  // lgfx::Panel_HX8357D     _panel_instance;
+  // lgfx::Panel_ILI9163     _panel_instance;
+  // lgfx::Panel_ILI9341 _panel_instance;
+  // lgfx::Panel_ILI9342     _panel_instance;
+  // lgfx::Panel_ILI9481     _panel_instance;
+  // lgfx::Panel_ILI9486     _panel_instance;
+  // lgfx::Panel_ILI9488     _panel_instance;
+  // lgfx::Panel_IT8951      _panel_instance;
+  // lgfx::Panel_RA8875      _panel_instance;
+  // lgfx::Panel_SH110x      _panel_instance; // SH1106, SH1107
+  // lgfx::Panel_SSD1306     _panel_instance;
+  // lgfx::Panel_SSD1327     _panel_instance;
+  // lgfx::Panel_SSD1331     _panel_instance;
+  // lgfx::Panel_SSD1351     _panel_instance; // SSD1351, SSD1357
+  // lgfx::Panel_SSD1963     _panel_instance;
+  // lgfx::Panel_ST7735      _panel_instance;
+  // lgfx::Panel_ST7735S     _panel_instance;
   lgfx::Panel_ST7789 _panel_instance;
+  // lgfx::Panel_ST7796      _panel_instance;
 
+  // パネルを接続するバスの種類にあったインスタンスを用意します。
   lgfx::Bus_SPI _bus_instance; // SPIバスのインスタンス
+                               // lgfx::Bus_I2C        _bus_instance;   // I2Cバスのインスタンス
+  // lgfx::Bus_Parallel8  _bus_instance;   // 8ビットパラレルバスのインスタンス
 
+  // バックライト制御が可能な場合はインスタンスを用意します。(必要なければ削除)
   lgfx::Light_PWM _light_instance;
 
   // タッチスクリーンの型にあったインスタンスを用意します。(必要なければ削除)
+  // lgfx::Touch_CST816S          _touch_instance;
   lgfx::Touch_FT5x06 _touch_instance; // FT5206, FT5306, FT5406, FT6206, FT6236, FT6336, FT6436
-
+  // lgfx::Touch_GSL1680E_800x480 _touch_instance; // GSL_1680E, 1688E, 2681B, 2682B
+  // lgfx::Touch_GSL1680F_800x480 _touch_instance;
+  // lgfx::Touch_GSL1680F_480x272 _touch_instance;
+  // lgfx::Touch_GSLx680_320x320  _touch_instance;
+  // lgfx::Touch_GT911            _touch_instance;
+  // lgfx::Touch_STMPE610         _touch_instance;
+  // lgfx::Touch_TT21xxx          _touch_instance; // TT21100
+  // lgfx::Touch_XPT2046          _touch_instance;
 
 public:
   // コンストラクタを作成し、ここで各種設定を行います。
@@ -76,11 +88,10 @@ public:
       auto cfg = _bus_instance.config(); // バス設定用の構造体を取得します。
 
       // SPIバスの設定
-      
       cfg.spi_host = SPI3_HOST; // 使用するSPIを選択  ESP32-S2,C3 : SPI2_HOST or SPI3_HOST / ESP32 : VSPI_HOST or HSPI_HOST
       // ※ ESP-IDFバージョンアップに伴い、VSPI_HOST , HSPI_HOSTの記述は非推奨になるため、エラーが出る場合は代わりにSPI2_HOST , SPI3_HOSTを使用してください。
       cfg.spi_mode = 3;                  // SPI通信モードを設定 (0 ~ 3)
-      cfg.freq_write = 80000000;         // 送信時のSPIクロック (最大80MHz, 80MHzを整数で割った値に丸められます)
+      cfg.freq_write = 40000000;         // 送信時のSPIクロック (最大80MHz, 80MHzを整数で割った値に丸められます)
       cfg.freq_read = 16000000;          // 受信時のSPIクロック
       cfg.spi_3wire = true;              // 受信をMOSIピンで行う場合はtrueを設定
       cfg.use_lock = true;               // トランザクションロックを使用する場合はtrueを設定
@@ -88,9 +99,35 @@ public:
       // ※ ESP-IDFバージョンアップに伴い、DMAチャンネルはSPI_DMA_CH_AUTO(自動設定)が推奨になりました。1ch,2chの指定は非推奨になります。
       cfg.pin_sclk = TFT_SCL; // SPIのSCLKピン番号を設定
       cfg.pin_mosi = TFT_SDA; // SPIのMOSIピン番号を設定
-      cfg.pin_miso = -1; // SPIのMISOピン番号を設定 (-1 = disable)
-      cfg.pin_dc = TFT_DC;   // SPIのD/Cピン番号を設定  (-1 = disable)
-                        
+      cfg.pin_miso = -1;      // SPIのMISOピン番号を設定 (-1 = disable)
+      cfg.pin_dc = TFT_DC;    // SPIのD/Cピン番号を設定  (-1 = disable)
+                              // SDカードと共通のSPIバスを使う場合、MISOは省略せず必ず設定してください。
+                              //*/
+                              /*
+                              // I2Cバスの設定
+                                    cfg.i2c_port    = 0;          // 使用するI2Cポートを選択 (0 or 1)
+                                    cfg.freq_write  = 400000;     // 送信時のクロック
+                                    cfg.freq_read   = 400000;     // 受信時のクロック
+                                    cfg.pin_sda     = 21;         // SDAを接続しているピン番号
+                                    cfg.pin_scl     = 22;         // SCLを接続しているピン番号
+                                    cfg.i2c_addr    = 0x3C;       // I2Cデバイスのアドレス
+                              //*/
+                              /*
+                              // 8ビットパラレルバスの設定
+                                    cfg.i2s_port = I2S_NUM_0;     // 使用するI2Sポートを選択 (I2S_NUM_0 or I2S_NUM_1) (ESP32のI2S LCDモードを使用します)
+                                    cfg.freq_write = 20000000;    // 送信クロック (最大20MHz, 80MHzを整数で割った値に丸められます)
+                                    cfg.pin_wr =  4;              // WR を接続しているピン番号
+                                    cfg.pin_rd =  2;              // RD を接続しているピン番号
+                                    cfg.pin_rs = 15;              // RS(D/C)を接続しているピン番号
+                                    cfg.pin_d0 = 12;              // D0を接続しているピン番号
+                                    cfg.pin_d1 = 13;              // D1を接続しているピン番号
+                                    cfg.pin_d2 = 26;              // D2を接続しているピン番号
+                                    cfg.pin_d3 = 25;              // D3を接続しているピン番号
+                                    cfg.pin_d4 = 17;              // D4を接続しているピン番号
+                                    cfg.pin_d5 = 16;              // D5を接続しているピン番号
+                                    cfg.pin_d6 = 27;              // D6を接続しているピン番号
+                                    cfg.pin_d7 = 14;              // D7を接続しているピン番号
+                              //*/
 
       _bus_instance.config(cfg);              // 設定値をバスに反映します。
       _panel_instance.setBus(&_bus_instance); // バスをパネルにセットします。
@@ -100,23 +137,23 @@ public:
       auto cfg = _panel_instance.config(); // 表示パネル設定用の構造体を取得します。
 
       cfg.pin_cs = TFT_CS;   // CSが接続されているピン番号   (-1 = disable)
-      cfg.pin_rst = TFT_RST;  // RSTが接続されているピン番号  (-1 = disable)
-      cfg.pin_busy = -1; // BUSYが接続されているピン番号 (-1 = disable)
+      cfg.pin_rst = TFT_RST; // RSTが接続されているピン番号  (-1 = disable)
+      cfg.pin_busy = -1;     // BUSYが接続されているピン番号 (-1 = disable)
 
       // ※ 以下の設定値はパネル毎に一般的な初期値が設定されていますので、不明な項目はコメントアウトして試してみてください。
 
-      cfg.panel_width = TFT_WIDTH;    // 実際に表示可能な幅
-      cfg.panel_height = TFT_HEIGHT;   // 実際に表示可能な高さ
-      cfg.offset_x = 0;         // パネルのX方向オフセット量
-      cfg.offset_y = 20;        // パネルのY方向オフセット量
-      cfg.offset_rotation = 0;  // 回転方向の値のオフセット 0~7 (4~7は上下反転)
-      cfg.dummy_read_pixel = 8; // ピクセル読出し前のダミーリードのビット数
-      cfg.dummy_read_bits = 1;  // ピクセル以外のデータ読出し前のダミーリードのビット数
-      cfg.readable = true;      // データ読出しが可能な場合 trueに設定
-      cfg.invert = true;        // パネルの明暗が反転してしまう場合 trueに設定
-      cfg.rgb_order = true;     // パネルの赤と青が入れ替わってしまう場合 trueに設定
-      cfg.dlen_16bit = false;   // 16bitパラレルやSPIでデータ長を16bit単位で送信するパネルの場合 trueに設定
-      cfg.bus_shared = true;    // SDカードとバスを共有している場合 trueに設定(drawJpgFile等でバス制御を行います)
+      cfg.panel_width = TFT_WIDTH;   // 実際に表示可能な幅
+      cfg.panel_height = TFT_HEIGHT; // 実際に表示可能な高さ
+      cfg.offset_x = 0;              // パネルのX方向オフセット量
+      cfg.offset_y = 100;            // パネルのY方向オフセット量
+      cfg.offset_rotation = 0;       // 回転方向の値のオフセット 0~7 (4~7は上下反転)
+      cfg.dummy_read_pixel = 8;      // ピクセル読出し前のダミーリードのビット数
+      cfg.dummy_read_bits = 1;       // ピクセル以外のデータ読出し前のダミーリードのビット数
+      cfg.readable = true;           // データ読出しが可能な場合 trueに設定
+      cfg.invert = false;            // パネルの明暗が反転してしまう場合 trueに設定
+      cfg.rgb_order = false;         // パネルの赤と青が入れ替わってしまう場合 trueに設定
+      cfg.dlen_16bit = false;        // 16bitパラレルやSPIでデータ長を16bit単位で送信するパネルの場合 trueに設定
+      cfg.bus_shared = true;         // SDカードとバスを共有している場合 trueに設定(drawJpgFile等でバス制御を行います)
 
       // 以下はST7735やILI9163のようにピクセル数が可変のドライバで表示がずれる場合にのみ設定してください。
       //    cfg.memory_width     =   240;  // ドライバICがサポートしている最大の幅
@@ -125,258 +162,130 @@ public:
       _panel_instance.config(cfg);
     }
 
-    
+    //*
     {                                      // バックライト制御の設定を行います。（必要なければ削除）
       auto cfg = _light_instance.config(); // バックライト設定用の構造体を取得します。
 
-      cfg.pin_bl = TFT_BCK_LT;     // バックライトが接続されているピン番号
-      cfg.invert = false;  // バックライトの輝度を反転させる場合 true
-      cfg.freq = 44100;    // バックライトのPWM周波数
-      cfg.pwm_channel = 7; // 使用するPWMのチャンネル番号
+      cfg.pin_bl = TFT_BCK_LT; // バックライトが接続されているピン番号
+      cfg.invert = false;      // バックライトの輝度を反転させる場合 true
+      cfg.freq = 44100;        // バックライトのPWM周波数
+      cfg.pwm_channel = 7;     // 使用するPWMのチャンネル番号
 
       _light_instance.config(cfg);
       _panel_instance.setLight(&_light_instance); // バックライトをパネルにセットします。
     }
-  
-{ // タッチスクリーン制御の設定を行います。（必要なければ削除）
-      auto cfg = _touch_instance.config();
+    //*/
 
-      cfg.x_min      = 0;    // タッチスクリーンから得られる最小のX値(生の値)
-      cfg.x_max      = TFT_WIDTH;  // タッチスクリーンから得られる最大のX値(生の値)
-      cfg.y_min      = 0;    // タッチスクリーンから得られる最小のY値(生の値)
-      cfg.y_max      = TFT_HEIGHT;  // タッチスクリーンから得られる最大のY値(生の値)
-      cfg.pin_int    =CTP_INT;   // INTが接続されているピン番号
-      cfg.bus_shared = false; // 画面と共通のバスを使用している場合 trueを設定
-      cfg.offset_rotation = 0;// 表示とタッチの向きのが一致しない場合の調整 0~7の値で設定
+    // //*
+    // { // タッチスクリーン制御の設定を行います。（必要なければ削除）
+    //   auto cfg = _touch_instance.config();
 
-// I2C接続の場合
-      cfg.i2c_port = 0;      // 使用するI2Cを選択 (0 or 1)
-      cfg.i2c_addr = 0x15;   // I2Cデバイスアドレス番号
-      cfg.pin_sda  = CTP_SDA;     // SDAが接続されているピン番号
-      cfg.pin_scl  = CTP_SCL;     // SCLが接続されているピン番号
-      cfg.freq = 400000;     // I2Cクロックを設定
+    //   cfg.x_min = 0;           // タッチスクリーンから得られる最小のX値(生の値)
+    //   cfg.x_max = 239;         // タッチスクリーンから得られる最大のX値(生の値)
+    //   cfg.y_min = 0;           // タッチスクリーンから得られる最小のY値(生の値)
+    //   cfg.y_max = 319;         // タッチスクリーンから得られる最大のY値(生の値)
+    //   cfg.pin_int = CTP_INT;   // INTが接続されているピン番号
+    //   cfg.bus_shared = true;   // 画面と共通のバスを使用している場合 trueを設定
+    //   cfg.offset_rotation = 0; // 表示とタッチの向きのが一致しない場合の調整 0~7の値で設定
 
-      _touch_instance.config(cfg);
-      _panel_instance.setTouch(&_touch_instance);  // タッチスクリーンをパネルにセットします。
-    }
+    //   // // SPI接続の場合
+    //   // cfg.spi_host = VSPI_HOST; // 使用するSPIを選択 (HSPI_HOST or VSPI_HOST)
+    //   // cfg.freq = 1000000;       // SPIクロックを設定
+    //   // cfg.pin_sclk = 18;        // SCLKが接続されているピン番号
+    //   // cfg.pin_mosi = 23;        // MOSIが接続されているピン番号
+    //   // cfg.pin_miso = 19;        // MISOが接続されているピン番号
+    //   // cfg.pin_cs = 5;           //   CSが接続されているピン番号
 
+    //   // I2C接続の場合
+    //   cfg.i2c_port = 1;      // 使用するI2Cを選択 (0 or 1)
+    //   cfg.i2c_addr = 0x15;   // I2Cデバイスアドレス番号
+    //   cfg.pin_sda = CTP_SDA; // SDAが接続されているピン番号
+    //   cfg.pin_scl = CTP_SCL; // SCLが接続されているピン番号
+    //   cfg.freq = 400000;     // I2Cクロックを設定
+
+    //   _touch_instance.config(cfg);
+    //   _panel_instance.setTouch(&_touch_instance); // タッチスクリーンをパネルにセットします。
+    // }
+    //*/
 
     setPanel(&_panel_instance); // 使用するパネルをセットします。
   }
 };
 
 // 準備したクラスのインスタンスを作成します。
-LGFX tft;
-
-/* Display flushing */
-void my_disp_flush( lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p )
-{
-   uint32_t w = ( area->x2 - area->x1 + 1 );
-   uint32_t h = ( area->y2 - area->y1 + 1 );
-
-   tft.startWrite();
-   tft.setAddrWindow( area->x1, area->y1, w, h );
-   //tft.pushColors( ( uint16_t * )&color_p->full, w * h, true );
-   tft.writePixels((lgfx::rgb565_t *)&color_p->full, w * h);
-   tft.endWrite();
-
-   lv_disp_flush_ready( disp );
-}
-
-
-static void btn_event_cb(lv_event_t * event)						//事件回调函数
-{
-	printf("Clicked\n");
-}
-
-void lv_example_get_started_1(void)
-{
-    lv_obj_t * btn = lv_btn_create(lv_scr_act());     /*Add a button the current screen*/
-    lv_obj_set_size(btn, 120, 50);                          /*Set its size*/
-    lv_obj_align(btn, LV_ALIGN_CENTER, 0,0);
-   lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_PRESSED, NULL);           /*Assign a callback to the button*/
-
-    lv_obj_t * label = lv_label_create(btn);          /*Add a label to the button*/
-    lv_label_set_text(label, "Button");                     /*Set the labels text*/
-    lv_obj_center(label);
-}
-
-void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
-{
-   uint16_t touchX, touchY;
-
-   bool touched =tft.getTouch(&touchX, &touchY);
-
-   if(!touched)
-   {
-    // Serial.print( "no touched " );
-      data->state = LV_INDEV_STATE_REL;
-   }
-   else
-   {
-      data->state = LV_INDEV_STATE_PR;
-
-      /*Set the coordinates*/
-      data->point.x = touchX;
-      data->point.y = touchY;
-
-      Serial.print( "Data x " );
-      Serial.println( touchX );
-
-      Serial.print( "Data y " );
-      Serial.println( touchY );
-   }
-}
-
-
-void printDirectory(File dir, int numTabs)
-{
-    while (true)
-    {
-
-        File entry = dir.openNextFile();
-        if (!entry)
-        {
-            // no more files
-            break;
-        }
-        for (uint8_t i = 0; i < numTabs; i++)
-        {
-            Serial.print('\t');
-        }
-        Serial.print(entry.name());
-        if (entry.isDirectory())
-        {
-            Serial.println("/");
-            printDirectory(entry, numTabs + 1);
-        }
-        else
-        {
-            // files have sizes, directories do not
-            Serial.print("\t\t");
-            Serial.println(entry.size(), DEC);
-            // time_t cr = entry.getCreationTime();
-            // time_t lw = entry.getLastWrite();
-            // struct tm *tmstruct = localtime(&cr);
-            // Serial.printf("\tCREATION: %d-%02d-%02d %02d:%02d:%02d", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
-            //  tmstruct = localtime(&lw);
-            // Serial.printf("\tLAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n", (tmstruct->tm_year) + 1900, (tmstruct->tm_mon) + 1, tmstruct->tm_mday, tmstruct->tm_hour, tmstruct->tm_min, tmstruct->tm_sec);
-        }
-        entry.close();
-    }
-}
-
-void SDCARD_Init()
-{
-
-    // // keep checking the SD reader for valid SD card/format
-    delay(100);
-    Serial.println("init SD Card");
-
-    SPI.begin(CONFIG_SDCARD_SCK, CONFIG_SDCARD_MISO, CONFIG_SDCARD_MOSI, -1);
-    // while (!SD.begin(SD_CS, SPI, 2000000))
-    // while (!SD.begin(CONFIG_SDCARD_CS, SPI, 2000000))
-    // while (!SD.begin(CONFIG_SDCARD_CS, SPI, 80000000))
-    while (!SD.begin(CONFIG_SDCARD_CS, SPI, 80000000))
-    // while (!SD.begin(CONFIG_SDCARD_CS))
-    {
-        Serial.println("init SD Card Failed");
-      
-    }
-
-
-
-    File root = SD.open("/");
-
-    printDirectory(root, 0);
-
-    root.close();
-
-    
-}
-
+LGFX display;
 
 void setup(void)
 {
   // SPIバスとパネルの初期化を実行すると使用可能になります。
-
-  Serial.println("test tft lvgl start");
   Serial.begin(115200);
+  delay(100);
+  pinMode(LED_RUN, OUTPUT);
 
-  //SDCARD_Init();
+  Serial.println("test tft lvgl start sleep 5 second");
+
+  delay(5000);
+
+  Serial.println("start");
   delay(1000);
-  Serial.println("test tft lvgl");
+  Serial.println("setup ok");
 
-  // pinMode(9,OUTPUT);
+  display.init();
 
-  //  digitalWrite(9, 0);
-  //  delay(10);
-  //    digitalWrite(9, 1);
-  //  delay(50);
+  // display.setTextSize((std::max(display.width(), display.height()) + 255) >> 8);
 
-    pinMode(LED_RUN,OUTPUT);
-//      Wire.begin(CTP_SDA, CTP_SCL);
-// cts.begin(SAFE);
-// cts.setTouchLimit(1);//from 1 to 5
+  // タッチが使用可能な場合のキャリブレーションを行います。（省略可）
+  // if (display.touch())
+  // {
+  //   if (display.width() < display.height())
+  //     display.setRotation(display.getRotation() ^ 1);
 
+  //   // 画面に案内文章を描画します。
+  //   display.setTextDatum(textdatum_t::middle_center);
+  //   display.drawString("touch the arrow marker.", display.width() >> 1, display.height() >> 1);
+  //   display.setTextDatum(textdatum_t::top_left);
 
-  tft.init();
-     tft.setRotation(1);
-   tft.setBrightness(255);
+  //   // タッチを使用する場合、キャリブレーションを行います。画面の四隅に表示される矢印の先端を順にタッチしてください。
+  //   std::uint16_t fg = TFT_WHITE;
+  //   std::uint16_t bg = TFT_BLACK;
+  //   if (display.isEPD())
+  //     std::swap(fg, bg);
+  //   display.calibrateTouch(nullptr, fg, bg, std::max(display.width(), display.height()) >> 3);
+  // }
 
-   lv_init();
-   lv_disp_draw_buf_init( &draw_buf, buf, NULL, TFT_WIDTH * 10 );
-   static lv_disp_drv_t disp_drv;
-   lv_disp_drv_init(&disp_drv);
+  display.fillScreen(TFT_BLUE);
 
-   /*Change the following line to your display resolution*/
-   disp_drv.hor_res = TFT_HEIGHT;
-   disp_drv.ver_res = TFT_WIDTH;
-   disp_drv.flush_cb = my_disp_flush;
-   disp_drv.draw_buf = &draw_buf;
-   lv_disp_drv_register(&disp_drv);
-
-   /*Initialize the (dummy) input device driver*/
-   static lv_indev_drv_t indev_drv;
-   lv_indev_drv_init(&indev_drv);
-   indev_drv.type = LV_INDEV_TYPE_POINTER;
-   indev_drv.read_cb = my_touchpad_read;
-   lv_indev_drv_register(&indev_drv);
-
-   lv_example_get_started_1();
- // lv_demo_widgets();
-
+  // digitalWrite(LED_RUN, (millis() / 1000) % 2);
 }
+
+uint32_t count = ~0;
 
 void loop(void)
 {
-        digitalWrite(LED_RUN, (millis() / 1000) % 2);
+  // Serial.println("test tft lvgl loop");
+  digitalWrite(LED_RUN, (millis() / 1000) % 2);
+  display.startWrite();
+  display.setRotation(++count & 7);
+  display.setColorDepth((count & 8) ? 16 : 24);
 
-   lv_timer_handler(); /* let the GUI do its work */
+  display.setTextColor(TFT_WHITE);
+  display.drawNumber(display.getRotation(), 16, 0);
 
+  display.setTextColor(0xFF0000U);
+  display.drawString("R", 30, 16);
+  display.setTextColor(0x00FF00U);
+  display.drawString("G", 40, 16);
+  display.setTextColor(0x0000FFU);
+  display.drawString("B", 50, 16);
 
-  // if (cts.touched()){
+  display.drawRect(30, 30, display.width() - 60, display.height() - 60, count * 7);
+  display.drawFastHLine(0, 0, 10);
 
-  //   uint8_t i;
-  //   uint16_t x,y;
-  //   cts.getTSregisters(registers);
-  //   current_touches = cts.getTScoordinates(new_coordinates, registers);
-  //   if (current_touches < 1) return;
+  display.endWrite();
 
-
-  //   for (i = 1; i <= current_touches; i++){// mark touches on screen
-  //     x = new_coordinates[i-1][0];
-  //     y = new_coordinates[i-1][1];
- 
-  //  Serial.printf("X:%d Y:%d\n", x, y);
-  //     old_coordinates[i-1][0] = x;
-  //     old_coordinates[i-1][1] = y;
-  //   }
-  //   old_touches = current_touches;
-
-  //   cts.rearmISR();
+  // int32_t x, y;
+  // if (display.getTouch(&x, &y))
+  // {
+  //   display.fillRect(x - 2, y - 2, 5, 5, count * 7);
   // }
-
-
-
 }
