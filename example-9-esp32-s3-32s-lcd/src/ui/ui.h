@@ -17,10 +17,17 @@ extern "C" {
 
 // SCREEN: ui_Screen1
 void ui_Screen1_screen_init(void);
+void ui_event_Screen1( lv_event_t * e);
 extern lv_obj_t *ui_Screen1;
 extern lv_obj_t *ui_Calendar1;
+void ui_event_btn1( lv_event_t * e);
 extern lv_obj_t *ui_btn1;
 extern lv_obj_t *ui_Label1;
+// SCREEN: ui_Screen2
+void ui_Screen2_screen_init(void);
+void ui_event_Screen2( lv_event_t * e);
+extern lv_obj_t *ui_Screen2;
+extern lv_obj_t *ui_Label2;
 extern lv_obj_t *ui____initial_actions0;
 
 

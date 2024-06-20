@@ -26,6 +26,14 @@ lv_obj_set_y( ui_btn1, -93 );
 lv_obj_set_align( ui_btn1, LV_ALIGN_CENTER );
 lv_obj_add_flag( ui_btn1, LV_OBJ_FLAG_SCROLL_ON_FOCUS );   /// Flags
 lv_obj_clear_flag( ui_btn1, LV_OBJ_FLAG_SCROLLABLE );    /// Flags
+lv_obj_set_style_outline_color(ui_btn1, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_PRESSED );
+lv_obj_set_style_outline_opa(ui_btn1, 255, LV_PART_MAIN| LV_STATE_PRESSED);
+lv_obj_set_style_outline_width(ui_btn1, 2, LV_PART_MAIN| LV_STATE_PRESSED);
+lv_obj_set_style_outline_pad(ui_btn1, 0, LV_PART_MAIN| LV_STATE_PRESSED);
+lv_obj_set_style_outline_color(ui_btn1, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_FOCUSED );
+lv_obj_set_style_outline_opa(ui_btn1, 255, LV_PART_MAIN| LV_STATE_FOCUSED);
+lv_obj_set_style_outline_width(ui_btn1, 1, LV_PART_MAIN| LV_STATE_FOCUSED);
+lv_obj_set_style_outline_pad(ui_btn1, 1, LV_PART_MAIN| LV_STATE_FOCUSED);
 
 ui_Label1 = lv_label_create(ui_Screen1);
 lv_obj_set_width( ui_Label1, LV_SIZE_CONTENT);  /// 1
@@ -33,7 +41,10 @@ lv_obj_set_height( ui_Label1, LV_SIZE_CONTENT);   /// 1
 lv_obj_set_x( ui_Label1, -104 );
 lv_obj_set_y( ui_Label1, -93 );
 lv_obj_set_align( ui_Label1, LV_ALIGN_CENTER );
-lv_label_set_text(ui_Label1,"你好");
+lv_label_set_text(ui_Label1,"你好2");
 lv_obj_set_style_text_font(ui_Label1, &ui_font_Font2, LV_PART_MAIN| LV_STATE_DEFAULT);
+
+lv_obj_add_event_cb(ui_btn1, ui_event_btn1, LV_EVENT_ALL, NULL);
+lv_obj_add_event_cb(ui_Screen1, ui_event_Screen1, LV_EVENT_ALL, NULL);
 
 }

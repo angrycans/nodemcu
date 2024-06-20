@@ -16,8 +16,6 @@
 #define TFT_WIDTH 240
 #define TFT_HEIGHT 320
 
-#define LED_RUN 1
-
 class LGFX : public lgfx::LGFX_Device
 {
   /*
