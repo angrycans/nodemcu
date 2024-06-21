@@ -5,7 +5,8 @@
 #include "gui.h"
 #include <OneButton.h>
 
-#include "../ui/ui.h"
+#include "../ui_1/ui.h"
+//  #include "../ui_2/ui.h"
 #include "../gfx/gfx.h"
 
 static const char *TAG = "gui";
@@ -224,7 +225,7 @@ void gui_start()
   lv_obj_center(label);
 
   lv_group_add_obj(g, btn);
-  // ui_init();
+  ui_init();
 }
 
 void gui_loop()

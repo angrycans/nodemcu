@@ -19,6 +19,7 @@ void loop()
 {
     // digitalWrite(LED_RUN, (millis() / 1000) % 2);
 
+    Serial.printf("on loop");
     lv_timer_handler();
     gui_loop();
 
