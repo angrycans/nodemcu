@@ -10,6 +10,8 @@ void BSP::init()
 {
     printBspInfos();
 
+    sd.init();
+
 #if BSP_MODULE_LVGL
     lvgl.init();
 #endif

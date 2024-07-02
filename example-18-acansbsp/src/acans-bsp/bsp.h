@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include "bsp-config.h"
+#include "sd/sd.hpp"
 #include "button/button.hpp"
 #include "led/led.hpp"
 #include "lvgl/bsp_lvgl.hpp"
@@ -40,6 +41,8 @@ public:
 #if BSP_MODULE_LVGL
     BspLvgl lvgl = BspLvgl();
 #endif
+
+    BSPSD sd;
 
     BSP();
 

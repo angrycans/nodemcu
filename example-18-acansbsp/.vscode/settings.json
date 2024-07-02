@@ -1,0 +1,5 @@
+{
+    "files.associations": {
+        "*.lvgl8": "c"
+    }
+}

@@ -200,16 +200,7 @@ namespace App
 
     void App_Launcher::button_event_cb(lv_event_t *e)
     {
-        lv_obj_t *obj = lv_event_get_target(e);
-        lv_event_code_t code = lv_event_get_code(e);
-
-        /* Into that App */
-        if (code == LV_EVENT_CLICKED)
-        {
-            _app.selected = (lv_obj_get_index(obj) - 2) / 2;
-            _app.onCreate = true;
         }
-    }
 
     void App_Launcher::panel_control_pad_event_cb(lv_event_t *e)
     {
