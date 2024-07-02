@@ -39,7 +39,6 @@ void loop()
   // the sensor data, otherwise it will never update
   imu.getSensorData();
 
-  // Print acceleration data
   Serial.print("Acceleration in g's");
   Serial.print("\t");
   Serial.print("X: ");
@@ -53,7 +52,6 @@ void loop()
 
   Serial.print("\t");
 
-  // Print rotation data
   Serial.print("Rotation in deg/sec");
   Serial.print("\t");
   Serial.print("X: ");
@@ -65,6 +63,5 @@ void loop()
   Serial.print("Z: ");
   Serial.println(imu.data.gyroZ, 3);
 
-  // Print 50x per second
   delay(20);
 }

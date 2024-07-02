@@ -66,6 +66,11 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
     /*Set the coordinates*/
     data->point.x = touchX;
     data->point.y = touchY;
+
+    Serial.print("Touch X: ");
+    Serial.print(touchX);
+    Serial.print(", Touch Y: ");
+    Serial.println(touchY);
   }
 }
 
@@ -174,7 +179,7 @@ void gui_start()
 
   // ----------- GFX -------------
   gfx.begin();
-  gfx.setRotation(3);
+  gfx.setRotation(1);
   //   gfx.setColorDepth(16);
   gfx.setBrightness(127);
 
@@ -190,41 +195,41 @@ void gui_start()
   disp_drv.draw_buf = &draw_buf;
   lv_disp_drv_register(&disp_drv);
 
-  // /*Initialize the input device driver*/
-  // static lv_indev_drv_t indev_drv;
-  // lv_indev_drv_init(&indev_drv);
-  // indev_drv.type = LV_INDEV_TYPE_POINTER;
-  // indev_drv.read_cb = my_touchpad_read;
-  // lv_indev_drv_register(&indev_drv);
-
+  /*Initialize the input device driver*/
   static lv_indev_drv_t indev_drv;
   lv_indev_drv_init(&indev_drv);
-  indev_drv.type = LV_INDEV_TYPE_KEYPAD;
-  // indev_drv.read_cb = my_keyboard_read;
-  indev_drv.read_cb = keyboard_read;
+  indev_drv.type = LV_INDEV_TYPE_POINTER;
+  indev_drv.read_cb = my_touchpad_read;
+  lv_indev_drv_register(&indev_drv);
 
-  lv_indev_t *key_indev_drv = lv_indev_drv_register(&indev_drv);
+  // static lv_indev_drv_t indev_drv;
+  // lv_indev_drv_init(&indev_drv);
+  // indev_drv.type = LV_INDEV_TYPE_KEYPAD;
+  // // indev_drv.read_cb = my_keyboard_read;
+  // indev_drv.read_cb = keyboard_read;
 
-  lv_group_t *g = lv_group_create();
-  lv_group_set_default(g);
-  lv_indev_set_group(key_indev_drv, g);
+  // lv_indev_t *key_indev_drv = lv_indev_drv_register(&indev_drv);
 
-  btn_next.attachClick([]()
-                       {
-                         Serial.println("btn_next Pressed!");
-                         // lv_event_send(lv_scr_act(), LV_EVENT_CLICKED, NULL);
-                       });
+  // lv_group_t *g = lv_group_create();
+  // lv_group_set_default(g);
+  // lv_indev_set_group(key_indev_drv, g);
 
-  lv_obj_t *btn = lv_btn_create(lv_scr_act());
-  lv_obj_set_size(btn, 100, 50);
-  lv_obj_center(btn);
-  lv_obj_add_event_cb(btn, event_cb, LV_EVENT_ALL, NULL);
+  // btn_next.attachClick([]()
+  //                      {
+  //                        Serial.println("btn_next Pressed!");
+  //                        // lv_event_send(lv_scr_act(), LV_EVENT_CLICKED, NULL);
+  //                      });
 
-  lv_obj_t *label = lv_label_create(btn);
-  lv_label_set_text(label, "Click me!");
-  lv_obj_center(label);
+  // lv_obj_t *btn = lv_btn_create(lv_scr_act());
+  // lv_obj_set_size(btn, 100, 50);
+  // lv_obj_center(btn);
+  // lv_obj_add_event_cb(btn, event_cb, LV_EVENT_ALL, NULL);
 
-  lv_group_add_obj(g, btn);
+  // lv_obj_t *label = lv_label_create(btn);
+  // lv_label_set_text(label, "Click me!");
+  // lv_obj_center(label);
+
+  // lv_group_add_obj(g, btn);
   ui_init();
 }
 

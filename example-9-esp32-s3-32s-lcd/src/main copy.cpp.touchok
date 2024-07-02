@@ -5,9 +5,9 @@
 
 #define LED_RUN 1
 
-#define CTP_INT 9
-#define CTP_SDA 10
-#define CTP_SCL 11
+#define CTP_INT 45
+#define CTP_SDA 47
+#define CTP_SCL 48
 
 uint8_t registers[FT5206_REGISTERS];
 uint16_t new_coordinates[5][2];
