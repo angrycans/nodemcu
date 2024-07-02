@@ -1,0 +1,16 @@
+{
+  "codename": "DSDIGIT64",
+  "ttf_path": "/assets/fonts/DS-DIGIT.TTF",
+  "bin_path": "/assets/fonts/ui_font_DSDIGIT64.bin",
+  "c_path": "/assets/fonts/ui_font_DSDIGIT64.c",
+  "cfg_path": "/assets/fonts/ui_font_DSDIGIT64.fcfg",
+  "size": 64,
+  "bpp": 1,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7f"
+  ],
+  "symbols": "",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}
