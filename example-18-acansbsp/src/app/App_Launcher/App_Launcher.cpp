@@ -30,21 +30,21 @@ namespace App
     {
         // _device->lvgl.init();
 
-        Serial.println("App_Launcher::onCreate()");
+        Serial.println("[APP] App_Launcher::onCreate()");
 
-        lv_obj_t *btn = lv_btn_create(lv_scr_act());
-        lv_obj_set_size(btn, 100, 50);
-        lv_obj_center(btn);
-        // lv_obj_add_event_cb(btn, event_cb, LV_EVENT_ALL, NULL);
+        // lv_obj_t *btn = lv_btn_create(lv_scr_act());
+        // lv_obj_set_size(btn, 100, 50);
+        // lv_obj_center(btn);
+        // // lv_obj_add_event_cb(btn, event_cb, LV_EVENT_ALL, NULL);
 
-        lv_obj_t *label = lv_label_create(btn);
-        lv_label_set_text(label, "Click me!");
-        lv_obj_center(label);
+        // lv_obj_t *label = lv_label_create(btn);
+        // lv_label_set_text(label, "Click me!");
+        // lv_obj_center(label);
 
         _device->lvgl.enable();
 
         // /* Init launcher UI */
-        // ui_init();
+        ui_init();
         // lv_obj_set_style_bg_color(lv_scr_act(), lv_color_hex(0x4D5B74), LV_PART_MAIN | LV_STATE_DEFAULT);
         // lv_scr_load_anim(ui_ScreenLauncher, LV_SCR_LOAD_ANIM_FADE_IN, 250, 0, true);
 
@@ -134,9 +134,9 @@ namespace App
         /* Delete timer */
         lv_timer_del(_time_update_timer);
 
-        /* Delete Launcher screen and reaplace with an empty one */
-        lv_disp_load_scr(lv_obj_create(NULL));
-        lv_obj_del(ui_ScreenLauncher);
+        // /* Delete Launcher screen and reaplace with an empty one */
+        // lv_disp_load_scr(lv_obj_create(NULL));
+        // lv_obj_del(ui_ScreenLauncher);
     }
 
     void App_Launcher::updateDeviceStatus()
@@ -181,21 +181,21 @@ namespace App
 
     void App_Launcher::scroll_event_cb(lv_event_t *e)
     {
-        static int16_t last_x = 280;
-        lv_obj_t *obj = lv_event_get_target(e);
+        // static int16_t last_x = 280;
+        // lv_obj_t *obj = lv_event_get_target(e);
 
-        /* If enter pannel home */
-        if ((lv_obj_get_scroll_x(obj) == 280) && (last_x != 280))
-        {
-            StateBarPullUp_Animation(ui_ImgStateBar, 0);
-        }
-        /* If leave pannel home */
-        else if ((lv_obj_get_scroll_x(obj) != 280) && (last_x == 280))
-        {
-            StateBarDropDown_Animation(ui_ImgStateBar, 0);
-        }
+        // /* If enter pannel home */
+        // if ((lv_obj_get_scroll_x(obj) == 280) && (last_x != 280))
+        // {
+        //     StateBarPullUp_Animation(ui_ImgStateBar, 0);
+        // }
+        // /* If leave pannel home */
+        // else if ((lv_obj_get_scroll_x(obj) != 280) && (last_x == 280))
+        // {
+        //     StateBarDropDown_Animation(ui_ImgStateBar, 0);
+        // }
 
-        last_x = lv_obj_get_scroll_x(obj);
+        // last_x = lv_obj_get_scroll_x(obj);
     }
 
     void App_Launcher::button_event_cb(lv_event_t *e)
@@ -213,44 +213,44 @@ namespace App
 
     void App_Launcher::panel_control_pad_event_cb(lv_event_t *e)
     {
-        lv_obj_t *obj = lv_event_get_target(e);
-        lv_event_code_t code = lv_event_get_code(e);
+        // lv_obj_t *obj = lv_event_get_target(e);
+        // lv_event_code_t code = lv_event_get_code(e);
 
-        /* If setting brightness */
-        if (obj == ui_ArcBrightness)
-        {
-            _device_status.updated = true;
-            _device_status.brightness = lv_arc_get_value(obj);
-        }
+        // /* If setting brightness */
+        // if (obj == ui_ArcBrightness)
+        // {
+        //     _device_status.updated = true;
+        //     _device_status.brightness = lv_arc_get_value(obj);
+        // }
 
-        /* If clicked infos button */
-        else if (obj == ui_ButtonInfos)
-        {
-            /* Go look for App setting */
-            for (int i = 0; i < _app.totalNum; i++)
-            {
-                if (App::Register[i].appName() == "Settings")
-                {
-                    _app.selected = i;
-                    _app.onCreate = true;
-                    break;
-                }
-            }
-        }
+        // /* If clicked infos button */
+        // else if (obj == ui_ButtonInfos)
+        // {
+        //     /* Go look for App setting */
+        //     for (int i = 0; i < _app.totalNum; i++)
+        //     {
+        //         if (App::Register[i].appName() == "Settings")
+        //         {
+        //             _app.selected = i;
+        //             _app.onCreate = true;
+        //             break;
+        //         }
+        //     }
+        // }
 
-        /* If enable auto screen off */
-        else if (obj == ui_ButtonAutoScreenOff)
-        {
-            // UI_LOG("%d\n", lv_obj_get_state(obj));
-            if (lv_obj_get_state(obj) == (LV_STATE_CHECKED | LV_STATE_FOCUSED))
-            {
-                _device_status.autoScreenOff = true;
-            }
-            else
-            {
-                _device_status.autoScreenOff = false;
-            }
-        }
+        // /* If enable auto screen off */
+        // else if (obj == ui_ButtonAutoScreenOff)
+        // {
+        //     // UI_LOG("%d\n", lv_obj_get_state(obj));
+        //     if (lv_obj_get_state(obj) == (LV_STATE_CHECKED | LV_STATE_FOCUSED))
+        //     {
+        //         _device_status.autoScreenOff = true;
+        //     }
+        //     else
+        //     {
+        //         _device_status.autoScreenOff = false;
+        //     }
+        // }
     }
 
     void App_Launcher::sleep_mode()

@@ -33,9 +33,9 @@
 // #define LVGL_LCD_PORTRAIT
 
 #ifdef LVGL_LCD_HORIZON
-#define MY_DISP_HOR_RES 280
+#define MY_DISP_HOR_RES 320
 #define MY_DISP_VER_RES 240
-#define LV_VER_RES_MAX 280
+#define LV_VER_RES_MAX 320
 #else
 #ifdef LVGL_LCD_PORTRAIT
 #define MY_DISP_HOR_RES 240
