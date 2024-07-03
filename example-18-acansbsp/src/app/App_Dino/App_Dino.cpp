@@ -46,6 +46,15 @@ namespace App
         lv_arc_set_bg_angles(arc, 0, 270);
         lv_arc_set_value(arc, 40);
         lv_obj_center(arc);
+
+        lv_obj_t *close_btn = lv_btn_create(lv_scr_act());
+        lv_obj_set_size(close_btn, 50, 50);
+
+        lv_obj_add_event_cb(close_btn, [](lv_event_t *e)
+                            {
+         if (_app.isRunning) {
+                _app.onDestroy = true;
+            } }, LV_EVENT_CLICKED, NULL);
     }
 
     /**
