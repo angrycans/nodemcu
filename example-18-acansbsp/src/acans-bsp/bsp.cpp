@@ -44,6 +44,29 @@ void BSP::printBspInfos()
         Serial.println("PSRAM not found");
         return;
     }
+    else
+    {
+        size_t psramSize = ESP.getPsramSize();
+        Serial.print("Total PSRAM size: ");
+        Serial.print(psramSize);
+        Serial.println(" bytes");
+
+        // 获取可用的PSRAM大小
+        size_t freePsram = ESP.getFreePsram();
+        Serial.print("Free PSRAM: ");
+        Serial.print(freePsram);
+        Serial.println(" bytes");
+
+        // 获取PSRAM堆信息
+        multi_heap_info_t heap_info;
+        heap_caps_get_info(&heap_info, MALLOC_CAP_SPIRAM);
+        Serial.print("Total PSRAM heap size: ");
+        Serial.print(heap_info.total_free_bytes + heap_info.total_allocated_bytes);
+        Serial.println(" bytes");
+        Serial.print("Free PSRAM heap size: ");
+        Serial.print(heap_info.total_free_bytes / (1024 * 1024));
+        Serial.println(" M");
+    }
 
     printf("%s\n", "BSP init...");
 }

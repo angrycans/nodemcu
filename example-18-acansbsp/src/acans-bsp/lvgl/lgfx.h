@@ -8,15 +8,15 @@
 
 /// 独自の設定を行うクラスを、LGFX_Deviceから派生して作成します。
 
-#define TFT_SDA 13 // SDA
-#define TFT_SCL 14 // SCL
-#define TFT_DC 9
-#define TFT_CS 10
-#define TFT_RST 3
-#define TFT_BCK_LT 46
+#define LCD_SDA 13 // SDA
+#define LCD_SCL 14 // SCL
+#define LCD_DC 9
+#define LCD_CS 10
+#define LCD_RST 3
+#define LCD_BCK_LT 46
 
-#define TFT_WIDTH 240
-#define TFT_HEIGHT 320
+#define LCD_WIDTH 240
+#define LCD_HEIGHT 320
 
 #define CTP_INT 45
 #define CTP_SDA 47
@@ -98,10 +98,10 @@ public:
       cfg.use_lock = true;               // トランザクションロックを使用する場合はtrueを設定
       cfg.dma_channel = SPI_DMA_CH_AUTO; // 使用するDMAチャンネルを設定 (0=DMA不使用 / 1=1ch / 2=ch / SPI_DMA_CH_AUTO=自動設定)
       // ※ ESP-IDFバージョンアップに伴い、DMAチャンネルはSPI_DMA_CH_AUTO(自動設定)が推奨になりました。1ch,2chの指定は非推奨になります。
-      cfg.pin_sclk = TFT_SCL; // SPIのSCLKピン番号を設定
-      cfg.pin_mosi = TFT_SDA; // SPIのMOSIピン番号を設定
+      cfg.pin_sclk = LCD_SCL; // SPIのSCLKピン番号を設定
+      cfg.pin_mosi = LCD_SDA; // SPIのMOSIピン番号を設定
       cfg.pin_miso = -1;      // SPIのMISOピン番号を設定 (-1 = disable)
-      cfg.pin_dc = TFT_DC;    // SPIのD/Cピン番号を設定  (-1 = disable)
+      cfg.pin_dc = LCD_DC;    // SPIのD/Cピン番号を設定  (-1 = disable)
                               // SDカードと共通のSPIバスを使う場合、MISOは省略せず必ず設定してください。
                               //*/
                               /*
@@ -137,14 +137,14 @@ public:
     {                                      // 表示パネル制御の設定を行います。
       auto cfg = _panel_instance.config(); // 表示パネル設定用の構造体を取得します。
 
-      cfg.pin_cs = TFT_CS;   // CSが接続されているピン番号   (-1 = disable)
-      cfg.pin_rst = TFT_RST; // RSTが接続されているピン番号  (-1 = disable)
+      cfg.pin_cs = LCD_CS;   // CSが接続されているピン番号   (-1 = disable)
+      cfg.pin_rst = LCD_RST; // RSTが接続されているピン番号  (-1 = disable)
       cfg.pin_busy = -1;     // BUSYが接続されているピン番号 (-1 = disable)
 
       // ※ 以下の設定値はパネル毎に一般的な初期値が設定されていますので、不明な項目はコメントアウトして試してみてください。
 
-      cfg.panel_width = TFT_WIDTH;   // 実際に表示可能な幅
-      cfg.panel_height = TFT_HEIGHT; // 実際に表示可能な高さ
+      cfg.panel_width = LCD_WIDTH;   // 実際に表示可能な幅
+      cfg.panel_height = LCD_HEIGHT; // 実際に表示可能な高さ
       cfg.offset_x = 0;              // パネルのX方向オフセット量
       cfg.offset_y = 0;              // パネルのY方向オフセット量
       cfg.offset_rotation = 0;       // 回転方向の値のオフセット 0~7 (4~7は上下反転)
@@ -167,7 +167,7 @@ public:
     {                                      // バックライト制御の設定を行います。（必要なければ削除）
       auto cfg = _light_instance.config(); // バックライト設定用の構造体を取得します。
 
-      cfg.pin_bl = TFT_BCK_LT; // バックライトが接続されているピン番号
+      cfg.pin_bl = LCD_BCK_LT; // バックライトが接続されているピン番号
       cfg.invert = false;      // バックライトの輝度を反転させる場合 true
       cfg.freq = 44100;        // バックライトのPWM周波数
       cfg.pwm_channel = 7;     // 使用するPWMのチャンネル番号

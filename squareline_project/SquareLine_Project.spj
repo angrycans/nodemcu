@@ -15,7 +15,7 @@
               {
                 "nid": -1124497945,
                 "strtype": "OBJECT/Name",
-                "strval": "Label1",
+                "strval": "TimeMinSec",
                 "InheritedType": 10
               },
               {
@@ -316,6 +316,33 @@
                 "strtype": "LABEL/Style_main",
                 "strval": "lv.PART.MAIN, Text, Rectangle, Pad",
                 "InheritedType": 11
+              },
+              {
+                "disabled": false,
+                "nid": -1693275255,
+                "strtype": "LABEL/EventHandler",
+                "strval": "CLICKED",
+                "childs": [
+                  {
+                    "nid": 117216007,
+                    "strtype": "_event/name",
+                    "strval": "Event1",
+                    "InheritedType": 10
+                  },
+                  {
+                    "nid": 1731352796,
+                    "strtype": "_event/condition_C",
+                    "strval": "",
+                    "InheritedType": 10
+                  },
+                  {
+                    "nid": 1445460645,
+                    "strtype": "_event/condition_P",
+                    "strval": "",
+                    "InheritedType": 10
+                  }
+                ],
+                "InheritedType": 4
               }
             ],
             "saved_objtypeKey": "LABEL"
@@ -328,7 +355,7 @@
               {
                 "nid": 897007724,
                 "strtype": "OBJECT/Name",
-                "strval": "Label2",
+                "strval": "TimeMs",
                 "InheritedType": 10
               },
               {
@@ -636,7 +663,7 @@
           {
             "nid": -143396798,
             "strtype": "OBJECT/Name",
-            "strval": "Screen1",
+            "strval": "ScreenTimer",
             "InheritedType": 10
           },
           {
@@ -887,7 +914,7 @@
     "theme_color2": 0,
     "uiExportFolderPath": "/Users/Acans/Documents/arduino/nodemcu/example-18-acansbsp/src/app/App_Launcher/UI",
     "projectExportFolderPath": "",
-    "backup_cnt": 7,
+    "backup_cnt": 11,
     "autosave_cnt": 0,
     "lvgl_version": "8.3.11",
     "callfuncsexport": "C_FILE",

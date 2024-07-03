@@ -23,7 +23,7 @@
     "theme_color2": 0,
     "uiExportFolderPath": "/Users/Acans/Documents/arduino/nodemcu/example-18-acansbsp/src/app/App_Launcher/UI",
     "projectExportFolderPath": "",
-    "backup_cnt": 8,
+    "backup_cnt": 12,
     "autosave_cnt": 0,
     "lvgl_version": "8.3.11",
     "callfuncsexport": "C_FILE",

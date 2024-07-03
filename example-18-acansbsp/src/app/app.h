@@ -4,8 +4,6 @@
 #include "../acans-bsp/bsp.h"
 #include "App_Launcher/App_Launcher.h"
 
-#define UI_LOG(format, args...) printf(format, ##args)
-
 class APP
 {
 private:

@@ -8,6 +8,9 @@ void setup()
 {
     Serial.begin(115200);
     delay(1000);
+    Serial.println("main setup...");
+    delay(1000);
+    delay(3000);
     app.init();
 }
 

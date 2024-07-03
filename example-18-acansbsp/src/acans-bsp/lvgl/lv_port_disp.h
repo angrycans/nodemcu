@@ -39,8 +39,8 @@
 #else
 #ifdef LVGL_LCD_PORTRAIT
 #define MY_DISP_HOR_RES 240
-#define MY_DISP_VER_RES 280
-#define LV_VER_RES_MAX 240
+#define MY_DISP_VER_RES 320
+#define LV_VER_RES_MAX 320
 #endif
 #endif
 

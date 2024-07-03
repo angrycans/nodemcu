@@ -30,5 +30,6 @@ int APP::init()
 
 void APP::loop()
 {
+    lv_timer_handler();
     _launcher->onLoop();
 }

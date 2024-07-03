@@ -1,56 +1,39 @@
-
+/**
+ * @file AppRegister.h
+ * @author Forairaaaaa
+ * @brief
+ * @version 0.1
+ * @date 2023-03-15
+ *
+ * @copyright Copyright (c) 2023
+ *
+ */
 #pragma once
+#include "App_Typedef.h"
 
-#include <string>
-
-namespace App
-{
-
-    /* Structure to contain app function pointers  */
-    struct AppRegister_t
-    {
-
-        /* Return app name */
-        std::string (*appName)();
-
-        /* Reaturn app Icon in lv_img_t */
-        void *(*appIcon)();
-
-        /* App oncreate */
-        void (*onCreate)();
-
-        /* App onLoop */
-        void (*onLoop)();
-
-        /* App onDestroy */
-        void (*onDestroy)();
-
-        /* Pass a BSP pointer */
-        void (*getBsp)(void *bsp);
-    };
-
-}
-
-/* Use this define to declare your App */
-#define App_Declare(app_name)                   \
-    static AppRegister_t App_##app_name = {     \
-        appName : App_##app_name##_appName,     \
-        appIcon : App_##app_name##_appIcon,     \
-        onCreate : App_##app_name##_onCreate,   \
-        onLoop : App_##app_name##_onLoop,       \
-        onDestroy : App_##app_name##_onDestroy, \
-        getBsp : App_##app_name##_getBsp,       \
-    };
-
-/* Use this to log your App into register */
-#define App_Login(app_name) \
-    App_##app_name
+/**
+ *  ------------------------------------------- How to Add an App -------------------------------------------
+ *
+ *  1. Copy the App_Template folder, rename it like App_MyApp, and paste it next to App_Template.
+ *      into App_MyApp folder, rename the cpp and h file, e.g. App_MyApp.cpp
+ *      into App_MyApp.cpp and  App_MyApp.h, change all the "Template" to "MyApp"
+ *
+ *  2. Include your App's header file in 2)
+ *      e.g. #include "App_MyApp/App_MyApp.h"
+ *
+ *  3. Log your App into AppRegister in 3)
+ *      e.g. App_Login(MyApp),
+ *
+ * ----------------------------------------------------------------------------------------------------------
+ */
 
 /**
  * @brief 2) Include your App's header file
  *
  */
-#include "App_xlap/App_xlap.h"
+#include "App_Xlap/App_Xlap.h"
+#include "App_Dino/App_Dino.h"
+
 /* Header files locator */
 /* Don't remove this, or python script's auto login will be failed */
 
@@ -63,7 +46,9 @@ namespace App
          * @brief 3) Log your App into AppRegister here
          *
          */
-        // App_Login(xlap),
+        App_Login(Dino),
+        App_Login(Xlap),
+
         /* Login locator */
         /* Don't remove this, or python script's auto login will be failed */
 

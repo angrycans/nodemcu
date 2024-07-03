@@ -1,75 +1,55 @@
 #if 1
-#include "App_xlap.h"
+#include "App_Xlap.h"
 #include "../../acans-bsp/bsp.h"
 
-static std::string app_name = "xlap";
+static std::string app_name = "Xlap";
 static BSP *device;
+
+
 
 namespace App
 {
 
-    /**
-     * @brief Return the App name laucnher, which will be show on launcher App list
-     *
-     * @return std::string
-     */
-    std::string App_xlap_appName()
+    std::string App_Xlap_appName()
     {
         return app_name;
     }
 
-    /**
-     * @brief Return the App Icon laucnher, NULL for default
-     *
-     * @return void*
-     */
-    void *App_xlap_appIcon()
+    void *App_Xlap_appIcon()
     {
         return NULL;
     }
 
-    /**
-     * @brief Called when App is on create
-     *
-     */
-    void App_xlap_onCreate()
+    void button_event_cb(lv_event_t *e)
     {
-        // UI_LOG("[%s] onCreate\n", App_xlap_appName().c_str());
-
-        // /*Create an Arc*/
-        // lv_obj_t * arc = lv_arc_create(lv_scr_act());
-        // lv_obj_set_size(arc, 150, 150);
-        // lv_arc_set_rotation(arc, 135);
-        // lv_arc_set_bg_angles(arc, 0, 270);
-        // lv_arc_set_value(arc, 40);
-        // lv_obj_center(arc);
+        UI_LOG("[%s] button_event_cb _app.isRunning %d %d\n", App_Xlap_appName().c_str(),&_app,_app.isRunning);
+         if (_app.isRunning) {
+             UI_LOG("[%s] button_event_cb _app.onDestroy = true\n", App_Xlap_appName().c_str());
+                _app.onDestroy = true;
+            }
     }
 
-    /**
-     * @brief Called repeatedly, end this function ASAP! or the App management will be affected
-     * If the thing you want to do takes time, try create a taak or lvgl timer to handle them.
-     * Try use millis() instead of delay() here
-     *
-     */
-    void App_xlap_onLoop()
+    void App_Xlap_onCreate()
     {
+        UI_LOG("[%s] onCreate\n", App_Xlap_appName().c_str());
+
+        lv_obj_t *close_btn = lv_btn_create(lv_scr_act());
+        lv_obj_set_size(close_btn, 50, 50);
+
+        lv_obj_add_event_cb(close_btn, button_event_cb, LV_EVENT_CLICKED, NULL);
     }
 
-    /**
-     * @brief Called when App is about to be destroy
-     * Please remember to release the resourse like lvgl timers in this function
-     *
-     */
-    void App_xlap_onDestroy()
+    void App_Xlap_onLoop()
     {
-        // UI_LOG("[%s] onDestroy\n", App_xlap_appName().c_str());
+       // UI_LOG("App_Xlap_onLoop() isrunning %d \n" ,_app.isRunning);
     }
 
-    /**
-     * @brief Launcher will pass the BSP pointer through this function before onCreate
-     *
-     */
-    void App_xlap_getBsp(void *bsp)
+    void App_Xlap_onDestroy()
+    {
+        UI_LOG("[%s] onDestroy\n", App_Xlap_appName().c_str());
+    }
+
+    void App_Xlap_getBsp(void *bsp)
     {
         device = (BSP *)bsp;
     }

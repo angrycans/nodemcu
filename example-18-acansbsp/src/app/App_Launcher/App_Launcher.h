@@ -3,7 +3,7 @@
 #include "../App_Register.h"
 #include "../../acans-bsp/bsp-config.h"
 #include "../../acans-bsp/bsp.h"
-
+#include "../App_Tools.h"
 namespace App
 {
 
@@ -18,10 +18,10 @@ namespace App
 
         /* UI events */
         lv_timer_t *_time_update_timer;
-        static void time_update(lv_timer_t *timer);
-        static void scroll_event_cb(lv_event_t *e);
+
+        static void update_label_cb(lv_timer_t *timer);
         static void button_event_cb(lv_event_t *e);
-        static void panel_control_pad_event_cb(lv_event_t *e);
+
         static void sleep_mode();
 
     public:
