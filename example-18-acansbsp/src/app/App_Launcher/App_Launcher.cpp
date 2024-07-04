@@ -2,7 +2,7 @@
 #include "App_Launcher.h"
 #include "UI/ui.h"
 
-
+extern void ui_init();
 
 /* Structure to hold device status */
 struct DeviceStatus_t
@@ -163,7 +163,7 @@ namespace App
 
     void App_Launcher::updateAppManage()
     {
-       // UI_LOG("updateAppManage");
+        // UI_LOG("updateAppManage");
         /* App state manage, kind of like a FSM */
         if (_app.onCreate)
         {
@@ -176,7 +176,7 @@ namespace App
             App::Register[_app.selected].getBsp(_device);
             App::Register[_app.selected].onCreate();
 
-            UI_LOG("app isrunning %d %d \n",&_app,_app.isRunning);
+            UI_LOG("app isrunning %d %d \n", &_app, _app.isRunning);
         }
         if (_app.isRunning)
         {

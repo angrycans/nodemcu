@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include "bsp-config.h"
+#include "littlefs/lfs.hpp"
 #include "sd/sd.hpp"
 #include "button/button.hpp"
 #include "led/led.hpp"
@@ -43,6 +44,8 @@ public:
 #endif
 
     BSPSD sd;
+
+    LFS lfs;
 
     BSP();
 

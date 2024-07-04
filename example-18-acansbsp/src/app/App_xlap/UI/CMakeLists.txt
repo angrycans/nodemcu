@@ -1,0 +1,9 @@
+SET(SOURCES screens/ui_ScreenTimer.c
+    ui.c
+    components/ui_comp_hook.c
+    ui_helpers.c
+    ui_events.c
+    fonts/ui_font_DSDIGIT64.c
+    fonts/ui_font_DSDIGIT90.c)
+
+add_library(ui ${SOURCES})

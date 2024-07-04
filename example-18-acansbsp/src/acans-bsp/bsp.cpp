@@ -9,6 +9,7 @@ BSP::BSP()
 void BSP::init()
 {
     printBspInfos();
+    lfs.init();
 
     sd.init();
 
