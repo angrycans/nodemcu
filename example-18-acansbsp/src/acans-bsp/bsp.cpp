@@ -10,13 +10,20 @@ void BSP::init()
 {
     printBspInfos();
     lfs.init();
-
     sd.init();
 
 #if BSP_MODULE_LVGL
     lvgl.init();
 #endif
     printf("%s\n", "BSP init ok");
+}
+
+void BSP::loop()
+{
+
+#if BSP_MODULE_LVGL
+    lv_timer_handler();
+#endif
 }
 
 void BSP::printBspInfos()

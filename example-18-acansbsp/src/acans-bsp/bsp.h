@@ -60,4 +60,6 @@ public:
      *
      */
     void printBspInfos();
+
+    void loop();
 };

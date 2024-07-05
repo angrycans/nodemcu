@@ -4,20 +4,17 @@
 
 extern void ui_init();
 
-/* Structure to hold device status */
-struct DeviceStatus_t
-{
-    bool updated = false;
-    bool autoScreenOff = false;
-    uint8_t brightness = 127;
-    uint32_t autoScreenOffTime = 20000;
-};
-static DeviceStatus_t _device_status;
-
-AppManager_t _app;
-
 namespace App
 {
+
+    const char *App_Launcher_Packer::getAppName() { return "App_Launcher"; }
+    // Theme color
+    constexpr static uint32_t _theme_color = 0x3D7AF5;
+    void *App_Launcher_Packer::getCustomData() { return (void *)(&_theme_color); }
+
+    // Icon
+    void *App_Launcher_Packer::getAppIcon() { return nullptr; }
+
     void App_Launcher::update_label_cb(lv_timer_t *timer)
     {
         // 获取标签对象
@@ -34,15 +31,15 @@ namespace App
         lv_label_set_text(label, buf);
     }
 
-    void App_Launcher::onCreate()
+    void App_Launcher::onResume()
     {
         // _device->lvgl.init();
 
-        Serial.println("[APP] App_Launcher::onCreate()");
+        Serial.println("[APP] App_Launcher::onResume()");
 
         // lv_timer_create(update_label_cb, 100, ui_TimeMs);
 
-        _device->lvgl.disable();
+        // _device->lvgl.disable();
 
         // /* Init launcher UI */
         ui_init();
@@ -53,13 +50,8 @@ namespace App
         lv_obj_set_scroll_snap_x(ui_PanelDesktop, LV_SCROLL_SNAP_CENTER);
         lv_obj_update_snap(ui_PanelDesktop, LV_ANIM_ON);
 
-        /* Read App register */
-        _app.totalNum = sizeof(App::Register) / sizeof(App::AppRegister_t);
-
-        UI_LOG("[APP] appnum=%d", _app.totalNum);
-
         /* Place App on the desktop panel */
-        for (int i = 0; i < _app.totalNum; i++)
+        for (int i = 0; i < static_cast<MOONCAKE::Mooncake *>(getAppPacker()->getFramwork())->getInstalledAppNum(); i++)
         {
             /* Apps' Icon (button) */
             lv_obj_t *app_btn = lv_btn_create(ui_PanelDesktop);
@@ -75,7 +67,7 @@ namespace App
             lv_obj_add_event_cb(app_btn, button_event_cb, LV_EVENT_CLICKED, NULL);
 
             /* Get App Icon image */
-            const lv_img_dsc_t *app_icon = (const lv_img_dsc_t *)App::Register[i].appIcon();
+            const lv_img_dsc_t *app_icon = NULL; //(const lv_img_dsc_t *)App::Register[i].appIcon();
             if (app_icon == NULL)
             {
                 app_icon = &ui_img_img_icon_defalut_png;
@@ -85,7 +77,9 @@ namespace App
             /* Apps' name */
             lv_obj_t *app_name = lv_label_create(ui_PanelDesktop);
             lv_obj_align(app_name, LV_ALIGN_CENTER, i * 180 + 560, 95);
-            lv_label_set_text(app_name, App::Register[i].appName().c_str());
+            std::string str(static_cast<MOONCAKE::Mooncake *>(getAppPacker()->getFramwork())->getInstalledAppList()[i]->getAppName());
+
+            lv_label_set_text(app_name, str.c_str());
             lv_obj_set_style_text_color(app_name, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_font(app_name, &ui_font_FontUbuntuBold18, LV_PART_MAIN | LV_STATE_DEFAULT);
         }
@@ -99,13 +93,13 @@ namespace App
         // lv_obj_add_event_cb(ui_ButtonBle, panel_control_pad_event_cb, LV_EVENT_CLICKED, NULL);
 
         /* Go to the previous place */
-        if (_app.selected != -1)
-        {
-            /* Pull down state bar manully */
-            lv_obj_set_y(ui_ImgStateBar, -105);
-            lv_obj_scroll_to_view(lv_obj_get_child(ui_PanelDesktop, (_app.selected * 2 + 2)), LV_ANIM_OFF);
-        }
-        else
+        // if (_app.selected != -1)
+        // {
+        //     /* Pull down state bar manully */
+        //     lv_obj_set_y(ui_ImgStateBar, -105);
+        //     lv_obj_scroll_to_view(lv_obj_get_child(ui_PanelDesktop, (_app.selected * 2 + 2)), LV_ANIM_OFF);
+        // }
+        // else
         {
             lv_obj_scroll_to_view(lv_obj_get_child(ui_PanelDesktop, 1), LV_ANIM_OFF);
         }
@@ -117,25 +111,23 @@ namespace App
         /* Reset auto screen off time counting */
         lv_disp_trig_activity(NULL);
 
-        /* Update control panel */
-        if (_device_status.autoScreenOff)
-        {
-            lv_obj_add_state(ui_ButtonAutoScreenOff, (LV_STATE_CHECKED | LV_STATE_FOCUSED));
-        }
+        // /* Update control panel */
+        // if (_device_status.autoScreenOff)
+        // {
+        //     lv_obj_add_state(ui_ButtonAutoScreenOff, (LV_STATE_CHECKED | LV_STATE_FOCUSED));
+        // }
 
-        _device->lvgl.enable();
+        // _device->lvgl.enable();
     }
 
-    void App_Launcher::onLoop()
+    void App_Launcher::onRunning()
     {
 
-        _device->lvgl.disable();
+        // _device->lvgl.disable();
 
-        updateDeviceStatus();
+        // updateAppManage();
 
-        updateAppManage();
-
-        _device->lvgl.enable();
+        // _device->lvgl.enable();
     }
 
     void App_Launcher::onDestroy()
@@ -156,51 +148,11 @@ namespace App
         /* Into that App */
         if (code == LV_EVENT_CLICKED)
         {
-            _app.selected = (lv_obj_get_index(obj) - 2) / 2;
-            _app.onCreate = true;
+            int idx = (lv_obj_get_index(obj) - 2) / 2;
+            // MOONCAKE::APP_BASE *app = static_cast<MOONCAKE::Mooncake *>(getAppPacker()->getFramwork())->getInstalledAppList()[idx]->getAddr();
+            // static_cast<MOONCAKE::Mooncake *>(getAppPacker()->getFramwork())->startApp();
+            // _app.onCreate = true;
         }
     }
 
-    void App_Launcher::updateAppManage()
-    {
-        // UI_LOG("updateAppManage");
-        /* App state manage, kind of like a FSM */
-        if (_app.onCreate)
-        {
-            _app.onCreate = false;
-            _app.isRunning = true;
-
-            /* Destroy launcher */
-            onDestroy();
-            /* Open App */
-            App::Register[_app.selected].getBsp(_device);
-            App::Register[_app.selected].onCreate();
-
-            UI_LOG("app isrunning %d %d \n", &_app, _app.isRunning);
-        }
-        if (_app.isRunning)
-        {
-            App::Register[_app.selected].onLoop();
-        }
-        if (_app.onDestroy)
-        {
-
-            UI_LOG("_app.onDestroy");
-            _app.onDestroy = false;
-            _app.isRunning = false;
-
-            /* Quit App */
-            App::Register[_app.selected].onDestroy();
-            /* Create launcher */
-            onCreate();
-        }
-    }
-
-    void App_Launcher::updateDeviceStatus()
-    {
-    }
-
-    void App_Launcher::sleep_mode()
-    {
-    }
 }

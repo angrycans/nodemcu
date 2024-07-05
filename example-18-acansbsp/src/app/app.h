@@ -2,14 +2,15 @@
 #pragma once
 
 #include "../acans-bsp/bsp.h"
-#include "App_Launcher/App_Launcher.h"
+#include <mooncake.h>
+#include "./App_tools.h"
 
 class APP
 {
 private:
     bool _inited;
     BSP *_device;
-    App::App_Launcher *_launcher;
+    // App::App_Launcher *_launcher;
 
 public:
     APP() : _inited(false) {}

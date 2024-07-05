@@ -6,30 +6,30 @@ int APP::init()
 
     if (_inited)
     {
-        UI_LOG("[APP] already inited\n");
+        spdlog::info("[APP] already inited\n");
         return -1;
     }
 
     /* Create bsp */
     _device = new BSP();
-    UI_LOG("[APP]  init...\n");
-    _launcher = new App::App_Launcher(_device);
+    spdlog::info("[APP]  init...\n");
+    // _launcher = new App::App_Launcher(_device);
     if (_device == NULL)
     {
-        UI_LOG("[APP] Launcher create failed\n");
+        spdlog::info("[APP] Launcher create failed\n");
         return -1;
     }
 
     _inited = true;
 
     /* Start launcher */
-    _launcher->onCreate();
+    //   _launcher->onCreate();
 
     return 0;
 }
 
 void APP::loop()
 {
-    lv_timer_handler();
-    _launcher->onLoop();
+    _device->loop();
+    // _launcher->onLoop();
 }
