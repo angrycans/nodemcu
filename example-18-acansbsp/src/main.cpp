@@ -1,5 +1,6 @@
 #include "Arduino.h"
 #include <lvgl.h>
+#include "acans-bsp/bsp.h"
 #include "./app/app.h"
 
 // APP app;
@@ -7,10 +8,10 @@
 
 #include "app/App_Launcher/App_Launcher.h"
 #include "app/App_Xlap/App_Xlap.h"
+
 using namespace MOONCAKE;
 
 Mooncake mooncake;
-APP app;
 
 void setup()
 {
@@ -19,8 +20,13 @@ void setup()
     Serial.println("main setup...");
     delay(1000);
     delay(3000);
+
+    BSP &bsp = BSP::getInstance();
+    bsp.init();
     mooncake.init();
-    app.init();
+
+    // APP *app = APP::getInstance();
+    // app->init();
 
     // 安装 App (工厂)
     // Install your app by app packer
@@ -46,6 +52,7 @@ void setup()
 void loop()
 {
     mooncake.update();
-    app.loop();
+    BSP &bsp = BSP::getInstance();
+    bsp.loop();
     delay(5);
 }

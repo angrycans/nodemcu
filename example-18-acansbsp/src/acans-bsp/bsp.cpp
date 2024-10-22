@@ -3,18 +3,26 @@
 
 BSP::BSP()
 {
-    init();
+
+    // init();
 }
 
 void BSP::init()
 {
     printBspInfos();
     lfs.init();
+#if BSP_MODULE_SD
     sd.init();
+#endif
 
 #if BSP_MODULE_LVGL
     lvgl.init();
 #endif
+
+#if BSP_MODULE_GPS
+    gps.init();
+#endif
+
     printf("%s\n", "BSP init ok");
 }
 
@@ -23,6 +31,10 @@ void BSP::loop()
 
 #if BSP_MODULE_LVGL
     lv_timer_handler();
+#endif
+
+#if BSP_MODULE_GPS
+    gps.loop();
 #endif
 }
 
@@ -74,6 +86,18 @@ void BSP::printBspInfos()
         Serial.print("Free PSRAM heap size: ");
         Serial.print(heap_info.total_free_bytes / (1024 * 1024));
         Serial.println(" M");
+    }
+
+    int core_id = xPortGetCoreID();
+
+    // 根据核 ID 打印不同的信息
+    if (core_id == 0)
+    {
+        Serial.println("current work PRO_CPU");
+    }
+    else if (core_id == 1)
+    {
+        Serial.println("current work APP_CPU");
     }
 
     printf("%s\n", "BSP init...");

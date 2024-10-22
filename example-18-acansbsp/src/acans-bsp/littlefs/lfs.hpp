@@ -11,11 +11,15 @@ public:
 
     inline void init()
     {
+        Serial.println("LittleFS start...");
         if (!LittleFS.begin())
         {
-            Serial.println("LittleFS 挂载失败");
+            Serial.println("LittleFS mount error");
         }
-        Serial.println("LittleFS 挂载成功");
+        else
+        {
+            Serial.println("LittleFS mount ok");
+        }
 
         // // 创建和写入文件
         // File file = LittleFS.open("/test1.txt", "r");

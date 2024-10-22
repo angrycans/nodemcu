@@ -28,7 +28,7 @@ public:
         /* Init spi */
         SPIClass *sd_spi = new SPIClass(HSPI);
         sd_spi->begin(CONFIG_SDCARD_SCK, CONFIG_SDCARD_MISO, CONFIG_SDCARD_MOSI, CONFIG_SDCARD_CS);
-        bool ret = SD.begin(CONFIG_SDCARD_CS, *sd_spi, 40000000);
+        bool ret = SD.begin(CONFIG_SDCARD_CS, *sd_spi, 80000000);
 
         if (!ret)
         {
@@ -49,8 +49,25 @@ public:
         Serial.printf("SD Card Size: %lluMB\n", cardSize);
 
         _inited = true;
+
         return ret;
     }
 
     inline bool isInited() { return _inited; }
+
+    // void logfile(const char *data)
+    // {
+
+    //     if (dataFile)
+    //     {
+    //         dataFile.println(data);
+    //         dataFile.flush();
+
+    //         // Serial.println(data);
+    //     }
+    // }
+
+    // void showlogfile()
+    // {
+    // }
 };

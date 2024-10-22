@@ -9,11 +9,13 @@
 #include "button/button.hpp"
 #include "led/led.hpp"
 #include "lvgl/bsp_lvgl.hpp"
+#include "gps/gps.h"
 
 /**
  * @brief Acans BSP
  *
  */
+
 class BSP
 {
 private:
@@ -47,6 +49,10 @@ public:
 
     LFS lfs;
 
+#if BSP_MODULE_GPS
+    HAL::BspGPS gps = HAL::BspGPS();
+#endif
+
     BSP();
 
     /**
@@ -62,4 +68,13 @@ public:
     void printBspInfos();
 
     void loop();
+
+    BSP(const BSP &) = delete;
+    BSP &operator=(const BSP &) = delete;
+
+    static BSP &getInstance()
+    {
+        static BSP instance; // 静态局部变量，唯一实例
+        return instance;
+    }
 };

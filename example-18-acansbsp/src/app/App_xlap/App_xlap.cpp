@@ -1,11 +1,20 @@
 #if 1
 #include "App_Xlap.h"
 #include "UI/ui.h"
-
-extern void ui_init();
+#include "../App_Tools.hpp"
 
 namespace App
 {
+
+    App_Xlap::App_Xlap()
+    {
+
+#if BSP_MODULE_GPS
+
+        race = new Race();
+
+#endif
+    }
 
     const char *App_Xlap_Packer::getAppName() { return "App_Xlap"; }
 
@@ -28,6 +37,13 @@ namespace App
         lv_label_set_text(label, buf);
     }
 
+    void App_Xlap::time_update(lv_timer_t *timer)
+    {
+
+        // 更新 LVGL 对象的值
+        lv_label_set_text_fmt(ui_TimeMinSec, "%s", formatTimeMs(millis()));
+    }
+
     void App_Xlap::onResume()
     {
         // _device->lvgl.init();
@@ -39,27 +55,28 @@ namespace App
         lv_obj_set_size(close_btn, 36, 36);
 
         lv_obj_add_event_cb(close_btn, button_event_cb, LV_EVENT_CLICKED, NULL);
+
+        lv_timer_t *_time_update_timer = lv_timer_create(time_update, 100, this);
+
+        time_update(_time_update_timer);
     }
 
     void App_Xlap::onRunning()
     {
-
-        // _device->lvgl.disable();
-
-        // updateAppManage();
-
-        // _device->lvgl.enable();
     }
 
     void App_Xlap::onDestroy()
     {
+
+        delete race;
     }
 
     void App_Xlap::button_event_cb(lv_event_t *e)
     {
+        BSP &bsp = BSP::getInstance();
+        bsp.gps.setRunning(!bsp.gps.getRunning());
     }
 
 }
-
 
 #endif

@@ -18,4 +18,23 @@
 #define BSP_LED_PIN 1
 #endif
 
+#define BSP_MODULE_SD 1
+
 #define BSP_MODULE_LVGL 1
+
+#define BSP_MODULE_GPS 1
+
+#if BSP_MODULE_GPS
+#define gpsSerial Serial1
+#define TXD1 8  // 串口 1使用的TX PIN
+#define RXD1 18 // 串口 1使用的RX PIN
+
+#define BSP_MODULE_GPS_NOFLASH 1
+#define gpsBUAD 115200
+
+#if BSP_MODULE_GPS_NOFLASH
+#define gpsCFGBUAD 9600
+
+#endif
+
+#endif

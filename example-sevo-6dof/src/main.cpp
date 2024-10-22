@@ -20,8 +20,8 @@ const unsigned int maxPeriod = samplePeriod;
 const unsigned int pulseLength = 5;
 
 const unsigned int minPos = 0;
-const unsigned int centerPos = 11000;
-const unsigned int maxPos = 22000;
+const unsigned int centerPos = 14500;
+const unsigned int maxPos = 29000;
 
 // msg format: P4aabbccdd!!
 // flypt mover: P4<axis1><axis2><axis3><axis4>!!
@@ -496,6 +496,8 @@ void setup()
   // motor_state[1] == ST_HOMING;
   // motor_state[2] == ST_HOMING;
   // motor_state[3] == ST_HOMING;
+
+  debug_println("setup ok.");
 }
 
 void command_check()
@@ -538,7 +540,7 @@ void command_check()
         // bgood += 8;
       }
     } // startMark2
-  }   // startMark1
+  } // startMark1
 }
 
 void motor_printX(int X)
@@ -863,18 +865,22 @@ void loop()
   case ST_IDLING:
     minPeriod = SPD_HOMING;
     run_state = ST_HOMING;
-    // homing_start ();
+
+    // todo 如何不需要检测扭矩到达或者0点到达 就不需要检测homeing_start 和下面的attachInterrupt
+    homing_start();
+
     delay4int(1000);
-    // #if 1
+#if 1
 
-    //     attachInterrupt(digitalPinToInterrupt(safe[0]), int_stop0, FALLING);
+    attachInterrupt(digitalPinToInterrupt(safe[0]), int_stop0, FALLING);
 
-    //     attachInterrupt(digitalPinToInterrupt(safe[1]), int_stop1, FALLING);
+    attachInterrupt(digitalPinToInterrupt(safe[1]), int_stop1, FALLING);
 
-    //     attachInterrupt(digitalPinToInterrupt(safe[2]), int_stop2, FALLING);
+    attachInterrupt(digitalPinToInterrupt(safe[2]), int_stop2, FALLING);
 
-    //     attachInterrupt(digitalPinToInterrupt(safe[3]), int_stop3, FALLING);
-    // #endif
+    attachInterrupt(digitalPinToInterrupt(safe[3]), int_stop3, FALLING);
+#endif
+
     break;
   case ST_HOMING:
   {
