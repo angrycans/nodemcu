@@ -20,8 +20,8 @@ const unsigned int maxPeriod = samplePeriod;
 const unsigned int pulseLength = 5;
 
 const unsigned int minPos = 0;
-const unsigned int centerPos = 14500;
-const unsigned int maxPos = 29000;
+const unsigned int centerPos = 10500;
+const unsigned int maxPos = 21000;
 
 // msg format: P4aabbccdd!!
 // flypt mover: P4<axis1><axis2><axis3><axis4>!!
@@ -179,7 +179,7 @@ volatile byte run_state = ST_IDLING;
 const unsigned int POS_HOME = 0;
 const unsigned int POS_CNTR = 32000;   // not scaled, full range
 const unsigned int POS_MAXI = 64000;   // not scaled, full range
-const unsigned int RANGE_SAFE = 28000; // 100mm行程=20000
+const unsigned int RANGE_SAFE = 21000; // 100mm行程=20000
 const unsigned int RANGE_DZ = 1;       // dead zone at the end of the range:
                                        //  each 200pos means 1 motor rotation, i.e. 5mm stroke
 const unsigned int HOME_DELAY = 2000;
