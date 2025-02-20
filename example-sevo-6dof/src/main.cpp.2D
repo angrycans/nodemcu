@@ -1,4 +1,6 @@
 /*
+By acans 2025/02/20 change
+2D 2轴，100mm行程代码
 开机自动归零点，然后去中位，flypt 的2d 没有park 自动回中。real_motors=2 flypt 正常设置
 */
 #include <Arduino.h>
