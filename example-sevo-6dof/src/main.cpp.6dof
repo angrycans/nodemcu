@@ -1,7 +1,5 @@
 /*
-卡丁车5轴 上层3轴 代码 行程100
-开机自动归零点，然后停止 ，real_motors=3 flypt 连接去中点
-*/
+老夏家300行程 斯图尔特 */
 #include <Arduino.h>
 // #define FAILSAFE //not useful if run at full speed
 #define NO_ACT_CHECK
@@ -19,12 +17,12 @@ const unsigned int maxPeriod = samplePeriod;
 const unsigned int pulseLength = 5;
 
 const unsigned int minPos = 0;
-const unsigned int centerPos = 5000;
-const unsigned int maxPos = 10000;
+const unsigned int centerPos = 15000;
+const unsigned int maxPos = 30000;
 
 // msg format: P4aabbccdd!!
 // flypt mover: P4<axis1><axis2><axis3><axis4>!!
-const unsigned int startMark1 = 'D';
+const unsigned int startMark1 = 'Y';
 const unsigned int startMark2 = '4';
 const unsigned int endMark1 = '!';
 const unsigned int endMark2 = '!';
@@ -180,7 +178,7 @@ volatile byte run_state = ST_IDLING;
 const unsigned int POS_HOME = 0;
 const unsigned int POS_CNTR = 32000;   // not scaled, full range
 const unsigned int POS_MAXI = 64000;   // not scaled, full range
-const unsigned int RANGE_SAFE = 20000; // 100mm行程=20000
+const unsigned int RANGE_SAFE = 30000; // 100mm行程=20000
 const unsigned int RANGE_DZ = 1000;    // dead zone at the end of the range:
 
 //  each 200pos means 1 motor rotation, i.e. 5mm stroke
