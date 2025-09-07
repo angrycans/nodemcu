@@ -1,6 +1,5 @@
 /*
-mini4dof 4轴 上层4轴 代码 行程50
-开机自动归零点，然后停止 ，real_motors=4 flypt 连接去中点
+300 行程 不需要检测零点的代码。
 */
 #include <Arduino.h>
 // #define FAILSAFE //not useful if run at full speed
@@ -19,19 +18,17 @@ const unsigned int maxPeriod = samplePeriod;
 const unsigned int pulseLength = 5;
 
 const unsigned int minPos = 0;
-const unsigned int centerPos = 2500;
-const unsigned int maxPos = 5000;
+const unsigned int centerPos = 15000;
+const unsigned int maxPos = 30000;
 
 // msg format: P4aabbccdd!!
 // flypt mover: P4<axis1><axis2><axis3><axis4>!!
-const unsigned int startMark1 = 'D';
+const unsigned int startMark1 = 'Y';
 const unsigned int startMark2 = '4';
 const unsigned int endMark1 = '!';
 const unsigned int endMark2 = '!';
 
 #define MAX_MOTORS 4
-#define REAL_MOTORS 4
-
 byte motors = 0;
 
 volatile unsigned int targetPos[MAX_MOTORS];
@@ -126,7 +123,7 @@ const byte dir3bit = B00001000;
 const unsigned long baudRate = 115200;
 
 #define SerialC Serial
-#define SerialD Serial3
+#define SerialD Serial2
 #define SerialDbg Serial
 
 #define DEBUG 1
@@ -180,10 +177,9 @@ volatile byte run_state = ST_IDLING;
 const unsigned int POS_HOME = 0;
 const unsigned int POS_CNTR = 32000;   // not scaled, full range
 const unsigned int POS_MAXI = 64000;   // not scaled, full range
-const unsigned int RANGE_SAFE = 10000; // 100mm行程=20000
-const unsigned int RANGE_DZ = 1000;    // dead zone at the end of the range:
-
-//  each 200pos means 1 motor rotation, i.e. 5mm stroke
+const unsigned int RANGE_SAFE = 60000; // 100mm行程=20000
+const unsigned int RANGE_DZ = 1;       // dead zone at the end of the range:
+                                       //  each 200pos means 1 motor rotation, i.e. 5mm stroke
 const unsigned int HOME_DELAY = 2000;
 volatile byte motor_state[] = {ST_IDLING, ST_IDLING, ST_IDLING, ST_IDLING};
 volatile unsigned int motor_mins[] = {POS_HOME + RANGE_DZ, POS_HOME + RANGE_DZ,
@@ -192,6 +188,7 @@ volatile unsigned int motor_maxs[] = {RANGE_SAFE - RANGE_DZ, RANGE_SAFE - RANGE_
                                       RANGE_SAFE - RANGE_DZ, RANGE_SAFE - RANGE_DZ};
 
 #define HOMING_INC 2
+
 void initTimers();
 void delay4int(int ms);
 void move0(unsigned int target);
@@ -207,8 +204,6 @@ int homing_start();
 
 void startTimer(byte motor, unsigned int period);
 void startTimerWithCrop(byte motor, unsigned int period);
-
-int serial_ok = 0;
 
 void delay4int(int ms)
 {
@@ -243,11 +238,12 @@ void fail_loop()
 int motors_count()
 {
 #ifdef NO_ACT_CHECK
-    motors = REAL_MOTORS;
+    motors = MAX_MOTORS;
     debug_print("#ACTs used: ");
     debug_println(motors);
-    return REAL_MOTORS;
+    return MAX_MOTORS;
 #endif
+
     //
     motors = 0;
     // check connection to motors 0..1
@@ -296,17 +292,12 @@ int motors_count()
 void motors_check()
 {
     if (motors == 0)
-    {
-        debug_println("motors_check start");
         fail_loop();
-    }
-
 // check connection to motors 0..1
 #ifdef NO_ACT_CHECK
-    // debug_println("NO_ACT_CHECK RETURN");
     return;
 #endif
-    debug_println("motors_check end");
+    debug_println("motors_check go....");
 
     //
     if (digitalRead(pres[0])) // NOK
@@ -479,22 +470,32 @@ void setup()
     // enable all interrupts
     interrupts();
     //
-    SerialDbg.begin(baudRate);
+    SerialD.begin(baudRate);
     digitalWrite(led_pin, HIGH);
     SerialC.begin(baudRate);
     if (DEBUG)
         delay4int(250);
-    motors_count();
 
+    debug_print("setup start1...\n");
+
+    int m_count = motors_count();
+
+    debug_print("motors_count=");
+    debug_println(m_count);
     // check motors for readiness
-    debug_println("setup motors_check start");
     motors_check();
     // ready motors
     for (int i = 0; i < motors; i++)
     {
         digitalWrite(ena[i], LOW); // motors on by default!?!
     }
-    debug_println("setup ok");
+
+    // motor_state[0] == ST_HOMING;
+    // motor_state[1] == ST_HOMING;
+    // motor_state[2] == ST_HOMING;
+    // motor_state[3] == ST_HOMING;
+
+    debug_println("setup ok.");
 }
 
 void command_check()
@@ -506,16 +507,13 @@ void command_check()
     }
     if (SerialC.read() == startMark1)
     {
-        // debug_println("CMDm1 startMark1");
-
+        debug2_println("CMDm1");
         while (SerialC.available() < 1)
         {
             ;
         }
         if (SerialC.read() == startMark2)
         {
-            // debug_println("CMDm1 startMark2");
-
             while (SerialC.available() < MAX_MOTORS * 2 + 2)
             {
                 ;
@@ -529,9 +527,6 @@ void command_check()
             em2 = SerialC.read();
             if (em1 == endMark1 && em2 == endMark2)
             {
-                // debug_print("CMDm1 endmark ok targetInput[0]=");
-                // debug_println(targetInput[0]);
-
                 if (motors > 0)
                     move0(targetInput[0]);
                 if (motors > 1)
@@ -569,8 +564,7 @@ void motor_printX(int X)
 
 void motor_parkX(int X)
 {
-    // uint32_t ctr_pos = ((uint32_t)motor_mins[X] + (uint32_t)motor_maxs[X]) / 2;
-    uint32_t ctr_pos = (uint32_t)motor_mins[X]; // todo angrycans  change to try to min
+    uint32_t ctr_pos = ((uint32_t)motor_mins[X] + (uint32_t)motor_maxs[X]) / 2;
     debug_print("M");
     debug_print(X, DEC);
     debug_print(" parking at ");
@@ -578,19 +572,19 @@ void motor_parkX(int X)
     switch (X)
     {
     case 0:
-        targetInput[0] = ctr_pos;
+        targetInput[0] = 0;
         move0(targetInput[0]);
         break;
     case 1:
-        targetInput[1] = ctr_pos;
+        targetInput[1] = 0;
         move1(targetInput[1]);
         break;
     case 2:
-        targetInput[2] = ctr_pos;
+        targetInput[2] = 0;
         move2(targetInput[2]);
         break;
     case 3:
-        targetInput[3] = ctr_pos;
+        targetInput[3] = 0;
         move3(targetInput[3]);
         break;
     }
@@ -632,8 +626,6 @@ int homing_start()
         move2(targetInput[2]);
     if (motors > 3)
         move3(targetInput[3]);
-
-    debug_println("\n>>homing start end");
 }
 
 // checks limit reached and changes target position fwd or bkwd
@@ -761,20 +753,14 @@ int homing_checkX(int X)
         debug_print(X, DEC);
         debug_print(" centering at ");
         debug_println(currentPos[X], DEC);
-        debug_print("M");
-        debug_print(X, DEC);
-        debug_print(" motor_mins is ");
-        debug_println(motor_mins[X], DEC);
-
         if (currentPos[X] <= motor_mins[X])
         {
             // try again, keep it moving
             // since the Treach signal may be triggered several times
             mmove_try[X]++;
             // new center pos: min + (max - min)/2 = (2min + max - min)/2 = (min + max)/2
-            // uint32_t ctr_pos = ((uint32_t)motor_mins[X] + (uint32_t)motor_maxs[X]) / 2;
-            // targetInput[X] = (uint16_t)ctr_pos + mmove_try[X];
-            targetInput[X] = motor_mins[X] + mmove_try[X]; // todo angrycans  change to try to min
+            uint32_t ctr_pos = ((uint32_t)motor_mins[X] + (uint32_t)motor_maxs[X]) / 2;
+            targetInput[X] = (uint16_t)motor_mins[X] + mmove_try[X];
         }
         else
         {
@@ -806,8 +792,6 @@ int homing_checkX(int X)
 
 int homing_done()
 {
-    // debug_println("homing_done start");
-
     int mk = 0;
     // M0
     if (motors > 0 && isRunning[0] == false)
@@ -841,9 +825,6 @@ int homing_done()
         else
             homing_checkX(3);
     }
-    // debug_print("homing_done start return ");
-    // debug_println((mk == motors) ? 1 : 0);
-
     return (mk == motors) ? 1 : 0;
     // return (mk == 1)?1:0;
 }
@@ -876,37 +857,34 @@ void ledk_act(long loops)
 
 void loop()
 {
-
     motors_check();
     switch (run_state)
     {
     case ST_IDLING:
         minPeriod = SPD_HOMING;
         run_state = ST_HOMING;
-        debug_println("loop ST_IDLING>>homing start");
-        homing_start();
-        delay4int(1000);
-#if 1
 
-        attachInterrupt(digitalPinToInterrupt(safe[0]), int_stop0, FALLING);
+        // todo 如何不需要检测扭矩到达或者0点到达 就不需要检测homeing_start 和下面的attachInterrupt
+        //     homing_start();
 
-        attachInterrupt(digitalPinToInterrupt(safe[1]), int_stop1, FALLING);
+        //     delay4int(1000);
+        // #if 1
 
-        attachInterrupt(digitalPinToInterrupt(safe[2]), int_stop2, FALLING);
+        //     attachInterrupt(digitalPinToInterrupt(safe[0]), int_stop0, FALLING);
 
-        attachInterrupt(digitalPinToInterrupt(safe[3]), int_stop3, FALLING);
-#endif
-        debug_println("loop ST_IDLING>>homing start end");
+        //     attachInterrupt(digitalPinToInterrupt(safe[1]), int_stop1, FALLING);
+
+        //     attachInterrupt(digitalPinToInterrupt(safe[2]), int_stop2, FALLING);
+
+        //     attachInterrupt(digitalPinToInterrupt(safe[3]), int_stop3, FALLING);
+        // #endif
 
         break;
     case ST_HOMING:
     {
-        // debug_println("loop ST_HOMING>>homing done start");
 
         if (homing_done())
         {
-            debug_println("homing_done IF start");
-
             minPeriod = SPD_FASTST;
             run_state = ST_RUNING;
             if (motors > 0)
@@ -924,7 +902,6 @@ void loop()
             while (SerialC.available())
             {
                 // digitalWrite(led_pin, HIGH);
-                debug_println("SerialC RESV");
                 SerialC.read();
                 // delay4int (100);
                 // digitalWrite(led_pin, LOW);
@@ -932,30 +909,15 @@ void loop()
             }
             digitalWrite(led_pin, HIGH);
             ledk = 0;
-            debug_println("homing_done IF  end");
-            debug_print("Status=");
-            debug_println(ST_RUNING);
         }
-        else
-            ledk_act(20000 / HOMING_INC);
+        // else
+        //   ledk_act(20000/HOMING_INC);
     }
-    // debug_println("loop ST_HOMING>>homing done start end");
-
     break;
     case ST_RUNING:
-        // debug_println("loop ST_RUNING>>start");
-
         if (SerialC.available())
         {
-            if (serial_ok < 10)
-            {
-                debug_print("SerialC.available() n=");
-                debug_println(serial_ok);
-
-                serial_ok++;
-            }
-            // debug_print("SerialC.available() n=");
-            // debug_println("SerialC RESV");
+            // digitalWrite(led_pin, LOW);
             ledk_act(2);
             command_check();
         }
@@ -1215,7 +1177,7 @@ void move1(unsigned int target)
         }
     }
 }
-#if 1
+
 void move2(unsigned int target)
 {
     if (targetPos[2] != target)
@@ -1287,7 +1249,7 @@ void move3(unsigned int target)
         }
     }
 }
-#endif
+
 // timing is critical, change nothing here
 ISR(TIMER1_COMPA_vect, ISR_BLOCK)
 {
