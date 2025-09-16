@@ -1,6 +1,7 @@
 {
   "cmake.configureOnOpen": false,
   "files.associations": {
-    "*.minigf": "cpp"
+    "*.minigf": "cpp",
+    "*.6timer": "cpp"
   }
 }

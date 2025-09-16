@@ -24,12 +24,12 @@ const unsigned int maxPos = 5000;
 // msg format: P4aabbccdd!!
 // flypt mover: P6<axis1><axis2><axis3><axis4><axis5><axis6>!!
 const unsigned int startMark1 = 'P';
-const unsigned int startMark2 = '6';
+const unsigned int startMark2 = '5';
 const unsigned int endMark1 = '!';
 const unsigned int endMark2 = '!';
 
-#define MAX_MOTORS 6
-#define REAL_MOTORS 6
+#define MAX_MOTORS 5
+#define REAL_MOTORS 5
 
 byte motors = 0;
 
@@ -52,8 +52,8 @@ const byte ocr4bPin = 7;
 // pulse 3 -> cn2 m3 p3
 const byte ocr5bPin = 45;
 
-const byte ocr6bPin = 4; // 新增
-const byte ocr7bPin = 9; // 新增
+const byte ocr6bPin = 9; // 新增
+// const byte ocr7bPin = 9; // 新增
 
 // direction 0 -> cn2 m0 p4
 const byte dir0 = A0; // 30;
@@ -64,8 +64,8 @@ const byte dir2 = A2; // 32;
 // direction 3 -> cn2 m3 p4
 const byte dir3 = A3; // 33;
 
-const byte dir4 = A4; // 32;
-const byte dir5 = A5; // 33;
+const byte dir4 = A5; // 32;
+// const byte dir5 = A5; // 33;
 
 // todo: move these to bitfield
 volatile byte safe0s = LOW;
@@ -84,13 +84,13 @@ const byte safe2p = 20;
 // torque-reach 0 -> cn2 m3 p23
 const byte safe3p = 21;
 
-const byte safe4p = 16; // 新增
-const byte safe5p = 17; // 新增
+const byte safe4p = 17; // 新增
+// const byte safe5p = 17; // 新增
 
-byte safe[] = {safe0p, safe1p, safe2p, safe3p, safe4p, safe5p};
+byte safe[] = {safe0p, safe1p, safe2p, safe3p, safe4p};
 
-byte dir[] = {dir0, dir1, dir2, dir3, dir4, dir5};
-byte pulse[] = {ocr1bPin, ocr3bPin, ocr4bPin, ocr5bPin, ocr6bPin, ocr7bPin};
+byte dir[] = {dir0, dir1, dir2, dir3, dir4};
+byte pulse[] = {ocr1bPin, ocr3bPin, ocr4bPin, ocr5bPin, ocr6bPin};
 
 // fast digital write for direction pins D30..D33
 // #define setDirDown(b) PORTC |= (b)
@@ -102,8 +102,7 @@ const byte dir0bit = B00000001;
 const byte dir1bit = B00000010;
 const byte dir2bit = B00000100;
 const byte dir3bit = B00001000;
-const byte dir4bit = B00010000; // 5th bit
-const byte dir5bit = B00100000; // 6th bit
+const byte dir4bit = B00100000; // 5th bit
 
 // const byte dir0bit = B10000000;
 // const byte dir1bit = B01000000;
@@ -149,9 +148,6 @@ const unsigned long baudRate = 115200;
             SerialDbg.print(__VA_ARGS__); \
     } while (0)
 
-/* clock divider for timers /8 = 2MHz*/
-const byte PRESCALE = B10;
-
 // for direction pins
 const bool UP = LOW;
 const bool DOWN = HIGH;
@@ -173,7 +169,7 @@ const unsigned int RANGE_DZ = 1000;    // dead zone at the end of the range:
 
 //  each 200pos means 1 motor rotation, i.e. 5mm stroke
 const unsigned int HOME_DELAY = 2000;
-volatile byte motor_state[MAX_MOTORS] = {ST_IDLING, ST_IDLING, ST_IDLING, ST_IDLING, ST_IDLING, ST_IDLING};
+volatile byte motor_state[MAX_MOTORS] = {ST_IDLING, ST_IDLING, ST_IDLING, ST_IDLING, ST_IDLING};
 volatile unsigned int motor_mins[MAX_MOTORS] = {POS_HOME + RANGE_DZ, POS_HOME + RANGE_DZ, POS_HOME + RANGE_DZ, POS_HOME + RANGE_DZ, POS_HOME + RANGE_DZ, POS_HOME + RANGE_DZ};
 volatile unsigned int motor_maxs[MAX_MOTORS] = {RANGE_SAFE - RANGE_DZ, RANGE_SAFE - RANGE_DZ, RANGE_SAFE - RANGE_DZ, RANGE_SAFE - RANGE_DZ, RANGE_SAFE - RANGE_DZ, RANGE_SAFE - RANGE_DZ};
 
@@ -185,7 +181,6 @@ void move1(unsigned int target);
 void move2(unsigned int target);
 void move3(unsigned int target);
 void move4(unsigned int target);
-void move5(unsigned int target);
 
 unsigned int mapToRangeX(int X, unsigned int pos);
 void command_check();
@@ -218,7 +213,6 @@ void fail_loop()
     stopSignal[2] = true; // stop motor
     stopSignal[3] = true; // stop motor
     stopSignal[4] = true; // stop motor
-    stopSignal[5] = true; // stop motor
     //
     while (1) // do nothing else here, wait for reset
     {
@@ -315,18 +309,6 @@ void int_stop4()
         stopSignal[4] = true; // stop motor
 }
 
-void int_stop5()
-{
-    debug_print("#M5!");
-    debug_print(safe5s);
-    debug_print("#");
-    if (safe5s == HIGH)
-        return;
-    safe5s = HIGH;
-    if (run_state == ST_HOMING)
-        stopSignal[5] = true; // stop motor
-}
-
 void setup()
 {
     pinMode(led_pin, OUTPUT);
@@ -398,7 +380,6 @@ void command_check()
             targetInput[2] = mapToRangeX(2, SerialC.read() << 8 | SerialC.read());
             targetInput[3] = mapToRangeX(3, SerialC.read() << 8 | SerialC.read());
             targetInput[4] = mapToRangeX(4, SerialC.read() << 8 | SerialC.read());
-            targetInput[5] = mapToRangeX(5, SerialC.read() << 8 | SerialC.read());
             //
             em1 = SerialC.read();
             em2 = SerialC.read();
@@ -417,8 +398,7 @@ void command_check()
                     move3(targetInput[3]);
                 if (motors > 4)
                     move4(targetInput[4]);
-                if (motors > 5)
-                    move5(targetInput[5]);
+
                 // bgood += 8;
             }
         } // startMark2
@@ -476,9 +456,6 @@ void motor_parkX(int X)
         targetInput[4] = ctr_pos;
         move4(targetInput[4]);
         break;
-    case 5:
-        targetInput[5] = ctr_pos;
-        move5(targetInput[5]);
     }
 }
 
@@ -515,12 +492,7 @@ int homing_start()
         targetInput[4] = 2000 * HOMING_INC; // mapToRange(POS_MAXI);
         motor_state[4] = ST_HOMING;
     }
-    // M5
-    if (motors > 5)
-    {
-        targetInput[5] = 2000 * HOMING_INC; // mapToRange(POS_MAXI);
-        motor_state[5] = ST_HOMING;
-    }
+
     //
     if (motors > 0)
         move0(targetInput[0]);
@@ -532,8 +504,6 @@ int homing_start()
         move3(targetInput[3]);
     if (motors > 4)
         move4(targetInput[4]);
-    if (motors > 5)
-        move5(targetInput[5]);
 
     debug_println("\n>>homing start end");
 }
@@ -584,13 +554,7 @@ int homing_limitX(int X, int stp)
         }
         break;
 
-    case 5:
-        if (safe5s == HIGH)
-        {
-            safe5s = LOW;
-            return 1;
-        }
-        break;
+           break;
     }
     // we can move on with step <stp>
     targetInput[X] += stp;
@@ -780,9 +744,10 @@ int homing_done()
         else
             homing_checkX(5);
     }
-    // debug_print("homing_done start return ");
-    // debug_println((mk == motors) ? 1 : 0);
 
+    debug_println(mk, DEC);
+    debug_println(motors, DEC);
+    debug_println((mk == motors) ? 1 : 0);
     return (mk == motors) ? 1 : 0;
     // return (mk == 1)?1:0;
 }
