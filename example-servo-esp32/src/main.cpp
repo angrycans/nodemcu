@@ -35,6 +35,16 @@ const uint8_t LIMIT_PIN[AXIS_NUM] = {35, 36, 37, 38, 39, 40};
 #define HOME_SPEED 3000
 #define HOME_ACCEL 8000
 #define EXEC_INTERVAL_MS 10
+
+// ===== 自适应 DEADZONE（物理量）=====
+#define DEADZONE_MM_MIN 0.01f // 10μm（低速精细）
+#define DEADZONE_MM_MAX 0.05f // 50μm（高速稳定）
+
+int32_t calcAdaptiveDeadzoneSteps(
+    int32_t newTarget,
+    int32_t lastTarget,
+    uint32_t dt_ms);
+void applyTargets(uint32_t dt);
 #endif
 
 /*************************************************
@@ -62,44 +72,49 @@ int32_t targetStep[AXIS_NUM] = {0};
 int32_t lastTargetStep[AXIS_NUM] = {0};
 static uint32_t lastExecTime = 0;
 
+// ===== 电机行程参数 =====
+
+const float STEPS_PER_MM =
+    (MOTOR_STEPS_REV * MICROSTEPS) / LEAD_MM_PER_REV; // 800
+
+const float AXIS_STROKE_MM[AXIS_NUM] = {
+  100.0f, // Axis 1
+  100.0f, // Axis 2
+  100.0f,  // Axis 3
+  100.0f, // Axis 4
+  100.0f,  // Axis 5
+  100.0f   // Axis 6
+};
+
 // ===== Homing 参数 =====
 
 // ① 预退让距离：确保一开始不压在限位上
 const int32_t HOME_PREMOVE_MM = 10; // 10mm
+const int32_t HOME_BACKOFF_MM = 2;  // 回退 2mm
 
-#define HOME_PREMOVE_STEPS \
-  (int32_t)(HOME_PREMOVE_MM * STEPS_PER_MM)
+const int32_t HOME_PREMOVE_STEPS =
+    (int32_t)(HOME_PREMOVE_MM * STEPS_PER_MM);
 
-const int32_t HOME_BACKOFF_MM = 2; // 回退 2mm
-#define HOME_BACKOFF_STEPS \
-  (int32_t)(HOME_BACKOFF_MM * STEPS_PER_MM)
+const int32_t HOME_BACKOFF_STEPS =
+    (int32_t)(HOME_BACKOFF_MM * STEPS_PER_MM);
 
 bool homed[AXIS_NUM] = {false};
 bool homingActive[AXIS_NUM] = {false};
 
-// ===== 电机行程参数 =====
-const float STROKE_MM = 100.0;
-const float STEPS_PER_MM =
-    (MOTOR_STEPS_REV * MICROSTEPS) / LEAD_MM_PER_REV; // 800
-
-const int32_t MOTOR_MIN_STEP = 0;
-const int32_t MOTOR_MAX_STEP = (int32_t)(STROKE_MM * STEPS_PER_MM); // 240000
-
 // ===== FlyPT 16bit 全量定义 =====
 const uint32_t POS_HOME = 0;
-const uint32_t POS_CNTR = 32000; // 中位（逻辑）
-const uint32_t POS_MAXI = 64000; // 旧代码里用 64000，不用 65535
+// const uint32_t POS_CNTR = 32000; // 中位（逻辑）
+const uint32_t POS_MAXI = 65535; // 旧代码里用 64000，不用 65535
 
 // ===== 电机安全范围（抽象步数）=====
-const uint32_t RANGE_DZ = 1000; // 末端死区. ? 是不是应该使用mm
+#define RANGE_DZ_MM 1.0f // 1mm 安全边界
+const uint32_t RANGE_DZ =
+    (uint32_t)(RANGE_DZ_MM * STEPS_PER_MM);
 
 // ===== 电机每个轴位置变量 =====
-uint32_t motor_mins[AXIS_NUM] = {
-    0, 0, 0, 0, 0, 0};
+uint32_t motor_mins[AXIS_NUM] = {0};
 
-uint32_t motor_maxs[AXIS_NUM] = {
-    MOTOR_MAX_STEP, MOTOR_MAX_STEP, MOTOR_MAX_STEP,
-    MOTOR_MAX_STEP, MOTOR_MAX_STEP, MOTOR_MAX_STEP};
+uint32_t motor_maxs[AXIS_NUM] = {0};
 
 // ===== 每轴逻辑中位（步数）=====
 uint32_t motor_center[AXIS_NUM];
@@ -133,6 +148,7 @@ uint16_t cmap_uint16(uint32_t x,
                      uint32_t out_min,
                      uint32_t out_max);
 uint32_t mapToRangeX(uint8_t axis, uint16_t pos);
+void initAxisRange();
 void testMoveMinus100mm(uint8_t axis);
 
 void setup()
@@ -169,12 +185,14 @@ void setup()
     pinMode(LIMIT_PIN[i], INPUT_PULLUP);
   }
 
+  initAxisRange();
 
   Serial.println("ESP32-S3 FlyPT 6DOF READY");
 
   delay(3000);
   // testMoveMinus100mm(0);
-  for(int i=0; i<AXIS_NUM; i++) startHoming(i);
+  for (int i = 0; i < AXIS_NUM; i++)
+    startHoming(i);
 }
 
 void loop()
@@ -186,8 +204,10 @@ void handleSerial()
 {
   while (Serial.available() >= (2 + AXIS_NUM * 2 + 2))
   {
-    if (Serial.read() != 'Y') continue;
-    if (Serial.read() != '4') continue;
+    if (Serial.read() != 'Y')
+      continue;
+    if (Serial.read() != '4')
+      continue;
 
     for (int i = 0; i < AXIS_NUM; i++)
     {
@@ -205,32 +225,27 @@ void handleSerial()
       continue;
 
 #ifdef USE_STEPPER
-    uint32_t now = millis();
-    if (now - lastExecTime <= EXEC_INTERVAL_MS)
-      return;
 
+    uint32_t now = millis();
+    uint32_t dt = now - lastExecTime;
+    if (dt < EXEC_INTERVAL_MS)
+      return;
     lastExecTime = now;
+
 #endif
 
-    for (int i = 0; i < AXIS_NUM; i++)
-    {
-      if (!homed[i]) continue;
-
 #ifdef USE_STEPPER
-      int32_t diff =
-          (int32_t)targetStep[i] - (int32_t)lastTargetStep[i];
-
-      if (diff > 20 || diff < -20)
-      {
-        stepper[i]->moveTo(targetStep[i]);
-        lastTargetStep[i] = targetStep[i];
-      }
+    applyTargets(dt);
 #endif
 
 #ifdef USE_SERVO
+    for (int i = 0; i < AXIS_NUM; i++)
+    {
+      if (!homed[i])
+        continue;
       stepper[i]->moveTo(targetStep[i]);
-#endif
     }
+#endif
   }
 }
 
@@ -300,7 +315,7 @@ void handleHoming()
 
         Serial.printf("Axis %d homing: HIT LIMIT\n", i + 1);
 
-        return; // ⭐ 必须立即退出
+        break; // ⭐ 必须立即退出
       }
 
       // ===== SEEK 走到目标但没命中限位 =====
@@ -319,7 +334,8 @@ void handleHoming()
             "ERROR: Axis %d homing FAILED (limit not found)\n",
             i + 1);
 
-        return;
+        break;
+        ;
       }
     }
     break;
@@ -365,11 +381,9 @@ uint16_t cmap_uint16(uint32_t x,
   return (uint16_t)rv;
 }
 
-
 uint32_t mapToRangeX(uint8_t axis, uint16_t pos)
 {
   return cmap_uint16(pos, POS_HOME, POS_MAXI, motor_mins[axis] + RANGE_DZ, motor_maxs[axis] - RANGE_DZ);
-
 }
 
 void testMoveMinus100mm(uint8_t axis)
@@ -400,4 +414,66 @@ void testMoveMinus100mm(uint8_t axis)
 
   // ===== 反向运动 100mm =====
   stepper[axis]->moveTo(move_steps);
+}
+
+#ifdef USE_STEPPER
+int32_t calcAdaptiveDeadzoneSteps(
+    int32_t newTarget,
+    int32_t lastTarget,
+    uint32_t dt_ms)
+{
+
+   if (dt_ms == 0)
+    dt_ms = 1;
+  // 目标速度（steps/ms）
+  int32_t delta = newTarget - lastTarget;
+  float v = fabsf((float)delta) / (float)dt_ms;
+
+  // 经验上：5~50 steps/ms 是“慢→快”区间
+  float alpha = constrain(v / 50.0f, 0.0f, 1.0f);
+
+  float dz_mm =
+      DEADZONE_MM_MIN +
+      alpha * (DEADZONE_MM_MAX - DEADZONE_MM_MIN);
+
+  return (int32_t)(dz_mm * STEPS_PER_MM);
+}
+
+void applyTargets(uint32_t dt)
+{
+  for (int i = 0; i < AXIS_NUM; i++)
+  {
+    if (!homed[i])
+      continue;
+    int32_t newTarget = targetStep[i];
+    int32_t lastTarget = lastTargetStep[i];
+
+    int32_t dz = calcAdaptiveDeadzoneSteps(
+        newTarget,
+        lastTarget,
+        dt);
+
+    int32_t diff = (int32_t)targetStep[i] - (int32_t)lastTargetStep[i];
+    if (diff > dz || diff < -dz)
+
+    {
+      stepper[i]->moveTo(newTarget);
+      lastTargetStep[i] = newTarget;
+    }
+  }
+}
+
+#endif
+
+
+void initAxisRange()
+{
+  for (int i = 0; i < AXIS_NUM; i++)
+  {
+    motor_maxs[i] =
+        (int32_t)(AXIS_STROKE_MM[i] * STEPS_PER_MM);
+
+    motor_center[i] =
+        (motor_mins[i] + motor_maxs[i]) / 2;
+  }
 }
