@@ -39,8 +39,8 @@ float LEAD_MM_PER_REV[AXIS_NUM] = {
 #define ACCEL 120000
 
 // ===== Homing 参数 =====
-#define HOME_SPEED 3000
-#define HOME_ACCEL 8000
+#define HOME_SPEED 10000
+#define HOME_ACCEL 40000
 #define EXEC_INTERVAL_MS 10
 
 // ===== 自适应 DEADZONE（物理量）=====
@@ -169,36 +169,26 @@ void setup()
   delay(3000);
   Serial.println("setup start...");
 
-  engine.init();
    for (int i = 0; i < AXIS_NUM; i++)
   {
     pinMode(LIMIT_PIN[i], INPUT_PULLUP);
   }
 
-  for (int i = 0; i < AXIS_NUM; i++)
-  {
-    stepper[i] = engine.stepperConnectToPin(STEP_PIN[i]);
-    if (!stepper[i])
-    {
-      Serial.printf("Stepper %d failed\n", i);
-      continue;
-    }
+engine.init();
 
-    stepper[i]->setDirectionPin(DIR_PIN[i]);
-    stepper[i]->setAutoEnable(true);
+  stepper[0] = engine.stepperConnectToPin(STEP_PIN[0]);
+  stepper[0]->setDirectionPin(DIR_PIN[0]);
+  //stepper[0]->setAutoEnable(true);
 
-    stepper[i]->setSpeedInHz(SPEED_HZ);
-    stepper[i]->setAcceleration(ACCEL);
-    stepper[i]->setCurrentPosition(0);
+  stepper[0]->setSpeedInHz(10000);     // ⭐极慢
+  stepper[0]->setAcceleration(100000); // ⭐极小
 
-    homed[i] = false;
-    homingActive[i] = false;
-    homingState[i] = HOME_IDLE;
-  }
+  stepper[0]->setCurrentPosition(0);
+  delay(100);
+  stepper[0]->move(8000); // 2mm
+  
 
- 
-
-  initAxisRange();
+  //initAxisRange();
 
   Serial.println("ESP32-S3 FlyPT 6DOF READY");
 
@@ -206,9 +196,11 @@ void setup()
   // testMoveMinus100mm(0);
 
   HomingActiveNum = 0;
-  for (int i = 0; i < AXIS_NUM; i++){
-      startHoming(i);
-  }
+
+  //startHoming(0);
+  // for (int i = 0; i < AXIS_NUM; i++){
+  //     startHoming(i);
+  // }
     
 }
 
@@ -217,14 +209,40 @@ void loop()
 
   if (HomingActiveNum < AXIS_NUM-1)
   {
-    handleHoming();
+   // handleHoming();
   }
   else
   {
-    handleSerial();
+   // handleSerial();
    //Serial.println(HomingActiveNum);
   }
 }
+
+
+void startHoming(uint8_t axis)
+{
+
+  if (axis >= AXIS_NUM)
+    return;
+
+  Serial.printf("Axis %d homing: PREMOVE start\n", axis + 1);
+
+  homed[axis] = false;
+  homingActive[axis] = true;
+  homingState[axis] = HOME_PREMOVE;
+
+  stepper[axis]->forceStop();
+  stepper[axis]->setSpeedInHz(HOME_SPEED);
+  stepper[axis]->setAcceleration(HOME_ACCEL);
+  
+
+  // ⭐ ① 预退让：远离限位
+  stepper[axis]->move(+home_premove_steps(axis));
+
+  Serial.printf("Axis %d homing: PREMOVE\n", axis + 1);
+}
+
+
 
 void handleSerial()
 {
@@ -263,29 +281,6 @@ void handleSerial()
     }
 #endif
   }
-}
-
-void startHoming(uint8_t axis)
-{
-
-  if (axis >= AXIS_NUM)
-    return;
-
-  
-  homed[axis] = false;
-  homingActive[axis] = true;
-  homingState[axis] = HOME_PREMOVE;
-
-  stepper[axis]->forceStop();
-  stepper[axis]->setSpeedInHz(HOME_SPEED);
-  stepper[axis]->setAcceleration(HOME_ACCEL);
-  stepper[axis]->setCurrentPosition(0);
-
-
-  // ⭐ ① 预退让：远离限位
-  stepper[axis]->move(home_premove_steps(axis));
-
-  Serial.printf("Axis %d homing: PREMOVE\n", axis + 1);
 }
 
 void handleHoming()
