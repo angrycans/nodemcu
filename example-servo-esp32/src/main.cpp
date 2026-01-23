@@ -149,7 +149,7 @@ void loop();
 void startHoming(uint8_t axis);
 void handleSerial();
 void handleHoming();
-uint16_t cmap_uint16(uint32_t x,
+uint32_t cmap_uint32(uint32_t x,
                      uint32_t in_min,
                      uint32_t in_max,
                      uint32_t out_min,
@@ -169,7 +169,7 @@ void setup()
   delay(3000);
   Serial.println("setup start...");
 
-  engine.init();
+  engine.init();                                                                                                                                                                                                                             
    for (int i = 0; i < AXIS_NUM; i++)
   {
     pinMode(LIMIT_PIN[i], INPUT_PULLUP);
@@ -389,25 +389,29 @@ void handleHoming()
   }
 }
 
-uint16_t cmap_uint16(uint32_t x,
+uint32_t cmap_uint32(uint32_t x,
                      uint32_t in_min,
                      uint32_t in_max,
                      uint32_t out_min,
                      uint32_t out_max)
 {
-  uint32_t rv =
-      (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+  uint64_t rv =
+      (uint64_t)(x - in_min) * (out_max - out_min)
+      / (in_max - in_min)
+      + out_min;
 
   if (rv > out_max)
     rv = out_max;
   if (rv < out_min)
     rv = out_min;
-  return (uint16_t)rv;
+
+  return (uint32_t)rv;
 }
+
 
 uint32_t mapToRangeX(uint8_t axis, uint16_t pos)
 {
-  return cmap_uint16(pos, POS_HOME, POS_MAXI, motor_mins[axis] + RANGE_DZ(axis), motor_maxs[axis] - RANGE_DZ(axis));
+  return cmap_uint32(pos, POS_HOME, POS_MAXI, motor_mins[axis] + RANGE_DZ(axis), motor_maxs[axis] - RANGE_DZ(axis));
 }
 
 void testMoveMinus100mm(uint8_t axis)
