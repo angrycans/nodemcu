@@ -49,8 +49,8 @@ def main():
       
         # ===== 示例 2：1 号轴 → 50mm 对应值 =====
         # 如果 300mm 行程：50 / 300 * 65535
-        axis1_50mm = int(100 / 100 * 65535)
-        axis2_40mm = int(90 / 100 * 65535)
+        axis1_50mm = int(50 / 100 * 65535)
+        axis2_40mm = int(20 / 100 * 65535)
 
         send_flypt_Y4(ser, [axis1_50mm, axis2_40mm, 0])
 

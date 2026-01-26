@@ -1,5 +1,8 @@
 #include <Arduino.h>
 #include <FastAccelStepper.h>
+#include <EEPROM.h>
+
+
 
 #define AXIS_NUM 6
 #define SERIAL_BAUD 115200
@@ -8,21 +11,21 @@ FastAccelStepperEngine engine;
 FastAccelStepper *stepper[AXIS_NUM];
 
 // ===== GPIO 定义（可按你实际接线改）=====
-const uint8_t STEP_PIN[AXIS_NUM] = {5, 7, 9, 11, 13, 15};
-const uint8_t DIR_PIN[AXIS_NUM] = {4, 6, 8, 10, 12, 14};
+const uint8_t STEP_PIN[AXIS_NUM] = {5, 7, 11, 13, 19, 15};
+const uint8_t DIR_PIN[AXIS_NUM] = {4, 6, 8, 12, 14, 20};
 const uint8_t LIMIT_PIN[AXIS_NUM] = {35, 36, 37, 38, 39, 40};
+// false = 默认方向, true = 软件反向
 
 /*************************************************
  *  驱动类型选择
  *************************************************/
-// #define USE_SERVO   // ← 用伺服时打开
-#define USE_STEPPER // ← 用步进时打开
+#define USE_SERVO   // ← 用伺服时打开
+//#define USE_STEPPER // ← 用步进时打开
 
 /*************************************************
  *  步进电机参数（测试阶段）
  *************************************************/
 #ifdef USE_STEPPER
-
 float LEAD_MM_PER_REV[AXIS_NUM] = {
     4,
     4,
@@ -72,25 +75,26 @@ void applyTargets();
 #define EXEC_INTERVAL_MS 1
 
 float LEAD_MM_PER_REV[AXIS_NUM] = {
-    10.0f,
-    10.0f,
-    10.0f,
-    10.0f,
-    10.0f,
-    10.0f,
+    5.0f,
+    5.0f,
+    5.0f,
+    5.0f,
+    5.0f,
+    5.0f,
 };
 
 #endif
 
 // ===== 状态变量 =====
+// 电机反向设置
+bool Motor_Inverted[AXIS_NUM] = {false, false, false, false, false, false};
 
 int32_t targetStep[AXIS_NUM] = {0};
 int32_t lastTargetStep[AXIS_NUM] = {0};
 uint32_t lastExecTime[AXIS_NUM] = {0};
 
 // ===== 电机行程参数 =====
-
-const float AXIS_STROKE_MM[AXIS_NUM] = {
+ float AXIS_STROKE_MM[AXIS_NUM] = {
     100.0f, // Axis 1
     100.0f, // Axis 2
     100.0f, // Axis 3
@@ -144,6 +148,17 @@ const char startMark2 = '4'; // 保持你原有的协议头
 const char endMark1 = '!';
 const char endMark2 = '!';
 
+// ===== EEPROM结构体定义 =====
+struct AxisConfig {
+  float lead;
+  float stroke;
+  bool  invert;
+};
+
+AxisConfig cfg[AXIS_NUM];
+
+
+// ===== 函数声明 =====
 void setup();
 void loop();
 void startHoming(uint8_t axis);
@@ -160,17 +175,23 @@ float STEPS_PER_MM(int i);
 int32_t home_premove_steps(int i);
 int32_t home_backoff_steps(int i);
 uint32_t RANGE_DZ(int i);
-
 void testMoveMinus100mm(uint8_t axis);
+void syncToCfg() ;
+void syncFromCfg() ;
+void saveParams() ;
+void loadParams();
+
 
 void setup()
 {
+
   Serial.begin(SERIAL_BAUD);
   delay(3000);
+
   Serial.println("setup start...");
 
-  engine.init();                                                                                                                                                                                                                             
-   for (int i = 0; i < AXIS_NUM; i++)
+  engine.init();
+  for (int i = 0; i < AXIS_NUM; i++)
   {
     pinMode(LIMIT_PIN[i], INPUT_PULLUP);
   }
@@ -184,7 +205,7 @@ void setup()
       continue;
     }
 
-    stepper[i]->setDirectionPin(DIR_PIN[i]);
+    stepper[i]->setDirectionPin(DIR_PIN[i], Motor_Inverted[i]);
     stepper[i]->setAutoEnable(true);
 
     stepper[i]->setSpeedInHz(SPEED_HZ);
@@ -196,33 +217,29 @@ void setup()
     homingState[i] = HOME_IDLE;
   }
 
- 
-
   initAxisRange();
 
   Serial.println("ESP32-S3 FlyPT 6DOF READY");
 
   delay(3000);
-  // testMoveMinus100mm(0);
 
   HomingActiveNum = 0;
-  for (int i = 0; i < AXIS_NUM; i++){
-      startHoming(i);
+  for (int i = 0; i < AXIS_NUM; i++)
+  {
+    startHoming(i);
   }
-    
 }
 
 void loop()
 {
 
-  if (HomingActiveNum < AXIS_NUM-1)
+  if (HomingActiveNum < AXIS_NUM)
   {
     handleHoming();
   }
   else
   {
     handleSerial();
-   //Serial.println(HomingActiveNum);
   }
 }
 
@@ -271,7 +288,6 @@ void startHoming(uint8_t axis)
   if (axis >= AXIS_NUM)
     return;
 
-  
   homed[axis] = false;
   homingActive[axis] = true;
   homingState[axis] = HOME_PREMOVE;
@@ -280,7 +296,6 @@ void startHoming(uint8_t axis)
   stepper[axis]->setSpeedInHz(HOME_SPEED);
   stepper[axis]->setAcceleration(HOME_ACCEL);
   stepper[axis]->setCurrentPosition(0);
-
 
   // ⭐ ① 预退让：远离限位
   stepper[axis]->move(home_premove_steps(axis));
@@ -309,7 +324,7 @@ void handleHoming()
 
         // ⭐ 绝对 SEEK 目标（一次性）
         homingSeekTarget[i] =
-            motor_mins[i] - (motor_maxs[i] - motor_mins[i] + home_backoff_steps(i));
+            (int32_t)(motor_mins[i] - (motor_maxs[i] - motor_mins[i] + home_backoff_steps(i))) / 2;
 
         stepper[i]->moveTo(homingSeekTarget[i]);
 
@@ -344,16 +359,16 @@ void handleHoming()
       // ===== SEEK 走到目标但没命中限位 =====
       if (!stepper[i]->isRunning())
       {
-       
+
         // homingState[i] = HOME_BACKOFF;
         homingState[i] = HOME_IDLE;
+        homed[i] = true;
         HomingActiveNum++;
 
-        // stepper[i]->moveTo(motor_mins[i] + home_backoff_steps(i));
-
         Serial.printf(
-            "ERROR: Axis %d homing FAILED (limit not found)\n",
-            i + 1);
+            "ERROR: Axis %d homing FAILED (limit not found) HomingActiveNum=%d\n",
+            i + 1, HomingActiveNum);
+       
 
         break;
         ;
@@ -375,11 +390,10 @@ void handleHoming()
         stepper[i]->setAcceleration(ACCEL);
         stepper[i]->setCurrentPosition(0);
 
-
         // ⭐ 自动到中位
         // stepper[i]->moveTo(motor_center[i]);
 
-        Serial.printf("Axis %d homing: DONE\n", i + 1);
+        Serial.printf("Axis %d homing: DONE HomingActiveNum=%d\n", i + 1, HomingActiveNum);
       }
       break;
 
@@ -396,9 +410,7 @@ uint32_t cmap_uint32(uint32_t x,
                      uint32_t out_max)
 {
   uint64_t rv =
-      (uint64_t)(x - in_min) * (out_max - out_min)
-      / (in_max - in_min)
-      + out_min;
+      (uint64_t)(x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 
   if (rv > out_max)
     rv = out_max;
@@ -407,7 +419,6 @@ uint32_t cmap_uint32(uint32_t x,
 
   return (uint32_t)rv;
 }
-
 
 uint32_t mapToRangeX(uint8_t axis, uint16_t pos)
 {
@@ -473,7 +484,7 @@ void applyTargets()
     if (!homed[i])
       continue;
 
-    //Serial.println("applyTargets");
+    // Serial.println("applyTargets");
 
     uint32_t dt = now - lastExecTime[i];
     if (dt < EXEC_INTERVAL_MS)
@@ -531,3 +542,31 @@ uint32_t RANGE_DZ(int i)
 {
   return (uint32_t)(RANGE_DZ_MM * STEPS_PER_MM(i));
 }
+
+
+void syncToCfg() {
+  for (int i = 0; i < AXIS_NUM; i++) {
+    cfg[i].lead   = LEAD_MM_PER_REV[i];
+    cfg[i].stroke = AXIS_STROKE_MM[i];
+    cfg[i].invert = Motor_Inverted[i];
+  }
+}
+
+void syncFromCfg() {
+  for (int i = 0; i < AXIS_NUM; i++) {
+    LEAD_MM_PER_REV[i] = cfg[i].lead;
+    AXIS_STROKE_MM[i]  = cfg[i].stroke;
+    Motor_Inverted[i]  = cfg[i].invert;
+  }
+}
+void saveParams() {
+  syncToCfg();
+  EEPROM.put(0, cfg);
+}
+
+void loadParams() {
+  EEPROM.get(0, cfg);
+  syncFromCfg();
+}
+
+

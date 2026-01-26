@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>FlyPT 6轴电缸控制 HMI</title>
+
+<style>
+body {
+  margin: 0;
+  background:#0f0f0f;
+  color:#eee;
+  font-family: Arial, sans-serif;
+}
+header {
+  padding: 10px 20px;
+  background:#1b1b1b;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+button {
+  background:#333;
+  color:#eee;
+  border:none;
+  padding:6px 10px;
+  border-radius:6px;
+  cursor:pointer;
+}
+button:hover { background:#555; }
+
+.container {
+  display:flex;
+  justify-content:space-around;
+  padding:20px;
+}
+
+.axis {
+  width:170px;
+  background:#1a1a1a;
+  border-radius:12px;
+  padding:10px;
+}
+.axis h3 {
+  text-align:center;
+  margin:6px 0;
+}
+
+svg {
+  display:block;
+  margin:8px auto;
+}
+
+label { font-size:13px; }
+input[type=number] { width:70px; }
+input[type=range] { width:100%; }
+
+.value {
+  text-align:center;
+  font-size:13px;
+  margin-top:4px;
+  color:#9fdc9f;
+}
+
+.controls {
+  display:flex;
+  justify-content:space-between;
+  margin-top:6px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <button onclick="connect()">🔌 连接串口</button>
+  <button onclick="send('ENABLE ALL')">▶ Enable All</button>
+  <button onclick="send('DISABLE ALL')">⏹ Disable All</button>
+  <button onclick="send('HOME ALL')">🏠 Home All</button>
+  <span id="status">未连接</span>
+</header>
+
+<div class="container" id="container"></div>
+
+<script>
+/* ================= 配置 ================= */
+const AXIS_NUM = 6;
+const SHELL_TOP = 10;
+const SHELL_HEIGHT = 180;
+const ROD_HEIGHT = 20;
+
+/* ================= Web Serial ================= */
+let port, writer;
+
+async function connect() {
+  port = await navigator.serial.requestPort();
+  await port.open({ baudRate: 115200 });
+  writer = port.writable.getWriter();
+  document.getElementById("status").textContent = "已连接";
+}
+
+function send(cmd) {
+  console.log(cmd);
+  if (!writer) return;
+  writer.write(new TextEncoder().encode(cmd + "\n"));
+}
+
+/* ================= 轴数据 ================= */
+let axis = Array.from({length: AXIS_NUM}, () => ({
+  stroke: 100,
+  lead: 5.0,
+  invert: false,
+  target: 0,
+  enabled: false
+}));
+
+/* ================= SVG 组件 ================= */
+function axisSVG(i) {
+  return `
+<svg width="80" height="200">
+  <!-- 外壳 -->
+  <rect x="20" y="${SHELL_TOP}" width="40" height="${SHELL_HEIGHT}"
+        rx="6" fill="#555"/>
+  <!-- 刻度 -->
+  <line x1="62" y1="${SHELL_TOP}" x2="70" y2="${SHELL_TOP}" stroke="#888"/>
+  <line x1="62" y1="${SHELL_TOP+SHELL_HEIGHT}" x2="70" y2="${SHELL_TOP+SHELL_HEIGHT}" stroke="#888"/>
+  <!-- 滑块 -->
+  <rect id="rod${i}" x="28" y="${SHELL_TOP+SHELL_HEIGHT-ROD_HEIGHT}"
+        width="24" height="${ROD_HEIGHT}" rx="4" fill="#4CAF50"/>
+</svg>`;
+}
+
+/* ================= UI 构建 ================= */
+const container = document.getElementById("container");
+
+axis.forEach((a, i) => {
+  container.innerHTML += `
+  <div class="axis">
+    <h3>Axis ${i+1}</h3>
+
+    ${axisSVG(i)}
+
+    <div class="value" id="val${i}">0.0 mm</div>
+
+    <input type="range" min="0" max="${a.stroke}" value="0"
+      oninput="moveAxis(${i}, this.value)">
+
+    <label>行程</label><br>
+    <input type="number" value="${a.stroke}"
+      onchange="setStroke(${i}, this.value)"> mm<br>
+
+    <label>导程</label><br>
+    <input type="number" step="0.1" value="${a.lead}"
+      onchange="setLead(${i}, this.value)"> mm/rev<br>
+
+    <label>
+      <input type="checkbox"
+        onchange="setInvert(${i}, this.checked)">
+      电机反向
+    </label>
+
+    <div class="controls">
+      <button onclick="send('HOME AXIS ${i}')">Home</button>
+      <button onclick="send('ENABLE AXIS ${i}')">Enable</button>
+      <button onclick="send('DISABLE AXIS ${i}')">Disable</button>
+    </div>
+  </div>
+  `;
+});
+
+/* ================= 控制逻辑 ================= */
+function moveAxis(i, value) {
+  axis[i].target = Number(value);
+  updateRod(i);
+
+  const sendValue = axis[i].invert
+    ? axis[i].stroke - axis[i].target
+    : axis[i].target;
+
+  send(`MOVE AXIS ${i} ${sendValue}`);
+}
+
+function setStroke(i, v) {
+  axis[i].stroke = Number(v);
+  send(`SET STROKE ${i} ${v}`);
+}
+
+function setLead(i, v) {
+  axis[i].lead = Number(v);
+  send(`SET LEAD ${i} ${v}`);
+}
+
+function setInvert(i, v) {
+  axis[i].invert = v;
+  send(`SET INVERT ${i} ${v ? 1 : 0}`);
+}
+
+/* ================= SVG 更新 ================= */
+function updateRod(i) {
+  const a = axis[i];
+  const ratio = a.target / a.stroke;
+  const maxTravel = SHELL_HEIGHT - ROD_HEIGHT;
+
+  const y = SHELL_TOP + maxTravel * (1 - ratio);
+
+  document.getElementById(`rod${i}`).setAttribute("y", y);
+  document.getElementById(`val${i}`).textContent =
+    a.target.toFixed(1) + " mm";
+}
+</script>
+
+</body>
+</html>
