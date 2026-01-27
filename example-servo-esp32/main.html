@@ -1,148 +1,212 @@
 <!DOCTYPE html>
 <html lang="zh">
+
 <head>
-<meta charset="UTF-8">
-<title>FlyPT 6轴电缸控制 HMI</title>
+    <meta charset="UTF-8">
+    <title>FlyPT 6轴电缸控制 HMI</title>
 
-<style>
-body {
-  margin: 0;
-  background:#0f0f0f;
-  color:#eee;
-  font-family: Arial, sans-serif;
-}
-header {
-  padding: 10px 20px;
-  background:#1b1b1b;
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-button {
-  background:#333;
-  color:#eee;
-  border:none;
-  padding:6px 10px;
-  border-radius:6px;
-  cursor:pointer;
-}
-button:hover { background:#555; }
+    <style>
+        body {
+            margin: 0;
+            background: #0f0f0f;
+            color: #eee;
+            font-family: Arial, sans-serif;
+        }
 
-.container {
-  display:flex;
-  justify-content:space-around;
-  padding:20px;
-}
+        header {
+            padding: 10px 20px;
+            background: #1b1b1b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-.axis {
-  width:170px;
-  background:#1a1a1a;
-  border-radius:12px;
-  padding:10px;
-}
-.axis h3 {
-  text-align:center;
-  margin:6px 0;
-}
+        button.enable {
+            background: #2e7d32;
+            /* 绿 */
+        }
 
-svg {
-  display:block;
-  margin:8px auto;
-}
+        button.disable {
+            background: #8e2424;
+            /* 红 */
+        }
 
-label { font-size:13px; }
-input[type=number] { width:70px; }
-input[type=range] { width:100%; }
+        button.home-idle {
+            background: #838784;
+            /* 绿 */
+        }
 
-.value {
-  text-align:center;
-  font-size:13px;
-  margin-top:4px;
-  color:#9fdc9f;
-}
+        button.home-homing {
+            background: #ff9800;
+            /* 橙 */
+        }
 
-.controls {
-  display:flex;
-  justify-content:space-between;
-  margin-top:6px;
-}
-</style>
+        button.home-homed {
+            background: #4CAF50;
+            /* 绿 */
+        }
+
+        button.home-failed {
+            background: #f6010a;
+            /* 绿 */
+        }
+
+        button.disable {
+            background: #8e2424;
+            /* 红 */
+        }
+
+
+        button {
+            background: #333;
+            color: #eee;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+
+
+
+        .container {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px;
+        }
+
+
+
+        .axis {
+            width: 170px;
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 10px;
+        }
+
+        .axis h3 {
+            text-align: center;
+            margin: 6px 0;
+        }
+
+        svg {
+            display: block;
+            margin: 8px auto;
+        }
+
+        label {
+            font-size: 13px;
+        }
+
+        input[type=number] {
+            width: 70px;
+        }
+
+        input[type=range] {
+            width: 100%;
+        }
+
+        .value {
+            text-align: center;
+            font-size: 13px;
+            margin-top: 4px;
+            color: #9fdc9f;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+        }
+    </style>
 </head>
 
 <body>
 
-<header>
-  <button onclick="connect()">🔌 连接串口</button>
-  <button onclick="send('ENABLE ALL')">▶ Enable All</button>
-  <button onclick="send('DISABLE ALL')">⏹ Disable All</button>
-  <button onclick="send('HOME ALL')">🏠 Home All</button>
-  <span id="status">未连接</span>
-</header>
+    <header>
+        <button onclick="connect()">🔌 连接串口</button>
 
-<div class="container" id="container"></div>
+        <button onclick="send('HOME ALL')">🏠 Home All</button>
+        <span id="status">未连接</span>
+    </header>
 
-<script>
-/* ================= 配置 ================= */
-const AXIS_NUM = 6;
-const SHELL_TOP = 10;
-const SHELL_HEIGHT = 180;
-const ROD_HEIGHT = 20;
+    <div class="container" id="container"></div>
 
-/* ================= Web Serial ================= */
-let port, writer;
+    <script>
+        /* ================= 配置 ================= */
+        const AXIS_NUM = 6;
+        const SHELL_TOP = 10;
+        const SHELL_HEIGHT = 180;
+        const ROD_HEIGHT = 20;
 
-async function connect() {
-  port = await navigator.serial.requestPort();
-  await port.open({ baudRate: 115200 });
-  writer = port.writable.getWriter();
-  document.getElementById("status").textContent = "已连接";
-}
+        const HOME_IDLE = 0;
+        const HOME_HOMING = 1;
+        const HOME_HOMED = 2;
+        const HOME_FAILED = 3;
 
-function send(cmd) {
-  console.log(cmd);
-  if (!writer) return;
-  writer.write(new TextEncoder().encode(cmd + "\n"));
-}
 
-/* ================= 轴数据 ================= */
-let axis = Array.from({length: AXIS_NUM}, () => ({
-  stroke: 100,
-  lead: 5.0,
-  invert: false,
-  target: 0,
-  enabled: false
-}));
+        /* ================= Web Serial ================= */
+        let port, writer;
 
-/* ================= SVG 组件 ================= */
-function axisSVG(i) {
-  return `
+
+
+        async function connect() {
+            port = await navigator.serial.requestPort();
+            await port.open({ baudRate: 115200 });
+            writer = port.writable.getWriter();
+            document.getElementById("status").textContent = "已连接";
+        }
+
+        function send(cmd) {
+            console.log(cmd);
+            if (!writer) return;
+            writer.write(new TextEncoder().encode(cmd + "\n"));
+        }
+
+        /* ================= 轴数据 ================= */
+        let axis = Array.from({ length: AXIS_NUM }, () => ({
+            stroke: 100,
+            lead: 5.0,
+            invert: false,
+            target: 0,
+            enabled: true,
+            homeState: HOME_IDLE   // ⭐ 三态
+        }));
+        /* ================= SVG 组件 ================= */
+        function axisSVG(i) {
+            return `
 <svg width="80" height="200">
   <!-- 外壳 -->
-  <rect x="20" y="${SHELL_TOP}" width="40" height="${SHELL_HEIGHT}"
-        rx="6" fill="#555"/>
-  <!-- 刻度 -->
-  <line x1="62" y1="${SHELL_TOP}" x2="70" y2="${SHELL_TOP}" stroke="#888"/>
-  <line x1="62" y1="${SHELL_TOP+SHELL_HEIGHT}" x2="70" y2="${SHELL_TOP+SHELL_HEIGHT}" stroke="#888"/>
+  <rect id="shell${i}" x="20" y="${SHELL_TOP}" width="40" height="${SHELL_HEIGHT}"
+        rx="6" fill="#555" stroke="#777"
+        stroke-width="2"/>
   <!-- 滑块 -->
-  <rect id="rod${i}" x="28" y="${SHELL_TOP+SHELL_HEIGHT-ROD_HEIGHT}"
-        width="24" height="${ROD_HEIGHT}" rx="4" fill="#4CAF50"/>
+  <rect id="rod${i}" x="28" y="${SHELL_TOP + SHELL_HEIGHT - ROD_HEIGHT}"
+        width="24" height="${ROD_HEIGHT}" rx="4" fill="#777"/>
 </svg>`;
-}
+        }
 
-/* ================= UI 构建 ================= */
-const container = document.getElementById("container");
+        /* ================= UI 构建 ================= */
+        const container = document.getElementById("container");
 
-axis.forEach((a, i) => {
-  container.innerHTML += `
+        axis.forEach((a, i) => {
+            container.innerHTML += `
   <div class="axis">
-    <h3>Axis ${i+1}</h3>
+    
+    <h3>Axis ${i + 1} <button id="enBtn${i}" onclick="toggleEnable(${i})">
+    DISABLED
+  </button></h3>
 
     ${axisSVG(i)}
 
     <div class="value" id="val${i}">0.0 mm</div>
 
-    <input type="range" min="0" max="${a.stroke}" value="0"
-      oninput="moveAxis(${i}, this.value)">
+    <input type="range"
+  id="slider${i}"
+  min="0"
+  max="${a.stroke}"
+  value="0"
+  oninput="moveAxis(${i}, this.value)">
 
     <label>行程</label><br>
     <input type="number" value="${a.stroke}"
@@ -159,54 +223,203 @@ axis.forEach((a, i) => {
     </label>
 
     <div class="controls">
-      <button onclick="send('HOME AXIS ${i}')">Home</button>
-      <button onclick="send('ENABLE AXIS ${i}')">Enable</button>
-      <button onclick="send('DISABLE AXIS ${i}')">Disable</button>
+     <div class="controls">
+<button id="homeBtn${i}" onclick="homeAxis(${i})">Home</button>
+ 
+</div>
+
     </div>
   </div>
   `;
-});
+        });
 
-/* ================= 控制逻辑 ================= */
-function moveAxis(i, value) {
-  axis[i].target = Number(value);
-  updateRod(i);
+        /* ================= 控制逻辑 ================= */
+        function moveAxis(i, value) {
+            if (!(axis[i].enabled && axis[i].homeState === HOME_HOMED)) {
+                return;
+            }
 
-  const sendValue = axis[i].invert
-    ? axis[i].stroke - axis[i].target
-    : axis[i].target;
 
-  send(`MOVE AXIS ${i} ${sendValue}`);
-}
+            axis[i].target = Number(value);
+            updateRod(i);
 
-function setStroke(i, v) {
-  axis[i].stroke = Number(v);
-  send(`SET STROKE ${i} ${v}`);
-}
+            const sendValue = axis[i].invert
+                ? axis[i].stroke - axis[i].target
+                : axis[i].target;
 
-function setLead(i, v) {
-  axis[i].lead = Number(v);
-  send(`SET LEAD ${i} ${v}`);
-}
+            send(`MOVE AXIS ${i} ${sendValue}`);
+        }
 
-function setInvert(i, v) {
-  axis[i].invert = v;
-  send(`SET INVERT ${i} ${v ? 1 : 0}`);
-}
+        function setStroke(i, v) {
+            const stroke = Number(v);
+            axis[i].stroke = stroke;
 
-/* ================= SVG 更新 ================= */
-function updateRod(i) {
-  const a = axis[i];
-  const ratio = a.target / a.stroke;
-  const maxTravel = SHELL_HEIGHT - ROD_HEIGHT;
+            const slider = document.getElementById(`slider${i}`);
+            slider.max = stroke;
 
-  const y = SHELL_TOP + maxTravel * (1 - ratio);
+            // 防止目标超出新行程
+            if (axis[i].target > stroke) {
+                axis[i].target = stroke;
+                slider.value = stroke;
+            }
 
-  document.getElementById(`rod${i}`).setAttribute("y", y);
-  document.getElementById(`val${i}`).textContent =
-    a.target.toFixed(1) + " mm";
-}
-</script>
+            updateRod(i);
+            send(`SET STROKE ${i} ${stroke}`);
+        }
+
+
+        function setLead(i, v) {
+            axis[i].lead = Number(v);
+            send(`SET LEAD ${i} ${v}`);
+        }
+
+        function setInvert(i, v) {
+            axis[i].invert = v;
+            send(`SET INVERT ${i} ${v ? 1 : 0}`);
+        }
+
+        /* ================= SVG 更新 ================= */
+        function updateRod(i) {
+            const a = axis[i];
+            const ratio = a.target / a.stroke;
+            const maxTravel = SHELL_HEIGHT - ROD_HEIGHT;
+
+            const y = SHELL_TOP + maxTravel * (1 - ratio);
+
+            document.getElementById(`rod${i}`).setAttribute("y", y);
+            document.getElementById(`val${i}`).textContent =
+                a.target.toFixed(1) + " mm";
+        }
+
+        function toggleEnable(i) {
+            axis[i].enabled = !axis[i].enabled;
+
+            const btn = document.getElementById(`enBtn${i}`);
+
+            if (axis[i].enabled) {
+                btn.textContent = "ENABLED";
+                btn.classList.remove("disable");
+                btn.classList.add("enable");
+                send(`ENABLE AXIS ${i}`);
+            } else {
+                btn.textContent = "DISABLED";
+                btn.classList.remove("enable");
+                btn.classList.add("disable");
+
+                axis[i].homeState = HOME_IDLE; // ⭐ 关键
+                send(`DISABLE AXIS ${i}`);
+            }
+
+            updateAxisUI(i);
+        }
+
+
+        function updateAxisUI(i) {
+            const a = axis[i];
+
+            const slider = document.getElementById(`slider${i}`);
+            const rod = document.getElementById(`rod${i}`);
+            const shell = document.getElementById(`shell${i}`);
+            const homeBtn = document.getElementById(`homeBtn${i}`);
+
+            let canMove = false;
+            let rodColor = "#c62828";
+            let homeClass = "home-idle";
+
+
+            if (!a.enabled) {
+                canMove = false;
+                rodColor = "#c62828";
+                homeClass = "home-idle";
+
+            } else {
+                switch (a.homeState) {
+                    case HOME_IDLE:
+                        canMove = false;
+                        rodColor = "#777";
+                        homeClass = "home-idle";
+                        break;
+
+                    case HOME_HOMING:
+                        canMove = false;
+                        rodColor = "#f9a825";
+                        homeClass = "home-homing";
+                        break;
+
+                    case HOME_HOMED:
+                        canMove = true;
+                        rodColor = "#4CAF50";
+                        homeClass = "home-homed";
+                        break;
+                    case HOME_FAILED:
+                        canMove = false;
+                        rodColor = "#f6010a";
+                        homeClass = "home-failed";
+                        break;
+                }
+            }
+
+            slider.disabled = !canMove;
+            rod.setAttribute("fill", rodColor);
+
+            // ⭐ Home 按钮颜色控制
+            homeBtn.classList.remove("home-idle", "home-homing", "home-homed", "home-failed");
+            homeBtn.classList.add(homeClass);
+
+            // === 外壳描边颜色：Enable = 绿，Disable = 灰 ===
+            shell.setAttribute(
+                "stroke",
+                a.enabled ? "#4CAF50" : "#777"
+            );
+
+        }
+
+
+        function homeAxis(i) {
+            if (!axis[i].enabled) return;
+
+            axis[i].homeState = HOME_HOMING;
+            updateAxisUI(i);
+
+            send(`HOME AXIS ${i}`);
+
+            /*
+             * 现在先用“假完成”
+             * 后面 MCU 回传时，只要把下面这行
+             * 放到回传解析里即可
+             */
+            setTimeout(() => {
+                axis[i].homeState = HOME_HOMED;
+                axis[i].target = 0;
+                // axis[i].homeState = HOME_FAILED;
+                // axis[i].target = 0;
+                updateRod(i);
+                updateAxisUI(i);
+            }, 800);
+        }
+
+        function init() {
+            for (let i = 0; i < AXIS_NUM; i++) {
+                const btn = document.getElementById(`enBtn${i}`);
+                btn.textContent = "ENABLED";
+                btn.classList.remove("disable");
+                btn.classList.add("enable");
+
+                axis[i].enabled = true;
+                axis[i].homeState = HOME_IDLE;
+
+
+                updateAxisUI(i);
+
+            }
+
+
+        }
+
+        init();
+
+    </script>
 
 </body>
+
 </html>
