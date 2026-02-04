@@ -3,17 +3,17 @@
 #include <EEPROM.h>
 
 
-
-#define AXIS_NUM 6
+static const char* FW_VERSION = "0.5.0";
+#define AXIS_NUM 7
 #define SERIAL_BAUD 115200
 
 FastAccelStepperEngine engine;
 FastAccelStepper *stepper[AXIS_NUM];
 
 // ===== GPIO 定义（可按你实际接线改）=====
-const uint8_t STEP_PIN[AXIS_NUM] = {5, 7, 11, 13, 19, 15};
-const uint8_t DIR_PIN[AXIS_NUM] = {4, 6, 8, 12, 14, 20};
-const uint8_t LIMIT_PIN[AXIS_NUM] = {35, 36, 37, 38, 39, 40};
+const uint8_t STEP_PIN[AXIS_NUM] = {5, 7, 11, 13, 19, 15,3};
+const uint8_t DIR_PIN[AXIS_NUM] = {4, 6, 8, 12, 14, 20,10};
+const uint8_t LIMIT_PIN[AXIS_NUM] = {35, 36, 37, 38, 39, 40,21};
 // false = 默认方向, true = 软件反向
 
 /*************************************************
@@ -27,6 +27,7 @@ const uint8_t LIMIT_PIN[AXIS_NUM] = {35, 36, 37, 38, 39, 40};
  *************************************************/
 #ifdef USE_STEPPER
 float LEAD_MM_PER_REV[AXIS_NUM] = {
+    4,
     4,
     4,
     4,
@@ -80,14 +81,15 @@ float LEAD_MM_PER_REV[AXIS_NUM] = {
     5.0f,
     5.0f,
     5.0f,
-    5.0f,
+    5.0f,5.0f,
 };
 
 #endif
 
 // ===== 状态变量 =====
 // 电机反向设置
-bool Motor_Inverted[AXIS_NUM] = {false, false, false, false, false, false};
+bool Motor_Inverted[AXIS_NUM] = {false, false, false, false, false, false,false};
+bool Motor_Enable[AXIS_NUM] = {true, true, true, true, true, true, true};
 
 int32_t targetStep[AXIS_NUM] = {0};
 int32_t lastTargetStep[AXIS_NUM] = {0};
@@ -100,14 +102,15 @@ uint32_t lastExecTime[AXIS_NUM] = {0};
     100.0f, // Axis 3
     100.0f, // Axis 4
     100.0f, // Axis 5
-    100.0f  // Axis 6
+    100.0f,  // Axis 6
+    200.0f  // Axis 7
 };
 
 // ===== Homing 参数 =====
 
 // ① 预退让距离：确保一开始不压在限位上
-const float AXIS_HOME_PREMOVE_MM[AXIS_NUM] = {10, 10, 10, 10, 10, 10};
-const float AXIS_HOME_BACKOFF_MM[AXIS_NUM] = {2, 2, 2, 2, 2, 2};
+const float AXIS_HOME_PREMOVE_MM[AXIS_NUM] = {10, 10, 10, 10, 10, 10, 10};
+const float AXIS_HOME_BACKOFF_MM[AXIS_NUM] = {2, 2, 2, 2, 2, 2,2};
 
 bool homed[AXIS_NUM] = {false};
 bool homingActive[AXIS_NUM] = {false};
@@ -133,7 +136,9 @@ enum HomingState
   HOME_IDLE = 0,
   HOME_PREMOVE, // ① 反向预退让
   HOME_SEEK,    // ② 向限位靠近
-  HOME_BACKOFF  // ④ 回退
+  HOME_BACKOFF, // ④ 回退
+  HOME_HOMED,   // 完成且成功
+  HOME_FAILED   // 完成但失败
 };
 
 HomingState homingState[AXIS_NUM];
@@ -142,9 +147,9 @@ int32_t homingSeekTarget[AXIS_NUM];
 int HomingActiveNum = 0;
 
 // --- 串口协议 ---
-// FlyPT 格式建议: P6<M1><M2><M3><M4><M5><M6>!!
+// FlyPT 格式建议: Y7<M1><M2><M3><M4><M5><M6><M7>!!
 const char startMark1 = 'Y';
-const char startMark2 = '4'; // 保持你原有的协议头
+const char startMark2 = '7'; // 保持你原有的协议头
 const char endMark1 = '!';
 const char endMark2 = '!';
 
@@ -153,9 +158,29 @@ struct AxisConfig {
   float lead;
   float stroke;
   bool  invert;
+  bool  enable;
 };
 
-AxisConfig cfg[AXIS_NUM];
+struct EepromConfig {
+  uint32_t magic;
+  uint16_t version;
+  AxisConfig axis[AXIS_NUM];
+};
+
+static const uint32_t EEPROM_MAGIC = 0x46504C54; // "FPLT"
+static const uint16_t EEPROM_VERSION = 1;
+EepromConfig cfg;
+
+
+
+//红蓝LED引脚定义
+const int redPin = 47;   
+const int bluePin = 21;  
+
+void setLed(bool redOn, bool blueOn) {
+  digitalWrite(redPin, redOn ? LOW : HIGH);
+  digitalWrite(bluePin, blueOn ? LOW : HIGH);
+}
 
 
 // ===== 函数声明 =====
@@ -180,15 +205,41 @@ void syncToCfg() ;
 void syncFromCfg() ;
 void saveParams() ;
 void loadParams();
+void handleCmd() ;
+String getBoardName();
+void sendBoardInfo();
+void sendFirmwareInfo();
+void sendConfigJson();
+void sendHomeStatus();
+bool anyHomingActive();
+
+bool testMode = false;
 
 
 void setup()
 {
 
   Serial.begin(SERIAL_BAUD);
-  delay(3000);
+  delay(1000);
 
   Serial.println("setup start...");
+
+  pinMode(redPin, OUTPUT);
+  pinMode(bluePin, OUTPUT);
+ 
+//   digitalWrite(redPin, LOW);
+// digitalWrite(bluePin, HIGH);
+
+digitalWrite(redPin, HIGH);
+digitalWrite(bluePin, LOW);
+
+
+
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+  EEPROM.begin(sizeof(cfg));
+#endif
+
+  loadParams();
 
   engine.init();
   for (int i = 0; i < AXIS_NUM; i++)
@@ -219,28 +270,37 @@ void setup()
 
   initAxisRange();
 
+
   Serial.println("ESP32-S3 FlyPT 6DOF READY");
 
-  delay(3000);
+  uint32_t waitStart = millis();
+  while (millis() - waitStart < 2000) {
+    if (!Serial.available()) continue;
+    String line = Serial.readStringUntil('\n');
+    line.trim();
+    if (line == "HELLO") {
+      sendBoardInfo();
+      sendConfigJson();
+      testMode = true;
+      break;
+    }
+  }
 
   HomingActiveNum = 0;
   for (int i = 0; i < AXIS_NUM; i++)
   {
     startHoming(i);
   }
+ 
 }
 
 void loop()
 {
 
-  if (HomingActiveNum < AXIS_NUM)
-  {
+  if (anyHomingActive()) {
     handleHoming();
   }
-  else
-  {
-    handleSerial();
-  }
+  handleSerial();
 }
 
 void handleSerial()
@@ -258,7 +318,9 @@ void handleSerial()
           ((uint16_t)Serial.read() << 8) |
           (uint16_t)Serial.read();
 
-      targetStep[i] = mapToRangeX(i, raw);
+      if (Motor_Enable[i]) {
+        targetStep[i] = mapToRangeX(i, raw);
+      }
     }
 
     uint8_t em1 = Serial.read();
@@ -274,12 +336,17 @@ void handleSerial()
 #ifdef USE_SERVO
     for (int i = 0; i < AXIS_NUM; i++)
     {
+      if (!Motor_Enable[i])
+        continue;
       if (!homed[i])
         continue;
       stepper[i]->moveTo(targetStep[i]);
     }
 #endif
   }
+
+
+  handleCmd();
 }
 
 void startHoming(uint8_t axis)
@@ -288,6 +355,9 @@ void startHoming(uint8_t axis)
   if (axis >= AXIS_NUM)
     return;
 
+  if (homed[axis] && HomingActiveNum > 0) {
+    HomingActiveNum--;
+  }
   homed[axis] = false;
   homingActive[axis] = true;
   homingState[axis] = HOME_PREMOVE;
@@ -301,6 +371,13 @@ void startHoming(uint8_t axis)
   stepper[axis]->move(home_premove_steps(axis));
 
   Serial.printf("Axis %d homing: PREMOVE\n", axis + 1);
+}
+
+bool anyHomingActive() {
+  for (int i = 0; i < AXIS_NUM; i++) {
+    if (homingActive[i]) return true;
+  }
+  return false;
 }
 
 void handleHoming()
@@ -361,15 +438,15 @@ void handleHoming()
       {
 
         // homingState[i] = HOME_BACKOFF;
-        homingState[i] = HOME_IDLE;
-        homed[i] = true;
+        homingState[i] = HOME_FAILED;
+        homingActive[i] = false;
+        homed[i] = false;
         HomingActiveNum++;
 
         Serial.printf(
             "ERROR: Axis %d homing FAILED (limit not found) HomingActiveNum=%d\n",
             i + 1, HomingActiveNum);
-       
-
+        sendHomeStatus();
         break;
         ;
       }
@@ -382,7 +459,7 @@ void handleHoming()
       {
         homingActive[i] = false;
         homed[i] = true;
-        homingState[i] = HOME_IDLE;
+        homingState[i] = HOME_HOMED;
         HomingActiveNum++;
 
         // 恢复正常速度
@@ -394,6 +471,7 @@ void handleHoming()
         // stepper[i]->moveTo(motor_center[i]);
 
         Serial.printf("Axis %d homing: DONE HomingActiveNum=%d\n", i + 1, HomingActiveNum);
+        sendHomeStatus();
       }
       break;
 
@@ -481,6 +559,8 @@ void applyTargets()
   uint32_t now = millis();
   for (int i = 0; i < AXIS_NUM; i++)
   {
+    if (!Motor_Enable[i])
+      continue;
     if (!homed[i])
       continue;
 
@@ -546,27 +626,248 @@ uint32_t RANGE_DZ(int i)
 
 void syncToCfg() {
   for (int i = 0; i < AXIS_NUM; i++) {
-    cfg[i].lead   = LEAD_MM_PER_REV[i];
-    cfg[i].stroke = AXIS_STROKE_MM[i];
-    cfg[i].invert = Motor_Inverted[i];
+    cfg.axis[i].lead   = LEAD_MM_PER_REV[i];
+    cfg.axis[i].stroke = AXIS_STROKE_MM[i];
+    cfg.axis[i].invert = Motor_Inverted[i];
+    cfg.axis[i].enable = Motor_Enable[i];
   }
 }
 
 void syncFromCfg() {
   for (int i = 0; i < AXIS_NUM; i++) {
-    LEAD_MM_PER_REV[i] = cfg[i].lead;
-    AXIS_STROKE_MM[i]  = cfg[i].stroke;
-    Motor_Inverted[i]  = cfg[i].invert;
+    LEAD_MM_PER_REV[i] = cfg.axis[i].lead;
+    AXIS_STROKE_MM[i]  = cfg.axis[i].stroke;
+    Motor_Inverted[i]  = cfg.axis[i].invert;
+    Motor_Enable[i]    = cfg.axis[i].enable;
   }
 }
 void saveParams() {
+  cfg.magic = EEPROM_MAGIC;
+  cfg.version = EEPROM_VERSION;
   syncToCfg();
   EEPROM.put(0, cfg);
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+  EEPROM.commit();
+#endif
 }
 
 void loadParams() {
   EEPROM.get(0, cfg);
+  if (cfg.magic != EEPROM_MAGIC || cfg.version != EEPROM_VERSION) {
+    cfg.magic = EEPROM_MAGIC;
+    cfg.version = EEPROM_VERSION;
+    syncToCfg();
+    EEPROM.put(0, cfg);
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+    EEPROM.commit();
+#endif
+    return;
+  }
   syncFromCfg();
 }
 
+String getBoardName() {
+#if defined(ARDUINO_AVR_MEGA2560)
+  return "MEGA2560";
+#elif defined(ARDUINO_ARCH_ESP32)
+  String name = String(ESP.getChipModel());
+  return name.length() ? name : "ESP32";
+#elif defined(ARDUINO_ARCH_ESP8266)
+  return "ESP8266";
+#else
+  return "Unknown";
+#endif
+}
 
+void sendBoardInfo() {
+  Serial.print("BOARD:");
+  Serial.println(getBoardName());
+}
+
+void sendFirmwareInfo() {
+  Serial.print("FW:");
+  Serial.println(FW_VERSION);
+}
+
+void sendConfigJson() {
+  Serial.print("CFG ");
+  Serial.print("{\"stroke\":[");
+  for (int i = 0; i < AXIS_NUM; i++) {
+    if (i) Serial.print(",");
+    Serial.print(AXIS_STROKE_MM[i]);
+  }
+  Serial.print("],\"lead\":[");
+  for (int i = 0; i < AXIS_NUM; i++) {
+    if (i) Serial.print(",");
+    Serial.print(LEAD_MM_PER_REV[i], 3);
+  }
+  Serial.print("],\"invert\":[");
+  for (int i = 0; i < AXIS_NUM; i++) {
+    if (i) Serial.print(",");
+    Serial.print(Motor_Inverted[i] ? 1 : 0);
+  }
+  Serial.print("],\"enable\":[");
+  for (int i = 0; i < AXIS_NUM; i++) {
+    if (i) Serial.print(",");
+    Serial.print(Motor_Enable[i] ? 1 : 0);
+  }
+  Serial.println("]}");
+}
+
+void sendHomeStatus() {
+  Serial.print("HOME ");
+  Serial.print("{\"state\":[");
+  for (int i = 0; i < AXIS_NUM; i++) {
+    if (i) Serial.print(",");
+    int state = 0;
+    switch (homingState[i]) {
+      case HOME_PREMOVE:
+      case HOME_SEEK:
+      case HOME_BACKOFF:
+        state = 1; // HOMING
+        break;
+      case HOME_HOMED:
+        state = 2; // HOMED
+        break;
+      case HOME_FAILED:
+        state = 3; // FAILED
+        break;
+      case HOME_IDLE:
+      default:
+        state = 0; // IDLE
+        break;
+    }
+    Serial.print(state);
+  }
+  Serial.println("]}");
+}
+
+void handleCmd()
+{
+  // 只处理完整一行文本指令
+  if (!Serial.available()) return;
+
+  String line = Serial.readStringUntil('\n');
+  line.trim(); // 去掉回车换行
+
+  if (line.length() == 0) return;
+
+  // HELLO 自报板名
+  if (line == "HELLO") {
+    sendBoardInfo();
+    sendFirmwareInfo();
+    sendConfigJson();
+    sendHomeStatus();
+    return;
+  }
+
+  if (line.startsWith("SET STROKE ")) {
+    String rest = line.substring(11);
+    int sp = rest.indexOf(' ');
+    if (sp > 0) {
+      int axis = rest.substring(0, sp).toInt();
+      float stroke = rest.substring(sp + 1).toFloat();
+      if (axis >= 0 && axis < AXIS_NUM) {
+        AXIS_STROKE_MM[axis] = stroke;
+        motor_maxs[axis] = (int32_t)(AXIS_STROKE_MM[axis] * STEPS_PER_MM(axis));
+        motor_center[axis] = (motor_mins[axis] + motor_maxs[axis]) / 2;
+        saveParams();
+        Serial.printf("AXIS %d STROKE %.3f\n", axis, stroke);
+      }
+    }
+    return;
+  }
+
+  if (line.startsWith("SET LEAD ")) {
+    String rest = line.substring(9);
+    int sp = rest.indexOf(' ');
+    if (sp > 0) {
+      int axis = rest.substring(0, sp).toInt();
+      float lead = rest.substring(sp + 1).toFloat();
+      if (axis >= 0 && axis < AXIS_NUM) {
+        LEAD_MM_PER_REV[axis] = lead;
+        saveParams();
+        Serial.printf("AXIS %d LEAD %.3f\n", axis, lead);
+      }
+    }
+    return;
+  }
+
+  if (line.startsWith("SET INVERT ")) {
+    String rest = line.substring(11);
+    int sp = rest.indexOf(' ');
+    if (sp > 0) {
+      int axis = rest.substring(0, sp).toInt();
+      int inv = rest.substring(sp + 1).toInt();
+      if (axis >= 0 && axis < AXIS_NUM) {
+        Motor_Inverted[axis] = (inv != 0);
+        if (stepper[axis]) {
+          stepper[axis]->setDirectionPin(DIR_PIN[axis], Motor_Inverted[axis]);
+        }
+        saveParams();
+        Serial.printf("AXIS %d INVERT %d\n", axis, Motor_Inverted[axis] ? 1 : 0);
+      }
+    }
+    return;
+  }
+
+  if (line.startsWith("HOME AXIS ")) {
+    int axis = line.substring(10).toInt();
+    if (axis >= 0 && axis < AXIS_NUM) {
+      if (Motor_Enable[axis]) {
+        startHoming(axis);
+        Serial.printf("Axis %d homing: START\n", axis + 1);
+        sendHomeStatus();
+      }
+    }
+    return;
+  }
+
+  if (line.startsWith("HOME OK ")) {
+    int axis = line.substring(8).toInt();
+    if (axis >= 0 && axis < AXIS_NUM) {
+      if (Motor_Enable[axis]) {
+        homingActive[axis] = false;
+        homed[axis] = true;
+        homingState[axis] = HOME_HOMED;
+        sendHomeStatus();
+      }
+    }
+    return;
+  }
+
+  if (line == "HOME ALL") {
+    for (int i = 0; i < AXIS_NUM; i++) {
+      if (Motor_Enable[i]) {
+        startHoming(i);
+      }
+    }
+    Serial.println("Axis ALL homing: START");
+    sendHomeStatus();
+    return;
+  }
+
+  // // ENABLE/DISABLE AXIS
+  if (line.startsWith("ENABLE AXIS ")) {
+    int axis = line.substring(12).toInt();
+    if (axis >= 0 && axis < AXIS_NUM) {
+      Motor_Enable[axis] = true;
+      saveParams();
+      Serial.printf("AXIS %d ENABLED\n", axis);
+    }
+    return;
+  }
+
+  if (line.startsWith("DISABLE AXIS ")) {
+    int axis = line.substring(13).toInt();
+    if (axis >= 0 && axis < AXIS_NUM) {
+      Motor_Enable[axis] = false;
+      Serial.printf("AXIS %d DISABLED\n", axis);
+      stepper[axis]->forceStop();
+      saveParams();
+    }
+    return;
+  }
+
+  
+}

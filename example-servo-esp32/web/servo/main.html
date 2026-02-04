@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Acans 7轴电缸控制上位机</title>
+    <link rel="stylesheet" href="./main.css">
+</head>
+<script src="./main.js"></script>
+<body>
+
+    <header>
+        <button id="connectBtn" class="disable" onclick="connect()">🔌 连接串口</button>
+
+
+        <span id="status">未连接</span>
+        <span id="fwStatus">FW: -</span>
+        <button id="fwUpdateBtn" class="fw-update" onclick="requestFirmwareUpdate()">⬆️ 固件更新</button>
+    </header>
+
+    <div class="container disabled" id="container">
+        <!-- 顶部工具栏 -->
+        <div class="axis-toolbar">
+            <button id="consoleToggleBtn" class="console-toggle active" onclick="toggleConsole()">
+                🖥️ Console
+            </button>
+            <button class="home-homed" onclick="send('HOME ALL')">
+                🏠 Home All
+            </button>
+        </div>
+        <div class="axis-area" id="axisArea"></div>
+        <div class="console-panel" id="consolePanel">
+            <div class="console-header">
+                <div class="console-title">Console Output</div>
+                <button class="console-clear" onclick="clearConsole()">🧹 Clear</button>
+            </div>
+            <div class="console-body" id="consoleBody"></div>
+        </div>
+
+    </div>
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script>
+        /* ================= 配置 ================= */
+        const AXIS_NUM = 7;
+        const SHELL_TOP = 10;
+        const SHELL_HEIGHT = 140;
+        const ROD_HEIGHT = 20;
+        const POS_MAXI = 65535;
+        const FLYPT_SEND_INTERVAL_MS = 30;
+
+        const HOME_IDLE = 0;
+        const HOME_HOMING = 1;
+        const HOME_HOMED = 2;
+        const HOME_FAILED = 3;
+
+
+        /* ================= Web Serial ================= */
+        let port, writer, reader;
+        let consoleBuffer = "";
+        let consoleLines = [];
+        const CONSOLE_MAX_LINES = 500;
+        const serialListeners = [];
+        let isDisconnecting = false;
+
+
+
+        async function connect() {
+            console.log("尝试连接...");
+            // 如果已经连接，先断开
+            if (port || writer) {
+                console.log("已有连接，先断开...");
+                await disconnect();
+            }
+
+            try {
+                console.log("请求串口...");
+                port = await navigator.serial.requestPort();
+                console.log("打开串口...");
+                await port.open({ baudRate: 115200 });
+                writer = port.writable.getWriter();
+                console.log("串口已连接，writer 已创建");
+                document.getElementById("status").textContent = "已连接";
+                // 更新按钮
+                const btn = document.getElementById("connectBtn");
+                btn.textContent = "🔌 断开连接";
+                btn.classList.remove("disable");
+                btn.classList.add("enable");
+                btn.onclick = disconnect;
+                startSerialRead();
+                await queryBoardName();
+                document.getElementById("container").classList.remove("disabled");
+
+                console.log("连接成功，按钮已更新");
+
+            } catch (err) {
+                console.error("连接失败:", err);
+                // 连接失败时确保状态正确
+                writer = null;
+                port = null;
+                const btn = document.getElementById("connectBtn");
+                btn.textContent = "🔌 连接串口";
+                btn.classList.remove("enable");
+                btn.classList.add("disable");
+                btn.onclick = connect;
+                console.log("连接失败，状态已重置");
+            }
+        }
+
+        async function disconnect() {
+            if (!port || isDisconnecting) return;
+            isDisconnecting = true;
+
+            try {
+                // 1️⃣ 停止 reader（如果你后面加了读串口）
+                if (reader) {
+                    const currentReader = reader;
+                    try {
+                        await currentReader.cancel();
+                    } catch (err) {
+                        console.warn("reader.cancel failed:", err);
+                    }
+                    try {
+                        currentReader.releaseLock();
+                    } catch (err) {
+                        console.warn("reader.releaseLock failed:", err);
+                    }
+                    reader = null;
+                }
+
+                // 2️⃣ 释放 writer
+                if (writer) {
+                    try {
+                        await writer.ready;
+                    } catch (err) {
+                        console.warn("writer.ready failed:", err);
+                    }
+                    try {
+                        writer.releaseLock();
+                    } catch (err) {
+                        console.warn("writer.releaseLock failed:", err);
+                    }
+                    writer = null;
+                }
+
+                // 3️⃣ 关闭串口
+                try {
+                    await port.close();
+                } catch (err) {
+                    console.warn("port.close failed:", err);
+                }
+                port = null;
+
+                // 4️⃣ 更新 UI
+                document.getElementById("status").textContent = "未连接";
+
+                const btn = document.getElementById("connectBtn");
+                btn.textContent = "🔌 连接串口";
+                btn.classList.remove("enable");
+                btn.classList.add("disable");
+                btn.onclick = connect;
+                document.getElementById("container").classList.add("disabled");
+
+                console.log("串口已断开（port.close 完成）");
+            } catch (err) {
+                console.error("断开串口失败:", err);
+            } finally {
+                isDisconnecting = false;
+            }
+        }
+
+        function send(cmd) {
+            console.log(cmd);
+            if (!writer) return;
+            emitSerialEvent({ direction: "TX", line: cmd });
+            writer.write(new TextEncoder().encode(cmd + "\n"));
+        }
+
+        let lastFlyptSendMs = 0;
+        let flyptRawCache = new Uint16Array(AXIS_NUM);
+
+        function updateFlyptCacheForAxis(i) {
+            const stroke = Number(axis[i].stroke) || 1;
+            let raw = Math.round((axis[i].target / stroke) * POS_MAXI);
+            if (raw < 0) raw = 0;
+            if (raw > POS_MAXI) raw = POS_MAXI;
+            flyptRawCache[i] = raw;
+        }
+
+        function sendFlyptFrame() {
+            if (!writer) return;
+            const now = Date.now();
+            if (now - lastFlyptSendMs < FLYPT_SEND_INTERVAL_MS) return;
+            lastFlyptSendMs = now;
+            const frame = new Uint8Array(2 + AXIS_NUM * 2 + 2);
+            frame[0] = "Y".charCodeAt(0);
+            frame[1] = "7".charCodeAt(0);
+
+            for (let i = 0; i < AXIS_NUM; i++) {
+                const raw = flyptRawCache[i];
+                const hi = (raw >> 8) & 0xff;
+                const lo = raw & 0xff;
+                const offset = 2 + i * 2;
+                frame[offset] = hi;
+                frame[offset + 1] = lo;
+            }
+
+            frame[frame.length - 2] = "!".charCodeAt(0);
+            frame[frame.length - 1] = "!".charCodeAt(0);
+
+            const frameText = Array.from(frame)
+                .map((v) => String(v).padStart(3, "0"))
+                .join(" ");
+            emitSerialEvent({ direction: "TX", line: frameText });
+            writer.write(frame);
+        }
+
+        /* ================= Console ================= */
+        function toggleConsole() {
+            const panel = document.getElementById("consolePanel");
+            const btn = document.getElementById("consoleToggleBtn");
+            const isHidden = panel.classList.contains("hidden");
+
+            if (isHidden) {
+                panel.classList.remove("hidden");
+                btn.classList.add("active");
+            } else {
+                panel.classList.add("hidden");
+                btn.classList.remove("active");
+            }
+        }
+
+        function clearConsole() {
+            consoleLines = [];
+            document.getElementById("consoleBody").textContent = "";
+        }
+
+        function formatTimestamp(dateObj) {
+            const pad = (n, len = 2) => String(n).padStart(len, "0");
+            const hh = pad(dateObj.getHours());
+            const mm = pad(dateObj.getMinutes());
+            const ss = pad(dateObj.getSeconds());
+            return `${hh}:${mm}:${ss}`;
+        }
+
+        function appendConsoleLine(direction, text) {
+            const ts = formatTimestamp(new Date());
+            const label = direction === "TX" ? "TX>" : "RX>";
+            const line = `[${ts}] ${label} ${text}`;
+            consoleLines.push({ direction, line });
+
+            if (consoleLines.length > CONSOLE_MAX_LINES) {
+                consoleLines = consoleLines.slice(-CONSOLE_MAX_LINES);
+            }
+
+            const body = document.getElementById("consoleBody");
+            body.innerHTML = "";
+            for (const item of consoleLines) {
+                const div = document.createElement("div");
+                div.classList.add("console-line");
+                if (item.direction === "TX") div.classList.add("console-tx");
+                if (item.direction === "RX") div.classList.add("console-rx");
+                div.textContent = item.line;
+                body.appendChild(div);
+            }
+            body.scrollTop = body.scrollHeight;
+        }
+
+        function addSerialListener(fn) {
+            serialListeners.push(fn);
+            return () => {
+                const idx = serialListeners.indexOf(fn);
+                if (idx >= 0) serialListeners.splice(idx, 1);
+            };
+        }
+
+        function emitSerialEvent(evt) {
+            appendConsoleLine(evt.direction, evt.line);
+            for (const fn of serialListeners) {
+                try {
+                    fn(evt);
+                } catch (err) {
+                    console.error("serial listener error:", err);
+                }
+            }
+        }
+
+        function waitForLinePrefix(prefix, timeoutMs = 800) {
+            return new Promise((resolve, reject) => {
+                const cleanup = () => {
+                    if (off) off();
+                    if (timer) clearTimeout(timer);
+                };
+                const off = addSerialListener((evt) => {
+                    if (evt.direction === "RX" && evt.line.startsWith(prefix)) {
+                        cleanup();
+                        resolve(evt.line);
+                    }
+                });
+                const timer = setTimeout(() => {
+                    cleanup();
+                    reject(new Error("timeout"));
+                }, timeoutMs);
+            });
+        }
+
+        async function handleSerialDisconnect(message) {
+            await disconnect();
+            showToast(message || "串口已断开");
+        }
+
+        let toastTimer = null;
+        function showToast(message, duration = 2200) {
+            const container = document.getElementById("toastContainer");
+            container.textContent = message;
+            container.classList.add("show");
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                container.classList.remove("show");
+            }, duration);
+        }
+
+        function requestFirmwareUpdate() {
+            showToast("固件更新功能待接入");
+        }
+
+        async function startSerialRead() {
+            if (!port || reader) return;
+            const decoder = new TextDecoder();
+            consoleBuffer = "";
+
+            try {
+                reader = port.readable.getReader();
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) {
+                        await handleSerialDisconnect("串口已断开");
+                        break;
+                    }
+                    if (!value) continue;
+
+                    consoleBuffer += decoder.decode(value, { stream: true });
+                    const lines = consoleBuffer.split("\n");
+                    consoleBuffer = lines.pop() || "";
+
+                    for (const raw of lines) {
+                        const line = raw.replace(/\r/g, "").trim();
+                        if (line.length === 0) continue;
+                        const cleaned = line.replace(/[^\x20-\x7E]/g, "");
+                        if (cleaned.length === 0) continue;
+                        const normalized = normalizeRxLine(cleaned);
+                        if (!normalized) continue;
+                        emitSerialEvent({ direction: "RX", line: normalized });
+                    }
+                }
+            } catch (err) {
+                console.error("串口读取失败:", err);
+                await handleSerialDisconnect("串口已断开");
+            } finally {
+                if (reader) {
+                    reader.releaseLock();
+                    reader = null;
+                }
+            }
+        }
+
+        function normalizeRxLine(line) {
+            const boardIdx = line.indexOf("BOARD:");
+            const cfgIdx = line.indexOf("CFG ");
+            let cutIdx = -1;
+
+            if (boardIdx >= 0) cutIdx = boardIdx;
+            if (cfgIdx >= 0 && (cutIdx === -1 || cfgIdx < cutIdx)) cutIdx = cfgIdx;
+
+            if (cutIdx >= 0) {
+                return line.slice(cutIdx);
+            }
+
+            return line;
+        }
+
+        /* ================= 轴数据 ================= */
+        let axis = Array.from({ length: AXIS_NUM }, () => ({
+            stroke: 100,
+            lead: 5.0,
+            invert: false,
+            target: 0,
+            enabled: true,
+            homeState: HOME_IDLE   // ⭐ 三态
+        }));
+        /* ================= SVG 组件 ================= */
+        function axisSVG(i) {
+            return `
+<svg width="80" height="160">
+  <!-- 外壳 -->
+  <rect id="shell${i}" x="20" y="${SHELL_TOP}" width="40" height="${SHELL_HEIGHT}"
+        rx="6" fill="#555" stroke="#777"
+        stroke-width="2"/>
+  <!-- 滑块 -->
+  <rect id="rod${i}" x="28" y="${SHELL_TOP + SHELL_HEIGHT - ROD_HEIGHT}"
+        width="24" height="${ROD_HEIGHT}" rx="4" fill="#777"/>
+</svg>`;
+        }
+
+        /* ================= UI 构建 ================= */
+        const container = document.getElementById("axisArea");
+
+        axis.forEach((a, i) => {
+            container.innerHTML += `
+  <div class="axis">
+    <div style="text-align: center">
+    <button id="enBtn${i}" onclick="toggleEnable(${i})">
+    DISABLED</button>
+    </div>
+    <h3>Axis ${i + 1}</h3> 
+  
+
+    ${axisSVG(i)}
+
+    <div class="value" id="val${i}">0.0 mm</div>
+
+    <input type="range"
+  id="slider${i}"
+  min="0"
+  max="${a.stroke}"
+  value="0"
+  oninput="moveAxis(${i}, this.value)">
+
+    <label>行程</label><br>
+    <input type="number" value="${a.stroke}"
+      id="stroke${i}"
+      onchange="setStroke(${i}, this.value)"> mm<br>
+
+    <label>导程</label><br>
+    <input type="number" step="0.1" value="${a.lead}"
+      id="lead${i}"
+      onchange="setLead(${i}, this.value)"> mm/rev<br>
+
+    <label>
+      <input type="checkbox"
+        id="invert${i}"
+        onchange="setInvert(${i}, this.checked)">
+      电机反向
+    </label>
+
+    <div class="controls">
+     <div class="controls">
+<button id="homeBtn${i}" onclick="homeAxis(${i})">Home</button>
+ <label class="manual-home">
+   <input type="checkbox" id="manualHome${i}" onchange="setManualHome(${i}, this.checked)">
+   手动home
+ </label>
+</div>
+
+    </div>
+  </div>
+  `;
+        });
+
+        /* ================= 控制逻辑 ================= */
+        function moveAxis(i, value) {
+            if (!(axis[i].enabled && axis[i].homeState === HOME_HOMED)) {
+                return;
+            }
+
+
+            axis[i].target = Number(value);
+            updateRod(i);
+
+            updateFlyptCacheForAxis(i);
+            sendFlyptFrame();
+        }
+
+        function setStroke(i, v) {
+            const stroke = Number(v);
+            axis[i].stroke = stroke;
+
+            const slider = document.getElementById(`slider${i}`);
+            slider.max = stroke;
+
+            // 防止目标超出新行程
+            if (axis[i].target > stroke) {
+                axis[i].target = stroke;
+                slider.value = stroke;
+            }
+
+            updateRod(i);
+            send(`SET STROKE ${i} ${stroke}`);
+        }
+
+
+        function setLead(i, v) {
+            axis[i].lead = Number(v);
+            send(`SET LEAD ${i} ${v}`);
+        }
+
+        function setInvert(i, v) {
+            // UI: 电机反向 选中 => invert = false
+            axis[i].invert = !v;
+            send(`SET INVERT ${i} ${axis[i].invert ? 1 : 0}`);
+        }
+
+        /* ================= SVG 更新 ================= */
+        function updateRod(i) {
+            const a = axis[i];
+            const ratio = a.target / a.stroke;
+            const maxTravel = SHELL_HEIGHT - ROD_HEIGHT;
+
+            const y = SHELL_TOP + maxTravel * (1 - ratio);
+
+            document.getElementById(`rod${i}`).setAttribute("y", y);
+            document.getElementById(`val${i}`).textContent =
+                a.target.toFixed(1) + " mm";
+        }
+
+        function toggleEnable(i) {
+            axis[i].enabled = !axis[i].enabled;
+
+            const btn = document.getElementById(`enBtn${i}`);
+
+            if (axis[i].enabled) {
+                btn.textContent = "ENABLED";
+                btn.classList.remove("disable");
+                btn.classList.add("enable");
+                send(`ENABLE AXIS ${i}`);
+            } else {
+                btn.textContent = "DISABLED";
+                btn.classList.remove("enable");
+                btn.classList.add("disable");
+
+                axis[i].homeState = HOME_IDLE; // ⭐ 关键
+                send(`DISABLE AXIS ${i}`);
+            }
+
+            updateAxisUI(i);
+        }
+
+
+        function updateAxisUI(i) {
+            const a = axis[i];
+
+            const slider = document.getElementById(`slider${i}`);
+            const rod = document.getElementById(`rod${i}`);
+            const shell = document.getElementById(`shell${i}`);
+            const homeBtn = document.getElementById(`homeBtn${i}`);
+
+            let canMove = false;
+            let rodColor = "#c62828";
+            let homeClass = "home-idle";
+
+
+            if (!a.enabled) {
+                canMove = false;
+                rodColor = "#c62828";
+                homeClass = "home-idle";
+
+            } else {
+                switch (a.homeState) {
+                    case HOME_IDLE:
+                        canMove = false;
+                        rodColor = "#777";
+                        homeClass = "home-idle";
+                        break;
+
+                    case HOME_HOMING:
+                        canMove = false;
+                        rodColor = "#f9a825";
+                        homeClass = "home-homing";
+                        break;
+
+                    case HOME_HOMED:
+                        canMove = true;
+                        rodColor = "#4CAF50";
+                        homeClass = "home-homed";
+                        break;
+                    case HOME_FAILED:
+                        canMove = false;
+                        rodColor = "#f6010a";
+                        homeClass = "home-failed";
+                        break;
+                }
+            }
+
+            slider.disabled = !canMove;
+            rod.setAttribute("fill", rodColor);
+
+            // ⭐ Home 按钮颜色控制
+            homeBtn.classList.remove("home-idle", "home-homing", "home-homed", "home-failed");
+            homeBtn.classList.add(homeClass);
+
+            // === 外壳描边颜色：Enable = 绿，Disable = 灰 ===
+            shell.setAttribute(
+                "stroke",
+                a.enabled ? "#4CAF50" : "#777"
+            );
+
+        }
+
+        function applyConfigFromJson(cfg) {
+            if (!cfg) return;
+            for (let i = 0; i < AXIS_NUM; i++) {
+                if (Array.isArray(cfg.stroke) && cfg.stroke[i] != null) {
+                    axis[i].stroke = Number(cfg.stroke[i]);
+                }
+                if (Array.isArray(cfg.lead) && cfg.lead[i] != null) {
+                    axis[i].lead = Number(cfg.lead[i]);
+                }
+                if (Array.isArray(cfg.invert) && cfg.invert[i] != null) {
+                    axis[i].invert = Number(cfg.invert[i]) === 1;
+                }
+                if (Array.isArray(cfg.enable) && cfg.enable[i] != null) {
+                    axis[i].enabled = Number(cfg.enable[i]) === 1;
+                    if (!axis[i].enabled) {
+                        axis[i].homeState = HOME_IDLE;
+                    }
+                }
+
+                const slider = document.getElementById(`slider${i}`);
+                const strokeInput = document.getElementById(`stroke${i}`);
+                const leadInput = document.getElementById(`lead${i}`);
+                const invertInput = document.getElementById(`invert${i}`);
+
+                if (strokeInput) strokeInput.value = axis[i].stroke;
+                if (leadInput) leadInput.value = axis[i].lead;
+                if (invertInput) invertInput.checked = !axis[i].invert;
+
+                if (slider) {
+                    slider.max = axis[i].stroke;
+                    if (axis[i].target > axis[i].stroke) {
+                        axis[i].target = axis[i].stroke;
+                    }
+                    slider.value = axis[i].target;
+                }
+
+                const btn = document.getElementById(`enBtn${i}`);
+                if (btn) {
+                    if (axis[i].enabled) {
+                        btn.textContent = "ENABLED";
+                        btn.classList.remove("disable");
+                        btn.classList.add("enable");
+                    } else {
+                        btn.textContent = "DISABLED";
+                        btn.classList.remove("enable");
+                        btn.classList.add("disable");
+                    }
+                }
+
+                updateRod(i);
+                updateAxisUI(i);
+            }
+        }
+
+        function applyHomeFromJson(data) {
+            if (!data || !Array.isArray(data.state)) return;
+            for (let i = 0; i < AXIS_NUM; i++) {
+                if (data.state[i] == null) continue;
+                const state = Number(data.state[i]);
+                if (state === HOME_HOMED) {
+                    axis[i].homeState = HOME_HOMED;
+                } else if (state === HOME_HOMING) {
+                    axis[i].homeState = HOME_HOMING;
+                } else if (state === HOME_FAILED) {
+                    axis[i].homeState = HOME_FAILED;
+                } else {
+                    axis[i].homeState = HOME_IDLE;
+                }
+                updateAxisUI(i);
+            }
+        }
+
+
+        function homeAxis(i) {
+            if (!axis[i].enabled) return;
+
+            axis[i].homeState = HOME_HOMING;
+            updateAxisUI(i);
+
+            send(`HOME AXIS ${i}`);
+        }
+
+        function setManualHome(i, checked) {
+            if (!axis[i].enabled) return;
+            if (checked) {
+                axis[i].homeState = HOME_HOMED;
+                axis[i].target = 0;
+                updateRod(i);
+                send(`HOME OK ${i}`);
+            } else {
+                axis[i].homeState = HOME_IDLE;
+            }
+            updateAxisUI(i);
+        }
+
+        function init() {
+            for (let i = 0; i < AXIS_NUM; i++) {
+                const btn = document.getElementById(`enBtn${i}`);
+                btn.textContent = "ENABLED";
+                btn.classList.remove("disable");
+                btn.classList.add("enable");
+
+                axis[i].enabled = true;
+                axis[i].homeState = HOME_IDLE;
+
+
+                updateAxisUI(i);
+
+            }
+            for (let i = 0; i < AXIS_NUM; i++) {
+                updateFlyptCacheForAxis(i);
+            }
+
+
+        }
+
+        function registerSerialHandlers() {
+            addSerialListener((evt) => {
+                if (evt.direction !== "RX") return;
+                if (!evt.line.startsWith("CFG ")) return;
+                const jsonText = evt.line.slice(4).trim();
+                try {
+                    const cfg = JSON.parse(jsonText);
+                    applyConfigFromJson(cfg);
+                    showToast("参数已同步");
+                } catch (err) {
+                    console.error("CFG parse failed:", err);
+                    showToast("参数同步失败");
+                }
+            });
+
+            addSerialListener((evt) => {
+                if (evt.direction !== "RX") return;
+                if (!evt.line.startsWith("HOME ")) return;
+                const jsonText = evt.line.slice(5).trim();
+                try {
+                    const data = JSON.parse(jsonText);
+                    applyHomeFromJson(data);
+                } catch (err) {
+                    console.error("HOME parse failed:", err);
+                }
+            });
+
+            addSerialListener((evt) => {
+                if (evt.direction !== "RX") return;
+                if (!evt.line.startsWith("FW:")) return;
+                const version = evt.line.slice(3).trim();
+                const fw = document.getElementById("fwStatus");
+                if (fw) fw.textContent = `FW: ${version || "-"}`;
+            });
+        }
+
+        init();
+        registerSerialHandlers();
+
+    </script>
+
+</body>
+
+</html>

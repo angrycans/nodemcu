@@ -1,0 +1,260 @@
+body {
+    margin: 0;
+    background: #0f0f0f;
+    color: #eee;
+    font-family: Arial, sans-serif;
+}
+
+header {
+    padding: 10px 20px;
+    background: #1b1b1b;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#status {
+    flex: 1;
+}
+
+.fw-update {
+    background: #2b3a4a;
+}
+
+#fwStatus {
+    color: #9fdc9f;
+    font-size: 13px;
+}
+.fw-update {
+    background: #2b3a4a;
+}
+
+button.enable {
+    background: #2e7d32;
+    /* 绿 */
+}
+
+button.disable {
+    background: #8e2424;
+    /* 红 */
+}
+
+button.home-idle {
+    background: #838784;
+    /* 绿 */
+}
+
+button.home-homing {
+    background: #ff9800;
+    /* 橙 */
+}
+
+button.home-homed {
+    background: #4CAF50;
+    /* 绿 */
+}
+
+button.home-failed {
+    background: #f6010a;
+    /* 绿 */
+}
+
+button.disable {
+    background: #8e2424;
+    /* 红 */
+}
+
+
+button {
+    background: #333;
+    color: #eee;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+
+.axis {
+    background: #1a1a1a;
+    border-radius: 12px;
+    padding: 10px;
+    min-width: 100px;     /* 最小宽度 */
+    max-width: 160px;     /* 最大宽度（可选，保持原视觉） */
+    flex: 1;
+}
+
+.axis h3 {
+    text-align: center;
+    margin: 6px 0;
+}
+
+svg {
+    display: block;
+    margin: 8px auto;
+}
+
+label {
+    font-size: 13px;
+}
+
+input[type=number] {
+    width: 70px;
+}
+
+input[type=range] {
+    width: 100%;
+}
+
+.value {
+    text-align: center;
+    font-size: 13px;
+    margin-top: 4px;
+    color: #9fdc9f;
+}
+
+.controls {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+}
+
+.manual-home {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #cfcfcf;
+}
+
+.container.disabled {
+    pointer-events: none;
+    /* 所有控件不可点 */
+    opacity: 0.35;
+    /* 视觉灰掉 */
+}
+
+.container {
+    padding: 0;
+}
+
+/* 顶部 64px 工具栏 */
+.axis-toolbar {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    /* 右对齐 */
+    padding: 0 20px;
+    background: #141414;
+    border-bottom: 1px solid #2a2a2a;
+    gap: 10px;
+}
+
+/* 下面 axis 区 */
+.axis-area {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    padding-top: 20px;
+}
+
+.axis-toolbar button {
+    height: 44px;
+    min-width: 120px;
+    font-size: 14px;
+}
+
+.axis-toolbar .console-toggle.active {
+    background: #1e6f8a;
+}
+
+.console-panel {
+    margin: 16px 20px 20px;
+    background: #111;
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.console-panel.hidden {
+    display: none;
+}
+
+.console-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: #161616;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+.console-title {
+    font-size: 13px;
+    color: #9fdc9f;
+}
+
+.console-clear {
+    background: #3a3a3a;
+    font-size: 12px;
+    height: 30px;
+    min-width: 90px;
+}
+
+.console-body {
+    padding: 10px 12px;
+    max-height: 220px;
+    overflow-y: auto;
+    font-family: "Courier New", monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #e6e6e6;
+}
+
+.console-line {
+    white-space: pre-wrap;
+}
+
+.console-tx {
+    color: #4aa3ff;
+}
+
+.console-rx {
+    color: #69d36a;
+}
+
+.toast-container {
+    position: fixed;
+    /* 位置：距离顶部 60px */
+    top: 60px;
+    /* 核心居中逻辑 */
+    left: 50%;
+    transform: translateX(-50%);
+    
+    /* 背景修改为橙色警告色 (使用更醒目的琥珀橙) */
+    background: rgba(255, 152, 0, 0.95); 
+    /* 边框微调，使其更有质感 */
+    border: 1px solid #ef6c00;
+    /* 警告色通常配合深色文字或纯白色文字，这里建议白色 */
+    color: #ffffff;
+    
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    pointer-events: none;
+    
+    /* 动画初始状态 */
+    opacity: 0;
+    transition: opacity 200ms ease, transform 200ms ease;
+}
+
+/* 显示时的状态 */
+.toast-container.show {
+    opacity: 1;
+    /* 保持居中的同时，可以加一点点向下的位移效果 */
+    transform: translateX(-50%) translateY(5px);
+}
