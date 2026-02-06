@@ -3,45 +3,64 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Acans 7轴电缸控制上位机</title>
+    <title>Acans 7-Axis Control Console</title>
     <link rel="stylesheet" href="./main.css">
 </head>
 <script src="./main.js"></script>
+<script type="module" src="https://unpkg.com/esp-web-tools@9/dist/web/install-button.js?module"></script>
 <body>
 
     <header>
-        <button id="connectBtn" class="disable" onclick="connect()">🔌 连接串口</button>
+        <button id="connectBtn" class="disable" onclick="connect()">🔌 Connect Serial</button>
 
 
-        <span id="status">未连接</span>
+        <span id="status">Disconnected</span>
         <span id="fwStatus">FW: -</span>
-        <button id="fwUpdateBtn" class="fw-update" onclick="requestFirmwareUpdate()">⬆️ 固件更新</button>
+        <div class="fw-wrap">
+            <button id="fwUpdateBtn" class="fw-update" onclick="requestFirmwareUpdate()">⬆️ Firmware Update</button>
+            <div id="fwMenu" class="fw-menu hidden">
+                <div class="fw-menu-title" data-i18n="fw_list">Firmware List</div>
+                <div id="fwList" class="fw-list"></div>
+            </div>
+        </div>
+        <button id="contactBtn" class="contact-btn" onclick="openContact()" data-i18n="contact">Contact</button>
+        <button id="langToggleBtn" class="contact-btn" onclick="toggleLang()">中文</button>
     </header>
 
     <div class="container disabled" id="container">
-        <!-- 顶部工具栏 -->
+        <!-- Top toolbar -->
         <div class="axis-toolbar">
-            <button id="consoleToggleBtn" class="console-toggle active" onclick="toggleConsole()">
+            <button id="consoleToggleBtn" class="console-toggle active" onclick="toggleConsole()" data-i18n="console">
                 🖥️ Console
             </button>
-            <button class="home-homed" onclick="send('HOME ALL')">
+            <button class="home-homed" onclick="send('HOME ALL')" data-i18n="home_all">
                 🏠 Home All
             </button>
         </div>
         <div class="axis-area" id="axisArea"></div>
         <div class="console-panel" id="consolePanel">
             <div class="console-header">
-                <div class="console-title">Console Output</div>
-                <button class="console-clear" onclick="clearConsole()">🧹 Clear</button>
+                <div class="console-title" data-i18n="console_output">Console Output</div>
+                <button class="console-clear" onclick="clearConsole()" data-i18n="clear">🧹 Clear</button>
             </div>
             <div class="console-body" id="consoleBody"></div>
         </div>
 
     </div>
     <div id="toastContainer" class="toast-container"></div>
+    <div id="contactOverlay" class="modal-overlay hidden" onclick="closeContact()">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div class="modal-title" data-i18n="contact_title">Contact Info</div>
+            <div class="modal-body" data-i18n="contact_email">Email: angrycans@gmail.com</div>
+            <div class="modal-body" data-i18n="contact_wechat">WeChat: angrycans</div>
+            <div class="modal-actions">
+                <button class="modal-close" onclick="closeContact()" data-i18n="close">Close</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        /* ================= 配置 ================= */
+        /* ================= Config ================= */
         const AXIS_NUM = 7;
         const SHELL_TOP = 10;
         const SHELL_HEIGHT = 140;
@@ -53,6 +72,126 @@
         const HOME_HOMING = 1;
         const HOME_HOMED = 2;
         const HOME_FAILED = 3;
+
+        const I18N = {
+            en: {
+                connect: "Connect Serial",
+                disconnect: "Disconnect",
+                disconnected: "Disconnected",
+                connected: "Connected",
+                fw_update: "Firmware Update",
+                fw_list: "Firmware List",
+                contact: "Contact",
+                contact_title: "Contact Info",
+                contact_email: "Email: angrycans@gmail.com",
+                contact_wechat: "WeChat: angrycans",
+                close: "Close",
+                console: "🖥️ Console",
+                home_all: "🏠 Home All",
+                console_output: "Console Output",
+                clear: "🧹 Clear",
+                no_firmware: "No firmware",
+                sync_ok: "Parameters synced",
+                sync_fail: "Parameter sync failed",
+                need_disconnect: "Please disconnect serial first",
+                fw_load_fail: "Failed to load firmware list",
+                fw_bad: "Firmware files unavailable or corrupted",
+                serial_disconnected: "Serial disconnected",
+                serial_read_fail: "Serial read failed",
+                stroke: "Stroke",
+                lead: "Lead",
+                motor_reverse: "Motor Reverse",
+                manual_home: "Manual Home",
+                update_available: " (Update available)"
+                ,enabled: "ENABLED"
+                ,disabled: "DISABLED"
+                ,home: "Home"
+            },
+            zh: {
+                connect: "连接串口",
+                disconnect: "断开连接",
+                disconnected: "未连接",
+                connected: "已连接",
+                fw_update: "固件更新",
+                fw_list: "固件列表",
+                contact: "联系我",
+                contact_title: "联系信息",
+                contact_email: "邮箱: angrycans@gmail.com",
+                contact_wechat: "微信: angrycans",
+                close: "关闭",
+                console: "🖥️ 控制台",
+                home_all: "🏠 回零全部",
+                console_output: "控制台输出",
+                clear: "🧹 清空",
+                no_firmware: "暂无固件",
+                sync_ok: "参数已同步",
+                sync_fail: "参数同步失败",
+                need_disconnect: "请先断开串口",
+                fw_load_fail: "固件列表加载失败",
+                fw_bad: "固件文件不可用或损坏",
+                serial_disconnected: "串口已断开",
+                serial_read_fail: "串口读取失败",
+                stroke: "行程",
+                lead: "导程",
+                motor_reverse: "电机反向",
+                manual_home: "手动home",
+                update_available: "（有可用更新）"
+                ,enabled: "已启用"
+                ,disabled: "已禁用"
+                ,home: "回零"
+            }
+        };
+
+        let currentLang = "zh";
+
+        function t(key) {
+            const dict = I18N[currentLang] || I18N.en;
+            return dict[key] || key;
+        }
+
+        function applyLang() {
+            document.querySelectorAll("[data-i18n]").forEach((el) => {
+                const key = el.getAttribute("data-i18n");
+                el.textContent = t(key);
+            });
+
+            const btn = document.getElementById("connectBtn");
+            if (btn) {
+                const connected = !!(port || writer);
+                btn.textContent = connected ? `🔌 ${t("disconnect")}` : `🔌 ${t("connect")}`;
+            }
+
+            const fwBtn = document.getElementById("fwUpdateBtn");
+            if (fwBtn) fwBtn.textContent = `⬆️ ${t("fw_update")}`;
+
+            const status = document.getElementById("status");
+            if (status) {
+                const connected = !!(port || writer);
+                status.textContent = connected ? t("connected") : t("disconnected");
+            }
+
+            updateFwStatusText();
+            renderFirmwareList(firmwareCache || []);
+            updateAxisTexts();
+        }
+
+        function toggleLang() {
+            currentLang = currentLang === "en" ? "zh" : "en";
+            const btn = document.getElementById("langToggleBtn");
+            if (btn) btn.textContent = currentLang === "en" ? "中文" : "EN";
+            applyLang();
+        }
+
+        function updateAxisTexts() {
+            for (let i = 0; i < AXIS_NUM; i++) {
+                const enBtn = document.getElementById(`enBtn${i}`);
+                if (enBtn) {
+                    enBtn.textContent = axis[i].enabled ? t("enabled") : t("disabled");
+                }
+                const homeBtn = document.getElementById(`homeBtn${i}`);
+                if (homeBtn) homeBtn.textContent = t("home");
+            }
+        }
 
 
         /* ================= Web Serial ================= */
@@ -66,24 +205,24 @@
 
 
         async function connect() {
-            console.log("尝试连接...");
-            // 如果已经连接，先断开
+                console.log("Connecting...");
+            // If already connected, disconnect first
             if (port || writer) {
-                console.log("已有连接，先断开...");
+                console.log("Already connected, disconnecting first...");
                 await disconnect();
             }
 
             try {
-                console.log("请求串口...");
+                console.log("Requesting serial port...");
                 port = await navigator.serial.requestPort();
-                console.log("打开串口...");
+                console.log("Opening serial port...");
                 await port.open({ baudRate: 115200 });
                 writer = port.writable.getWriter();
-                console.log("串口已连接，writer 已创建");
-                document.getElementById("status").textContent = "已连接";
-                // 更新按钮
+                console.log("Serial connected, writer ready");
+                document.getElementById("status").textContent = t("connected");
+                // Update button
                 const btn = document.getElementById("connectBtn");
-                btn.textContent = "🔌 断开连接";
+                btn.textContent = `🔌 ${t("disconnect")}`;
                 btn.classList.remove("disable");
                 btn.classList.add("enable");
                 btn.onclick = disconnect;
@@ -91,19 +230,19 @@
                 await queryBoardName();
                 document.getElementById("container").classList.remove("disabled");
 
-                console.log("连接成功，按钮已更新");
+                console.log("Connected, button updated");
 
             } catch (err) {
-                console.error("连接失败:", err);
-                // 连接失败时确保状态正确
+                console.error("Connection failed:", err);
+                // Ensure state is reset on failure
                 writer = null;
                 port = null;
                 const btn = document.getElementById("connectBtn");
-                btn.textContent = "🔌 连接串口";
+                btn.textContent = `🔌 ${t("connect")}`;
                 btn.classList.remove("enable");
                 btn.classList.add("disable");
                 btn.onclick = connect;
-                console.log("连接失败，状态已重置");
+                console.log("Connection failed, state reset");
             }
         }
 
@@ -112,7 +251,7 @@
             isDisconnecting = true;
 
             try {
-                // 1️⃣ 停止 reader（如果你后面加了读串口）
+                // 1️⃣ Stop reader
                 if (reader) {
                     const currentReader = reader;
                     try {
@@ -128,7 +267,7 @@
                     reader = null;
                 }
 
-                // 2️⃣ 释放 writer
+                // 2️⃣ Release writer
                 if (writer) {
                     try {
                         await writer.ready;
@@ -143,7 +282,7 @@
                     writer = null;
                 }
 
-                // 3️⃣ 关闭串口
+                // 3️⃣ Close serial port
                 try {
                     await port.close();
                 } catch (err) {
@@ -151,19 +290,19 @@
                 }
                 port = null;
 
-                // 4️⃣ 更新 UI
-                document.getElementById("status").textContent = "未连接";
+                // 4️⃣ Update UI
+                document.getElementById("status").textContent = t("disconnected");
 
                 const btn = document.getElementById("connectBtn");
-                btn.textContent = "🔌 连接串口";
+                btn.textContent = `🔌 ${t("connect")}`;
                 btn.classList.remove("enable");
                 btn.classList.add("disable");
                 btn.onclick = connect;
                 document.getElementById("container").classList.add("disabled");
 
-                console.log("串口已断开（port.close 完成）");
+                console.log("Serial disconnected (port.close done)");
             } catch (err) {
-                console.error("断开串口失败:", err);
+                console.error("Disconnect failed:", err);
             } finally {
                 isDisconnecting = false;
             }
@@ -306,7 +445,7 @@
 
         async function handleSerialDisconnect(message) {
             await disconnect();
-            showToast(message || "串口已断开");
+            showToast(message || t("serial_disconnected"));
         }
 
         let toastTimer = null;
@@ -321,7 +460,185 @@
         }
 
         function requestFirmwareUpdate() {
-            showToast("固件更新功能待接入");
+            if (port || writer) {
+                showToast(t("need_disconnect"));
+                return;
+            }
+            toggleFirmwareMenu();
+        }
+
+        let firmwareCache = null;
+        let firmwareLoading = false;
+        let firmwareMenuOpen = false;
+        let latestFirmware = null;
+
+        function toggleFirmwareMenu() {
+            const menu = document.getElementById("fwMenu");
+            if (!menu) return;
+            firmwareMenuOpen = !firmwareMenuOpen;
+            if (firmwareMenuOpen) {
+                menu.classList.remove("hidden");
+                if (!firmwareCache && !firmwareLoading) {
+                    loadFirmwareList();
+                }
+            } else {
+                menu.classList.add("hidden");
+            }
+        }
+
+        async function loadFirmwareList() {
+            firmwareLoading = true;
+            try {
+                const resp = await fetch("./firmware/firmwares.json", { cache: "no-store" });
+                if (!resp.ok) throw new Error("manifest load failed");
+                const data = await resp.json();
+                firmwareCache = Array.isArray(data.firmwares) ? data.firmwares : [];
+                firmwareCache.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+                latestFirmware = firmwareCache.length ? firmwareCache[0] : null;
+                renderFirmwareList(firmwareCache);
+                updateFwStatusText();
+            } catch (err) {
+                console.error("loadFirmwareList failed:", err);
+                renderFirmwareList([]);
+                showToast(t("fw_load_fail"));
+            } finally {
+                firmwareLoading = false;
+            }
+        }
+
+        function renderFirmwareList(list) {
+            const container = document.getElementById("fwList");
+            if (!container) return;
+            container.innerHTML = "";
+
+            if (!list || list.length === 0) {
+                const empty = document.createElement("div");
+                empty.className = "fw-empty";
+                empty.textContent = t("no_firmware");
+                container.appendChild(empty);
+                return;
+            }
+
+            for (const item of list) {
+                const row = document.createElement("div");
+                row.className = "fw-item";
+
+                const info = document.createElement("div");
+                info.className = "fw-info";
+                const title = document.createElement("div");
+                title.className = "fw-title";
+                title.textContent = item.name || "Firmware";
+                info.appendChild(title);
+
+                const actions = document.createElement("div");
+                actions.className = "fw-actions";
+
+                const cacheBust = item.ts ? `?v=${item.ts}` : `?v=${Date.now()}`;
+                const dir = item.dir ? `${item.dir}/` : "";
+
+                const install = document.createElement("esp-web-install-button");
+                const manifestName = item.installManifest;
+                install.classList.add("fw-install");
+                install.setAttribute("disabled", "");
+
+                actions.appendChild(install);
+
+                row.appendChild(info);
+                row.appendChild(actions);
+                container.appendChild(row);
+
+                validateFirmware(item, cacheBust, install, manifestName, dir);
+            }
+        }
+
+        function parseVersionParts(v) {
+            if (!v) return [];
+            return String(v)
+                .trim()
+                .replace(/^v/i, "")
+                .split(".")
+                .map((x) => parseInt(x, 10))
+                .map((n) => (Number.isFinite(n) ? n : 0));
+        }
+
+        function compareVersions(a, b) {
+            const pa = parseVersionParts(a);
+            const pb = parseVersionParts(b);
+            const len = Math.max(pa.length, pb.length);
+            for (let i = 0; i < len; i++) {
+                const va = pa[i] || 0;
+                const vb = pb[i] || 0;
+                if (va > vb) return 1;
+                if (va < vb) return -1;
+            }
+            return 0;
+        }
+
+        function updateFwStatusText() {
+            const fw = document.getElementById("fwStatus");
+            if (!fw) return;
+            const text = fw.textContent || "";
+            const m = text.match(/FW:\s*([^\s]+)/i);
+            const current = m ? m[1] : "";
+            if (!current || !latestFirmware || !latestFirmware.version) return;
+
+            const hasUpdate = compareVersions(latestFirmware.version, current) > 0;
+            fw.textContent = `FW: ${current}${hasUpdate ? t("update_available") : ""}`;
+        }
+
+        async function fetchArrayBuffer(path) {
+            const resp = await fetch(path, { cache: "no-store" });
+            if (!resp.ok) throw new Error(`fetch failed: ${path}`);
+            return await resp.arrayBuffer();
+        }
+
+        function hasValidHeader(buf, offset = 0) {
+            if (!buf || buf.byteLength < offset + 1) return false;
+            const view = new Uint8Array(buf, offset, 1);
+            return view[0] !== 0xff;
+        }
+
+        async function validateFirmware(item, cacheBust, installEl, manifestName, dir) {
+            try {
+                await fetchArrayBuffer(`./firmware/${dir}${manifestName}${cacheBust}`);
+
+                const app = await fetchArrayBuffer(`./firmware/${dir}${item.bin}${cacheBust}`);
+                if (!hasValidHeader(app, 0)) {
+                    throw new Error("invalid app header");
+                }
+                const boot = await fetchArrayBuffer(`./firmware/${dir}${item.name}_bootloader.bin${cacheBust}`);
+                const part = await fetchArrayBuffer(`./firmware/${dir}${item.name}_partitions.bin${cacheBust}`);
+                const app0 = await fetchArrayBuffer(`./firmware/${dir}${item.name}_boot_app0.bin${cacheBust}`);
+                if (!hasValidHeader(boot, 0) || !hasValidHeader(part, 0) || !hasValidHeader(app0, 0)) {
+                    throw new Error("invalid segment header");
+                }
+
+                installEl.removeAttribute("disabled");
+                installEl.setAttribute("manifest", `./firmware/${dir}${manifestName}${cacheBust}`);
+            } catch (err) {
+                console.error("validateFirmware failed:", err);
+                showToast(t("fw_bad"));
+            }
+        }
+
+        document.addEventListener("click", (evt) => {
+            const menu = document.getElementById("fwMenu");
+            const wrap = document.querySelector(".fw-wrap");
+            if (!menu || !wrap) return;
+            if (!firmwareMenuOpen) return;
+            if (wrap.contains(evt.target)) return;
+            firmwareMenuOpen = false;
+            menu.classList.add("hidden");
+        });
+
+        function openContact() {
+            const overlay = document.getElementById("contactOverlay");
+            if (overlay) overlay.classList.remove("hidden");
+        }
+
+        function closeContact() {
+            const overlay = document.getElementById("contactOverlay");
+            if (overlay) overlay.classList.add("hidden");
         }
 
         async function startSerialRead() {
@@ -334,7 +651,7 @@
                 while (true) {
                     const { value, done } = await reader.read();
                     if (done) {
-                        await handleSerialDisconnect("串口已断开");
+                        await handleSerialDisconnect(t("serial_disconnected"));
                         break;
                     }
                     if (!value) continue;
@@ -354,8 +671,8 @@
                     }
                 }
             } catch (err) {
-                console.error("串口读取失败:", err);
-                await handleSerialDisconnect("串口已断开");
+                console.error(t("serial_read_fail") + ":", err);
+                await handleSerialDisconnect(t("serial_disconnected"));
             } finally {
                 if (reader) {
                     reader.releaseLock();
@@ -379,30 +696,30 @@
             return line;
         }
 
-        /* ================= 轴数据 ================= */
+        /* ================= Axis Data ================= */
         let axis = Array.from({ length: AXIS_NUM }, () => ({
             stroke: 100,
             lead: 5.0,
             invert: false,
             target: 0,
             enabled: true,
-            homeState: HOME_IDLE   // ⭐ 三态
+            homeState: HOME_IDLE   // 3-state
         }));
-        /* ================= SVG 组件 ================= */
+        /* ================= SVG Components ================= */
         function axisSVG(i) {
             return `
 <svg width="80" height="160">
-  <!-- 外壳 -->
+  <!-- Shell -->
   <rect id="shell${i}" x="20" y="${SHELL_TOP}" width="40" height="${SHELL_HEIGHT}"
         rx="6" fill="#555" stroke="#777"
         stroke-width="2"/>
-  <!-- 滑块 -->
+  <!-- Slider -->
   <rect id="rod${i}" x="28" y="${SHELL_TOP + SHELL_HEIGHT - ROD_HEIGHT}"
         width="24" height="${ROD_HEIGHT}" rx="4" fill="#777"/>
 </svg>`;
         }
 
-        /* ================= UI 构建 ================= */
+        /* ================= UI Build ================= */
         const container = document.getElementById("axisArea");
 
         axis.forEach((a, i) => {
@@ -410,7 +727,7 @@
   <div class="axis">
     <div style="text-align: center">
     <button id="enBtn${i}" onclick="toggleEnable(${i})">
-    DISABLED</button>
+    ${t("disabled")}</button>
     </div>
     <h3>Axis ${i + 1}</h3> 
   
@@ -426,12 +743,12 @@
   value="0"
   oninput="moveAxis(${i}, this.value)">
 
-    <label>行程</label><br>
+    <label data-i18n="stroke">${t("stroke")}</label><br>
     <input type="number" value="${a.stroke}"
       id="stroke${i}"
       onchange="setStroke(${i}, this.value)"> mm<br>
 
-    <label>导程</label><br>
+    <label data-i18n="lead">${t("lead")}</label><br>
     <input type="number" step="0.1" value="${a.lead}"
       id="lead${i}"
       onchange="setLead(${i}, this.value)"> mm/rev<br>
@@ -440,15 +757,15 @@
       <input type="checkbox"
         id="invert${i}"
         onchange="setInvert(${i}, this.checked)">
-      电机反向
+      <span data-i18n="motor_reverse">${t("motor_reverse")}</span>
     </label>
 
     <div class="controls">
      <div class="controls">
-<button id="homeBtn${i}" onclick="homeAxis(${i})">Home</button>
+<button id="homeBtn${i}" onclick="homeAxis(${i})">${t("home")}</button>
  <label class="manual-home">
    <input type="checkbox" id="manualHome${i}" onchange="setManualHome(${i}, this.checked)">
-   手动home
+   <span data-i18n="manual_home">${t("manual_home")}</span>
  </label>
 </div>
 
@@ -457,7 +774,7 @@
   `;
         });
 
-        /* ================= 控制逻辑 ================= */
+        /* ================= Control Logic ================= */
         function moveAxis(i, value) {
             if (!(axis[i].enabled && axis[i].homeState === HOME_HOMED)) {
                 return;
@@ -478,7 +795,7 @@
             const slider = document.getElementById(`slider${i}`);
             slider.max = stroke;
 
-            // 防止目标超出新行程
+            // Prevent target exceeding new stroke
             if (axis[i].target > stroke) {
                 axis[i].target = stroke;
                 slider.value = stroke;
@@ -495,12 +812,12 @@
         }
 
         function setInvert(i, v) {
-            // UI: 电机反向 选中 => invert = false
+            // UI: reverse checked => invert = false
             axis[i].invert = !v;
             send(`SET INVERT ${i} ${axis[i].invert ? 1 : 0}`);
         }
 
-        /* ================= SVG 更新 ================= */
+        /* ================= SVG Update ================= */
         function updateRod(i) {
             const a = axis[i];
             const ratio = a.target / a.stroke;
@@ -519,16 +836,16 @@
             const btn = document.getElementById(`enBtn${i}`);
 
             if (axis[i].enabled) {
-                btn.textContent = "ENABLED";
+                btn.textContent = t("enabled");
                 btn.classList.remove("disable");
                 btn.classList.add("enable");
                 send(`ENABLE AXIS ${i}`);
             } else {
-                btn.textContent = "DISABLED";
+                btn.textContent = t("disabled");
                 btn.classList.remove("enable");
                 btn.classList.add("disable");
 
-                axis[i].homeState = HOME_IDLE; // ⭐ 关键
+                axis[i].homeState = HOME_IDLE; // Key
                 send(`DISABLE AXIS ${i}`);
             }
 
@@ -584,11 +901,11 @@
             slider.disabled = !canMove;
             rod.setAttribute("fill", rodColor);
 
-            // ⭐ Home 按钮颜色控制
+            // Home button color
             homeBtn.classList.remove("home-idle", "home-homing", "home-homed", "home-failed");
             homeBtn.classList.add(homeClass);
 
-            // === 外壳描边颜色：Enable = 绿，Disable = 灰 ===
+            // Shell stroke: Enable = green, Disable = gray
             shell.setAttribute(
                 "stroke",
                 a.enabled ? "#4CAF50" : "#777"
@@ -635,11 +952,11 @@
                 const btn = document.getElementById(`enBtn${i}`);
                 if (btn) {
                     if (axis[i].enabled) {
-                        btn.textContent = "ENABLED";
+                        btn.textContent = t("enabled");
                         btn.classList.remove("disable");
                         btn.classList.add("enable");
                     } else {
-                        btn.textContent = "DISABLED";
+                        btn.textContent = t("disabled");
                         btn.classList.remove("enable");
                         btn.classList.add("disable");
                     }
@@ -694,7 +1011,7 @@
         function init() {
             for (let i = 0; i < AXIS_NUM; i++) {
                 const btn = document.getElementById(`enBtn${i}`);
-                btn.textContent = "ENABLED";
+                btn.textContent = t("enabled");
                 btn.classList.remove("disable");
                 btn.classList.add("enable");
 
@@ -720,10 +1037,10 @@
                 try {
                     const cfg = JSON.parse(jsonText);
                     applyConfigFromJson(cfg);
-                    showToast("参数已同步");
+                    showToast(t("sync_ok"));
                 } catch (err) {
                     console.error("CFG parse failed:", err);
-                    showToast("参数同步失败");
+                    showToast(t("sync_fail"));
                 }
             });
 
@@ -745,11 +1062,17 @@
                 const version = evt.line.slice(3).trim();
                 const fw = document.getElementById("fwStatus");
                 if (fw) fw.textContent = `FW: ${version || "-"}`;
+                if (!latestFirmware && !firmwareLoading) {
+                    loadFirmwareList();
+                } else {
+                    updateFwStatusText();
+                }
             });
         }
 
         init();
         registerSerialHandlers();
+        applyLang();
 
     </script>
 

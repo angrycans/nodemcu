@@ -1,0 +1,14 @@
+pio pkg exec -p tool-esptoolpy -- esptool.py --chip esp32s3 --port /dev/cu.usbserial-210 --baud 460800 \
+  --before default_reset --after hard_reset write_flash -z \
+  0x0000 web/servo/firmware/20260206_1424_v0.5.1_bootloader.bin \
+  0x8000 web/servo/firmware/20260206_1424_v0.5.1_partitions.bin \
+  0xE000 web/servo/firmware/20260206_1424_v0.5.1_boot_app0.bin \
+  0x10000 web/servo/firmware/20260206_1424_v0.5.1.bin
+
+  
+pio pkg exec -p tool-esptoolpy -- esptool.py --chip esp32s3 --port /dev/cu.usbserial-210 --baud 460800 \
+  --before default_reset --after hard_reset write_flash -z \
+  0x0000 web/servo/firmware/20260206_1543_v0.5.3_bootloader.bin \
+  0x8000 web/servo/firmware/20260206_1543_v0.5.3_partitions.bin \
+  0xE000 web/servo/firmware/20260206_1543_v0.5.3_boot_app0.bin \
+  0x10000 web/servo/firmware/20260206_1543_v0.5.3.bin

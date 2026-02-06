@@ -2,37 +2,56 @@
 #include <FastAccelStepper.h>
 #include <EEPROM.h>
 
-static const char *FW_VERSION = "0.5.0";
-#define AXIS_NUM 7
+static const char *FW_VERSION = "0.5.5";
+
 #define SERIAL_BAUD 115200
-
-FastAccelStepperEngine engine;
-FastAccelStepper *stepper[AXIS_NUM];
-
-// ===== GPIO 定义（可按你实际接线改）=====
-const uint8_t STEP_PIN[AXIS_NUM] = {5, 7, 11, 13, 19, 15, 3};
-const uint8_t DIR_PIN[AXIS_NUM] = {4, 6, 8, 12, 14, 20, 10};
-const uint8_t LIMIT_PIN[AXIS_NUM] = {35, 36, 37, 38, 39, 40, 21};
-// false = 默认方向, true = 软件反向
 
 /*************************************************
  *  驱动类型选择
  *************************************************/
-#define USE_SERVO // ← 用伺服时打开
-// #define USE_STEPPER // ← 用步进时打开
+// #define USE_SERVO // ← 用伺服时打开
+#define USE_STEPPER // ← 用步进时打开
+
+#ifdef USE_STEPPER
+#include "tmc2209.h"
+#endif
 
 /*************************************************
  *  步进电机参数（测试阶段）
  *************************************************/
 #ifdef USE_STEPPER
+#define AXIS_NUM 6
+// ===== GPIO 定义（可按你实际接线改）=====
+const uint8_t STEP_PIN[AXIS_NUM] = {5, 7, 11, 13, 19, 15};
+const uint8_t DIR_PIN[AXIS_NUM] = {4, 6, 8, 12, 14, 20};
+const uint8_t LIMIT_PIN[AXIS_NUM] = {35, 36, 37, 38, 39, 40};
+// false = 默认方向, true = 软件反向
 float LEAD_MM_PER_REV[AXIS_NUM] = {
     4,
     4,
     4,
     4,
     4,
-    4,
     4};
+
+bool Motor_Inverted[AXIS_NUM] = {false, false, false, false, false, false};
+bool Motor_Enable[AXIS_NUM] = {true, true, true, true, true, true};
+// ===== 电机行程参数 =====
+float AXIS_STROKE_MM[AXIS_NUM] = {
+    100.0f, // Axis 1
+    100.0f, // Axis 2
+    100.0f, // Axis 3
+    100.0f, // Axis 4
+    100.0f, // Axis 5
+    100.0f, // Axis 6
+
+};
+
+// ===== Homing 参数 =====
+
+// ① 预退让距离：确保一开始不压在限位上
+const float AXIS_HOME_PREMOVE_MM[AXIS_NUM] = {10, 10, 10, 10, 10, 10};
+const float AXIS_HOME_BACKOFF_MM[AXIS_NUM] = {2, 2, 2, 2, 2, 2};
 
 #define MOTOR_STEPS_REV 200 // 1.8° 步进
 #define MICROSTEPS 16       // 16 细分
@@ -50,6 +69,10 @@ float LEAD_MM_PER_REV[AXIS_NUM] = {
 #define DEADZONE_MM_MIN 0.01f // 10μm（低速精细）
 #define DEADZONE_MM_MAX 0.05f // 50μm（高速稳定）
 
+// 红蓝LED引脚定义
+const int redPin = 21;
+const int bluePin = 47;
+
 int32_t calcAdaptiveDeadzoneSteps(
     int32_t newTarget,
     int32_t lastTarget,
@@ -61,7 +84,32 @@ void applyTargets();
  *  伺服电机参数（工业阶段）
  *************************************************/
 #ifdef USE_SERVO
+#define AXIS_NUM 7
+// ===== GPIO 定义（可按你实际接线改）=====
+const uint8_t STEP_PIN[AXIS_NUM] = {5, 7, 11, 13, 19, 15, 3};
+const uint8_t DIR_PIN[AXIS_NUM] = {4, 6, 8, 12, 14, 20, 10};
+const uint8_t LIMIT_PIN[AXIS_NUM] = {35, 36, 37, 38, 39, 40, 21};
+// 电机反向设置
+bool Motor_Inverted[AXIS_NUM] = {false, false, false, false, false, false, false};
+bool Motor_Enable[AXIS_NUM] = {true, true, true, true, true, true, true};
+// ===== 电机行程参数 =====
+float AXIS_STROKE_MM[AXIS_NUM] = {
+    100.0f, // Axis 1
+    100.0f, // Axis 2
+    100.0f, // Axis 3
+    100.0f, // Axis 4
+    100.0f, // Axis 5
+    100.0f, // Axis 6
+    100.0f  // Axis 7
+};
 
+// ===== Homing 参数 =====
+
+// ① 预退让距离：确保一开始不压在限位上
+const float AXIS_HOME_PREMOVE_MM[AXIS_NUM] = {10, 10, 10, 10, 10, 10, 10};
+const float AXIS_HOME_BACKOFF_MM[AXIS_NUM] = {2, 2, 2, 2, 2, 2, 2};
+
+// false = 默认方向, true = 软件反向
 #define MOTOR_STEPS_REV 1000 // 等效电子齿轮
 #define MICROSTEPS 1         // 已抽象
 
@@ -86,31 +134,14 @@ float LEAD_MM_PER_REV[AXIS_NUM] = {
 
 #endif
 
+FastAccelStepperEngine engine;
+FastAccelStepper *stepper[AXIS_NUM];
+
 // ===== 状态变量 =====
-// 电机反向设置
-bool Motor_Inverted[AXIS_NUM] = {false, false, false, false, false, false, false};
-bool Motor_Enable[AXIS_NUM] = {true, true, true, true, true, true, true};
 
 int32_t targetStep[AXIS_NUM] = {0};
 int32_t lastTargetStep[AXIS_NUM] = {0};
 uint32_t lastExecTime[AXIS_NUM] = {0};
-
-// ===== 电机行程参数 =====
-float AXIS_STROKE_MM[AXIS_NUM] = {
-    100.0f, // Axis 1
-    100.0f, // Axis 2
-    100.0f, // Axis 3
-    100.0f, // Axis 4
-    100.0f, // Axis 5
-    100.0f, // Axis 6
-    200.0f  // Axis 7
-};
-
-// ===== Homing 参数 =====
-
-// ① 预退让距离：确保一开始不压在限位上
-const float AXIS_HOME_PREMOVE_MM[AXIS_NUM] = {10, 10, 10, 10, 10, 10, 10};
-const float AXIS_HOME_BACKOFF_MM[AXIS_NUM] = {2, 2, 2, 2, 2, 2, 2};
 
 bool homed[AXIS_NUM] = {false};
 bool homingActive[AXIS_NUM] = {false};
@@ -173,12 +204,6 @@ static const uint32_t EEPROM_MAGIC = 0x46504C54; // "FPLT"
 static const uint16_t EEPROM_VERSION = 1;
 EepromConfig cfg;
 
-// 红蓝LED引脚定义
-#ifdef USE_STEPPER
-  const int redPin = 21;
-  const int bluePin = 47;
-#endif
-
 
 
 // ===== 函数声明 =====
@@ -221,11 +246,16 @@ void setup()
 
   Serial.println("setup start...");
 
+
 #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
   EEPROM.begin(sizeof(cfg));
 #endif
 
   loadParams();
+
+#ifdef USE_STEPPER
+  initTmc2209();
+#endif
 
   engine.init();
   for (int i = 0; i < AXIS_NUM; i++)
@@ -685,7 +715,14 @@ String getBoardName()
 void sendBoardInfo()
 {
   Serial.print("BOARD:");
-  Serial.println(getBoardName());
+  Serial.print(getBoardName());
+#ifdef USE_SERVO
+  Serial.println(" Servo");
+#elif defined(USE_STEPPER)
+  Serial.println(" Stepper");
+#else
+  Serial.println();
+#endif
 }
 
 void sendFirmwareInfo()

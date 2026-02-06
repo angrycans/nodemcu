@@ -21,12 +21,118 @@ header {
     background: #2b3a4a;
 }
 
+.contact-btn {
+    background: #3a2f46;
+}
+
 #fwStatus {
     color: #9fdc9f;
     font-size: 13px;
 }
 .fw-update {
     background: #2b3a4a;
+}
+
+.fw-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.fw-menu {
+    position: absolute;
+    right: 0;
+    top: 42px;
+    width: 340px;
+    background: #161616;
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+    padding: 10px;
+    z-index: 20;
+}
+
+.fw-menu.hidden {
+    display: none;
+}
+
+.fw-menu-title {
+    font-size: 13px;
+    color: #cfd8dc;
+    margin-bottom: 8px;
+}
+
+.fw-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.fw-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    background: #1f1f1f;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.fw-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.fw-title {
+    font-size: 13px;
+    color: #e6e6e6;
+}
+
+.fw-meta {
+    font-size: 12px;
+    color: #9aa4a9;
+}
+
+.fw-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.fw-download {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: #2f3b46;
+    color: #f0f0f0;
+    text-decoration: none;
+    font-size: 12px;
+}
+
+.fw-download:hover {
+    background: #3b4a58;
+}
+
+.fw-install::part(button) {
+    background: #2e7d32;
+    color: #f0f0f0;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+.fw-empty {
+    padding: 8px;
+    text-align: center;
+    color: #9aa4a9;
+    font-size: 12px;
 }
 
 button.enable {
@@ -257,4 +363,51 @@ input[type=range] {
     opacity: 1;
     /* 保持居中的同时，可以加一点点向下的位移效果 */
     transform: translateX(-50%) translateY(5px);
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 9998;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.modal-card {
+    min-width: 280px;
+    background: #1b1b1b;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+    text-align: center;
+}
+
+.modal-title {
+    font-size: 14px;
+    color: #e6e6e6;
+    margin-bottom: 10px;
+}
+
+.modal-body {
+    font-size: 13px;
+    color: #cfcfcf;
+    margin: 6px 0;
+}
+
+.modal-actions {
+    margin-top: 12px;
+}
+
+.modal-close {
+    background: #3a3a3a;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 6px;
 }

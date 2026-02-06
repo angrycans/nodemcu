@@ -1,0 +1,32 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build:release",
+      "type": "shell",
+      "command": "pio run -e esp32-s3-devkitc-1",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "manual_upload",
+      "type": "shell",
+      "command": "pio pkg exec -p tool-esptoolpy -- esptool.py --chip esp32s3 --port ${input:serialPort} --baud 921600 write_flash -z 0x0 ${workspaceFolder}/web/servo/firmware/${input:mergedBin}",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "serialPort",
+      "type": "promptString",
+      "description": "Serial port (e.g. /dev/cu.usbmodemXXXX or COM5)",
+      "default": "/dev/cu.usbmodemXXXX"
+    },
+    {
+      "id": "mergedBin",
+      "type": "promptString",
+      "description": "Merged bin filename under web/servo/firmware",
+      "default": "20260206_0959_v0.5.1_merged.bin"
+    }
+  ]
+}
