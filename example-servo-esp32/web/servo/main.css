@@ -56,6 +56,47 @@ header {
     display: none;
 }
 
+.hidden {
+    display: none !important;
+}
+
+#langToggleBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#contactBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#fwUpdateBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-icon {
+    width: 12px;
+    height: 12px;
+    display: inline-block;
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+#connectBtn,
+#consoleToggleBtn,
+.home-homed,
+.console-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    line-height: 1;
+    justify-content: center;
+}
+
 .fw-menu-title {
     font-size: 13px;
     color: #cfd8dc;
@@ -195,7 +236,7 @@ button {
     margin: 6px 0;
 }
 
-svg {
+.axis svg {
     display: block;
     margin: 8px auto;
 }

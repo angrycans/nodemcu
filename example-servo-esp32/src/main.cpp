@@ -54,15 +54,15 @@ const float AXIS_HOME_PREMOVE_MM[AXIS_NUM] = {10, 10, 10, 10, 10, 10};
 const float AXIS_HOME_BACKOFF_MM[AXIS_NUM] = {2, 2, 2, 2, 2, 2};
 
 #define MOTOR_STEPS_REV 200 // 1.8° 步进
-#define MICROSTEPS 16       // 16 细分
+#define MICROSTEPS 32       // 32 细分
 
 // ===== 运动参数 =====
-#define SPEED_HZ 80000 // ≈ 100mm/s
-#define ACCEL 120000
+#define SPEED_HZ 50000 // ↑ for 32 microsteps
+#define ACCEL 80000
 
 // ===== Homing 参数 =====
 #define HOME_SPEED 3000
-#define HOME_ACCEL 8000
+#define HOME_ACCEL 6000
 #define EXEC_INTERVAL_MS 10
 
 // ===== 自适应 DEADZONE（物理量）=====
@@ -70,7 +70,7 @@ const float AXIS_HOME_BACKOFF_MM[AXIS_NUM] = {2, 2, 2, 2, 2, 2};
 #define DEADZONE_MM_MAX 0.05f // 50μm（高速稳定）
 
 // 红蓝LED引脚定义
-const int redPin = 21;
+const int redPin = 45;
 const int bluePin = 47;
 
 int32_t calcAdaptiveDeadzoneSteps(
@@ -155,9 +155,9 @@ const uint32_t POS_MAXI = 65535; // 旧代码里用 64000，不用 65535
 #define RANGE_DZ_MM 1.0f // 1mm 安全边界
 
 // ===== 电机每个轴位置变量 =====
-uint32_t motor_mins[AXIS_NUM] = {0};
+int32_t motor_mins[AXIS_NUM] = {0};
 
-uint32_t motor_maxs[AXIS_NUM] = {0};
+int32_t motor_maxs[AXIS_NUM] = {0};
 
 // ===== 每轴逻辑中位（步数）=====
 uint32_t motor_center[AXIS_NUM];
@@ -180,7 +180,7 @@ int HomingActiveNum = 0;
 // --- 串口协议 ---
 // FlyPT 格式建议: Y7<M1><M2><M3><M4><M5><M6><M7>!!
 const char startMark1 = 'Y';
-const char startMark2 = '7'; // 保持你原有的协议头
+const char startMark2 = '7'; 
 const char endMark1 = '!';
 const char endMark2 = '!';
 
@@ -203,8 +203,6 @@ struct EepromConfig
 static const uint32_t EEPROM_MAGIC = 0x46504C54; // "FPLT"
 static const uint16_t EEPROM_VERSION = 1;
 EepromConfig cfg;
-
-
 
 // ===== 函数声明 =====
 void setup();
@@ -243,9 +241,13 @@ void setup()
 
   Serial.begin(SERIAL_BAUD);
   delay(1000);
-
+#ifdef USE_STEPPER
+  pinMode(redPin, OUTPUT);
+  pinMode(bluePin, OUTPUT);
+  digitalWrite(redPin, LOW);
+  digitalWrite(bluePin, HIGH);
+#endif
   Serial.println("setup start...");
-
 
 #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
   EEPROM.begin(sizeof(cfg));
@@ -286,10 +288,6 @@ void setup()
 
   initAxisRange();
 
-#ifdef USE_STEPPER
-  pinMode(bluePin, OUTPUT);
-  digitalWrite(bluePin, LOW);
-#endif
   Serial.println("ESP32-S3 FlyPT 6DOF READY");
 
   uint32_t waitStart = millis();
@@ -313,6 +311,11 @@ void setup()
   {
     startHoming(i);
   }
+
+#ifdef USE_STEPPER
+  digitalWrite(redPin, HIGH);
+  digitalWrite(bluePin, LOW);
+#endif
 }
 
 void loop()
@@ -329,9 +332,11 @@ void handleSerial()
 {
   while (Serial.available() >= (2 + AXIS_NUM * 2 + 2))
   {
-    if (Serial.read() != 'Y')
+    if (Serial.peek() != startMark1)
+      break;
+    if (Serial.read() != startMark1)
       continue;
-    if (Serial.read() != '4')
+    if (Serial.read() != startMark2)
       continue;
 
     for (int i = 0; i < AXIS_NUM; i++)
@@ -368,7 +373,11 @@ void handleSerial()
 #endif
   }
 
-  handleCmd();
+  // Only parse text commands when the buffer isn't a binary frame head
+  if (Serial.available() > 0 && Serial.peek() != startMark1)
+  {
+    handleCmd();
+  }
 }
 
 void startHoming(uint8_t axis)
@@ -427,7 +436,7 @@ void handleHoming()
 
         // ⭐ 绝对 SEEK 目标（一次性）
         homingSeekTarget[i] =
-            (int32_t)(motor_mins[i] - (motor_maxs[i] - motor_mins[i] + home_backoff_steps(i))) / 2;
+            (motor_mins[i] - (motor_maxs[i] - motor_mins[i] + home_backoff_steps(i))) / 2;
 
         stepper[i]->moveTo(homingSeekTarget[i]);
 

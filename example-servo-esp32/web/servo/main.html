@@ -11,37 +11,68 @@
 <body>
 
     <header>
-        <button id="connectBtn" class="disable" onclick="connect()">🔌 Connect Serial</button>
+        <button id="connectBtn" class="disable" onclick="connect()">
+            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 3h2v4h2V3h2v4h2a3 3 0 0 1 3 3v3h-2V10a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v3H6v-3a3 3 0 0 1 3-3h2V3zm10 12v2a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-2h2v2a2 2 0 0 0 2 2h5a2 2 0 0 0 2-2v-2h2z" fill="currentColor"/>
+            </svg>
+            <span id="connectText">Connect Serial</span>
+        </button>
 
 
         <span id="status">Disconnected</span>
         <span id="fwStatus">FW: -</span>
         <div class="fw-wrap">
-            <button id="fwUpdateBtn" class="fw-update" onclick="requestFirmwareUpdate()">⬆️ Firmware Update</button>
+        <button id="fwUpdateBtn" class="fw-update" onclick="requestFirmwareUpdate()">
+            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3l4.5 5h-3v6h-3V8h-3L12 3zm-7 14h14v2H5v-2z" fill="currentColor" />
+            </svg>
+            <span id="fwUpdateText">Firmware Update</span>
+        </button>
             <div id="fwMenu" class="fw-menu hidden">
                 <div class="fw-menu-title" data-i18n="fw_list">Firmware List</div>
                 <div id="fwList" class="fw-list"></div>
             </div>
         </div>
-        <button id="contactBtn" class="contact-btn" onclick="openContact()" data-i18n="contact">Contact</button>
-        <button id="langToggleBtn" class="contact-btn" onclick="toggleLang()">中文</button>
+        <button id="contactBtn" class="contact-btn" onclick="openContact()">
+            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2zm0 2v.2l8 4.8 8-4.8V8H4zm16 8v-5.1l-7.5 4.5a1 1 0 0 1-1 0L4 10.9V16h16z" fill="currentColor"/>
+            </svg>
+            <span data-i18n="contact">Contact</span>
+        </button>
+        <button id="langToggleBtn" class="contact-btn" onclick="toggleLang()">
+            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2a10 10 0 1 0 0 20a10 10 0 0 0 0-20zm6.5 10a8.5 8.5 0 0 1-1.6 4.9h-3a17.6 17.6 0 0 0 .8-4.9h3.8zm-5.1 0a15.6 15.6 0 0 1-1.4 6.2A15.6 15.6 0 0 1 10.6 12h2.8zM12 4.1c.8 1.1 1.5 3 1.8 5.9h-3.6c.3-2.9 1-4.8 1.8-5.9zM7.1 7.1A8.5 8.5 0 0 1 10 4.1a17.6 17.6 0 0 0-.8 5.9H5.5a8.5 8.5 0 0 1 1.6-2.9zM5.5 12h3.8a17.6 17.6 0 0 0 .8 4.9h-3A8.5 8.5 0 0 1 5.5 12zm5.1 0a15.6 15.6 0 0 1 1.4-6.2A15.6 15.6 0 0 1 13.4 12h-2.8zm3.4 6.9a8.5 8.5 0 0 1-2.9 2.9a17.6 17.6 0 0 0 .8-5.9h3a8.5 8.5 0 0 1-.9 3zM18.5 10h-3.8a17.6 17.6 0 0 0-.8-5.9a8.5 8.5 0 0 1 4.6 5.9z" fill="currentColor"/>
+            </svg>
+            <span class="lang-label" id="langToggleText">中文</span>
+        </button>
     </header>
 
     <div class="container disabled" id="container">
         <!-- Top toolbar -->
         <div class="axis-toolbar">
-            <button id="consoleToggleBtn" class="console-toggle active" onclick="toggleConsole()" data-i18n="console">
-                🖥️ Console
+            <button id="consoleToggleBtn" class="console-toggle active" onclick="toggleConsole()">
+                <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 5h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm0 2v8h16V7H4zm3 12h10v2H7v-2z" fill="currentColor"/>
+                </svg>
+                <span data-i18n="console">Console</span>
             </button>
-            <button class="home-homed" onclick="send('HOME ALL')" data-i18n="home_all">
-                🏠 Home All
+            <button class="home-homed" onclick="send('HOME ALL')">
+                <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 3l9 7h-3v9h-5v-6H11v6H6v-9H3l9-7z" fill="currentColor"/>
+                </svg>
+                <span data-i18n="home_all">Home All</span>
             </button>
         </div>
         <div class="axis-area" id="axisArea"></div>
         <div class="console-panel" id="consolePanel">
             <div class="console-header">
                 <div class="console-title" data-i18n="console_output">Console Output</div>
-                <button class="console-clear" onclick="clearConsole()" data-i18n="clear">🧹 Clear</button>
+                <button class="console-clear" onclick="clearConsole()">
+                    <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M7 5h10l1 2h4v2H2V7h4l1-2zm1 6h2v7H8v-7zm4 0h2v7h-2v-7zm4 0h2v7h-2v-7z" fill="currentColor"/>
+                    </svg>
+                    <span data-i18n="clear">Clear</span>
+                </button>
             </div>
             <div class="console-body" id="consoleBody"></div>
         </div>
@@ -52,7 +83,7 @@
         <div class="modal-card" onclick="event.stopPropagation()">
             <div class="modal-title" data-i18n="contact_title">Contact Info</div>
             <div class="modal-body" data-i18n="contact_email">Email: angrycans@gmail.com</div>
-            <div class="modal-body" data-i18n="contact_wechat">WeChat: angrycans</div>
+            <!-- <div class="modal-body" data-i18n="contact_wechat">WeChat: angrycans</div> -->
             <div class="modal-actions">
                 <button class="modal-close" onclick="closeContact()" data-i18n="close">Close</button>
             </div>
@@ -62,6 +93,7 @@
     <script>
         /* ================= Config ================= */
         const AXIS_NUM = 7;
+        let activeAxisCount = AXIS_NUM;
         const SHELL_TOP = 10;
         const SHELL_HEIGHT = 140;
         const ROD_HEIGHT = 20;
@@ -86,10 +118,10 @@
                 contact_email: "Email: angrycans@gmail.com",
                 contact_wechat: "WeChat: angrycans",
                 close: "Close",
-                console: "🖥️ Console",
-                home_all: "🏠 Home All",
+                console: "Console",
+                home_all: "Home All",
                 console_output: "Console Output",
-                clear: "🧹 Clear",
+                clear: "Clear",
                 no_firmware: "No firmware",
                 sync_ok: "Parameters synced",
                 sync_fail: "Parameter sync failed",
@@ -119,10 +151,10 @@
                 contact_email: "邮箱: angrycans@gmail.com",
                 contact_wechat: "微信: angrycans",
                 close: "关闭",
-                console: "🖥️ 控制台",
-                home_all: "🏠 回零全部",
+                console: "控制台",
+                home_all: "归零全部",
                 console_output: "控制台输出",
-                clear: "🧹 清空",
+                clear: "清空",
                 no_firmware: "暂无固件",
                 sync_ok: "参数已同步",
                 sync_fail: "参数同步失败",
@@ -134,11 +166,11 @@
                 stroke: "行程",
                 lead: "导程",
                 motor_reverse: "电机反向",
-                manual_home: "手动home",
+                manual_home: "手动归零",
                 update_available: "（有可用更新）"
                 ,enabled: "已启用"
                 ,disabled: "已禁用"
-                ,home: "回零"
+                ,home: "归零"
             }
         };
 
@@ -155,14 +187,14 @@
                 el.textContent = t(key);
             });
 
-            const btn = document.getElementById("connectBtn");
-            if (btn) {
+            const connectText = document.getElementById("connectText");
+            if (connectText) {
                 const connected = !!(port || writer);
-                btn.textContent = connected ? `🔌 ${t("disconnect")}` : `🔌 ${t("connect")}`;
+                connectText.textContent = connected ? t("disconnect") : t("connect");
             }
 
-            const fwBtn = document.getElementById("fwUpdateBtn");
-            if (fwBtn) fwBtn.textContent = `⬆️ ${t("fw_update")}`;
+            const fwText = document.getElementById("fwUpdateText");
+            if (fwText) fwText.textContent = t("fw_update");
 
             const status = document.getElementById("status");
             if (status) {
@@ -170,6 +202,7 @@
                 status.textContent = connected ? t("connected") : t("disconnected");
             }
 
+            updateLangToggleBtn();
             updateFwStatusText();
             renderFirmwareList(firmwareCache || []);
             updateAxisTexts();
@@ -177,9 +210,13 @@
 
         function toggleLang() {
             currentLang = currentLang === "en" ? "zh" : "en";
-            const btn = document.getElementById("langToggleBtn");
-            if (btn) btn.textContent = currentLang === "en" ? "中文" : "EN";
             applyLang();
+        }
+
+        function updateLangToggleBtn() {
+            const label = document.getElementById("langToggleText");
+            if (!label) return;
+            label.textContent = currentLang === "en" ? "EN" : "中文";
         }
 
         function updateAxisTexts() {
@@ -222,7 +259,8 @@
                 document.getElementById("status").textContent = t("connected");
                 // Update button
                 const btn = document.getElementById("connectBtn");
-                btn.textContent = `🔌 ${t("disconnect")}`;
+                const connectText = document.getElementById("connectText");
+                if (connectText) connectText.textContent = t("disconnect");
                 btn.classList.remove("disable");
                 btn.classList.add("enable");
                 btn.onclick = disconnect;
@@ -238,7 +276,8 @@
                 writer = null;
                 port = null;
                 const btn = document.getElementById("connectBtn");
-                btn.textContent = `🔌 ${t("connect")}`;
+                const connectText = document.getElementById("connectText");
+                if (connectText) connectText.textContent = t("connect");
                 btn.classList.remove("enable");
                 btn.classList.add("disable");
                 btn.onclick = connect;
@@ -294,7 +333,8 @@
                 document.getElementById("status").textContent = t("disconnected");
 
                 const btn = document.getElementById("connectBtn");
-                btn.textContent = `🔌 ${t("connect")}`;
+                const connectText = document.getElementById("connectText");
+                if (connectText) connectText.textContent = t("connect");
                 btn.classList.remove("enable");
                 btn.classList.add("disable");
                 btn.onclick = connect;
@@ -331,11 +371,11 @@
             const now = Date.now();
             if (now - lastFlyptSendMs < FLYPT_SEND_INTERVAL_MS) return;
             lastFlyptSendMs = now;
-            const frame = new Uint8Array(2 + AXIS_NUM * 2 + 2);
+            const frame = new Uint8Array(2 + activeAxisCount * 2 + 2);
             frame[0] = "Y".charCodeAt(0);
             frame[1] = "7".charCodeAt(0);
 
-            for (let i = 0; i < AXIS_NUM; i++) {
+            for (let i = 0; i < activeAxisCount; i++) {
                 const raw = flyptRawCache[i];
                 const hi = (raw >> 8) & 0xff;
                 const lo = raw & 0xff;
@@ -705,6 +745,21 @@
             enabled: true,
             homeState: HOME_IDLE   // 3-state
         }));
+
+        function setActiveAxisCount(count) {
+            const next = Math.max(1, Math.min(AXIS_NUM, Number(count) || AXIS_NUM));
+            if (next === activeAxisCount) return;
+            activeAxisCount = next;
+            for (let i = 0; i < AXIS_NUM; i++) {
+                const card = document.getElementById(`axisCard${i}`);
+                if (!card) continue;
+                if (i < activeAxisCount) {
+                    card.classList.remove("hidden");
+                } else {
+                    card.classList.add("hidden");
+                }
+            }
+        }
         /* ================= SVG Components ================= */
         function axisSVG(i) {
             return `
@@ -724,7 +779,7 @@
 
         axis.forEach((a, i) => {
             container.innerHTML += `
-  <div class="axis">
+  <div class="axis" id="axisCard${i}">
     <div style="text-align: center">
     <button id="enBtn${i}" onclick="toggleEnable(${i})">
     ${t("disabled")}</button>
@@ -915,7 +970,10 @@
 
         function applyConfigFromJson(cfg) {
             if (!cfg) return;
-            for (let i = 0; i < AXIS_NUM; i++) {
+            if (Array.isArray(cfg.stroke) && cfg.stroke.length > 0) {
+                setActiveAxisCount(Math.min(AXIS_NUM, cfg.stroke.length));
+            }
+            for (let i = 0; i < activeAxisCount; i++) {
                 if (Array.isArray(cfg.stroke) && cfg.stroke[i] != null) {
                     axis[i].stroke = Number(cfg.stroke[i]);
                 }
@@ -969,10 +1027,16 @@
 
         function applyHomeFromJson(data) {
             if (!data || !Array.isArray(data.state)) return;
-            for (let i = 0; i < AXIS_NUM; i++) {
+            setActiveAxisCount(Math.min(AXIS_NUM, data.state.length));
+            for (let i = 0; i < activeAxisCount; i++) {
                 if (data.state[i] == null) continue;
                 const state = Number(data.state[i]);
                 if (state === HOME_HOMED) {
+                    axis[i].target = 0;
+                    const slider = document.getElementById(`slider${i}`);
+                    if (slider) slider.value = 0;
+                    updateRod(i);
+                    updateFlyptCacheForAxis(i);
                     axis[i].homeState = HOME_HOMED;
                 } else if (state === HOME_HOMING) {
                     axis[i].homeState = HOME_HOMING;
@@ -1000,7 +1064,10 @@
             if (checked) {
                 axis[i].homeState = HOME_HOMED;
                 axis[i].target = 0;
+                const slider = document.getElementById(`slider${i}`);
+                if (slider) slider.value = 0;
                 updateRod(i);
+                updateFlyptCacheForAxis(i);
                 send(`HOME OK ${i}`);
             } else {
                 axis[i].homeState = HOME_IDLE;
@@ -1053,6 +1120,16 @@
                     applyHomeFromJson(data);
                 } catch (err) {
                     console.error("HOME parse failed:", err);
+                }
+            });
+
+            addSerialListener((evt) => {
+                if (evt.direction !== "RX") return;
+                if (!evt.line.startsWith("BOARD:")) return;
+                if (evt.line.includes("Stepper")) {
+                    setActiveAxisCount(6);
+                } else {
+                    setActiveAxisCount(AXIS_NUM);
                 }
             });
 

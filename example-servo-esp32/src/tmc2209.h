@@ -4,8 +4,8 @@
 #include <TMCStepper.h>
 
 // UART1 pins (single-wire PDN_UART tied to TX+RX)
-static const int TMC_UART_TX = 1;
-static const int TMC_UART_RX = 2;
+static const int TMC_UART_TX = 42;
+static const int TMC_UART_RX = 41;
 static const int TMC_EN_PIN = 9;
 static const int TMC_UART2_TX = 10;
 static const int TMC_UART2_RX = 46;
@@ -14,7 +14,7 @@ static const uint32_t TMC_UART_BAUD = 115200;
 static const float TMC_R_SENSE = 0.10f;
 
 static const uint16_t TMC_RMS_CURRENT_MA = 800;
-static const uint16_t TMC_MICROSTEPS = 16; // 配合插值实现 256
+static const uint16_t TMC_MICROSTEPS = 32; // 配合插值实现 256
 
 static HardwareSerial &TMCSerial = Serial1;
 static HardwareSerial &TMCSerial2 = Serial2;
@@ -26,6 +26,8 @@ static TMC2209Stepper tmc2209_4(&TMCSerial2, TMC_R_SENSE, 0b01);
 static TMC2209Stepper tmc2209_5(&TMCSerial2, TMC_R_SENSE, 0b10);
 
 inline void initTmc2209() {
+    Serial.println("Tmc2209 init start");
+
   pinMode(TMC_EN_PIN, OUTPUT);
   digitalWrite(TMC_EN_PIN, LOW); // 低电平使能
 
@@ -52,4 +54,7 @@ inline void initTmc2209() {
     drv->pwm_autoscale(true);
     drv->pwm_autograd(true);
   }
+
+    Serial.println("Tmc2209 init ok");
+
 }
