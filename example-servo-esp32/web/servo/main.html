@@ -1097,10 +1097,57 @@
         }
 
         function registerSerialHandlers() {
+            function extractJsonObject(text) {
+                const first = text.indexOf("{");
+                if (first === -1) return null;
+                let start = -1;
+                let depth = 0;
+                let inString = false;
+                let escape = false;
+                for (let i = first; i < text.length; i++) {
+                    const ch = text[i];
+                    if (inString) {
+                        if (escape) {
+                            escape = false;
+                            continue;
+                        }
+                        if (ch === "\\") {
+                            escape = true;
+                            continue;
+                        }
+                        if (ch === "\"") {
+                            inString = false;
+                        }
+                        continue;
+                    }
+                    if (ch === "\"") {
+                        inString = true;
+                        continue;
+                    }
+                    if (ch === "{") {
+                        if (depth === 0) start = i;
+                        depth++;
+                        continue;
+                    }
+                    if (ch === "}") {
+                        depth--;
+                        if (depth === 0 && start !== -1) {
+                            return text.slice(start, i + 1);
+                        }
+                    }
+                }
+                return null;
+            }
+
             addSerialListener((evt) => {
                 if (evt.direction !== "RX") return;
                 if (!evt.line.startsWith("CFG ")) return;
-                const jsonText = evt.line.slice(4).trim();
+                const jsonText = extractJsonObject(evt.line.slice(4).trim());
+                if (!jsonText) {
+                    console.error("CFG parse failed: no JSON object found");
+                    showToast(t("sync_fail"));
+                    return;
+                }
                 try {
                     const cfg = JSON.parse(jsonText);
                     applyConfigFromJson(cfg);
@@ -1114,7 +1161,11 @@
             addSerialListener((evt) => {
                 if (evt.direction !== "RX") return;
                 if (!evt.line.startsWith("HOME ")) return;
-                const jsonText = evt.line.slice(5).trim();
+                const jsonText = extractJsonObject(evt.line.slice(5).trim());
+                if (!jsonText) {
+                    console.error("HOME parse failed: no JSON object found");
+                    return;
+                }
                 try {
                     const data = JSON.parse(jsonText);
                     applyHomeFromJson(data);
