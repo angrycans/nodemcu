@@ -2,15 +2,15 @@
 #include <FastAccelStepper.h>
 #include <EEPROM.h>
 
-static const char *FW_VERSION = "0.5.5";
+static const char *FW_VERSION = "0.6.0";
 
 #define SERIAL_BAUD 115200
 
 /*************************************************
  *  驱动类型选择
  *************************************************/
-// #define USE_SERVO // ← 用伺服时打开
-#define USE_STEPPER // ← 用步进时打开
+ #define USE_SERVO // ← 用伺服时打开
+//#define USE_STEPPER // ← 用步进时打开
 
 #ifdef USE_STEPPER
 #include "tmc2209.h"

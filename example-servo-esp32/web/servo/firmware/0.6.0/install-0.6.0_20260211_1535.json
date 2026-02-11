@@ -1,25 +1,25 @@
 {
-  "name": "FlyPT Firmware",
-  "version": "0.5.5",
+  "name": "Acans ESP32 7Axis Firmware",
+  "version": "0.6.0",
   "new_install_improv_wait_time": 0,
   "builds": [
     {
       "chipFamily": "ESP32-S3",
       "parts": [
         {
-          "path": "0.5.5_20260206_1626_bootloader.bin",
+          "path": "0.6.0_20260211_1535_bootloader.bin",
           "offset": 0
         },
         {
-          "path": "0.5.5_20260206_1626_partitions.bin",
+          "path": "0.6.0_20260211_1535_partitions.bin",
           "offset": 32768
         },
         {
-          "path": "0.5.5_20260206_1626_boot_app0.bin",
+          "path": "0.6.0_20260211_1535_boot_app0.bin",
           "offset": 57344
         },
         {
-          "path": "0.5.5_20260206_1626.bin",
+          "path": "0.6.0_20260211_1535.bin",
           "offset": 65536
         }
       ]
