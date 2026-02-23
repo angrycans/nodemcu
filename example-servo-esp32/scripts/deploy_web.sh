@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-HOST="root@45.32.106.210"
+HOST="root@144.202.9.72"
 REMOTE_DIR="/var/www/servo"
 
 LOCAL_DIR="$(cd "$(dirname "$0")/.." && pwd)/web/servo"

@@ -298,6 +298,21 @@ input[type=range] {
     gap: 10px;
 }
 
+.axis-toolbar .auto-home-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #ddd;
+    font-size: 13px;
+    padding: 0 6px;
+}
+
+.axis-toolbar .auto-home-toggle input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #1e6f8a;
+}
+
 /* 下面 axis 区 */
 .axis-area {
     display: flex;

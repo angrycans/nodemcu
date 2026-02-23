@@ -75,6 +75,8 @@ def package_action(*args, **kwargs):
 
     fw_node = env.File(os.path.join(env.subst("$BUILD_DIR"), "firmware.bin"))
     mod.package_firmware([fw_node], [], env)
+    if hasattr(mod, "rebuild_manifest_from_folders"):
+        mod.rebuild_manifest_from_folders(project_dir)
 
 
 def manual_upload_action(*args, **kwargs):

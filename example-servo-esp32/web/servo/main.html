@@ -50,6 +50,10 @@
     <div class="container disabled" id="container">
         <!-- Top toolbar -->
         <div class="axis-toolbar">
+            <label class="auto-home-toggle">
+                <input type="checkbox" id="autoHomeToggle" onchange="setAutoHome(this.checked)">
+                <span data-i18n="auto_home">Auto Home</span>
+            </label>
             <button id="consoleToggleBtn" class="console-toggle active" onclick="toggleConsole()">
                 <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M4 5h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm0 2v8h16V7H4zm3 12h10v2H7v-2z" fill="currentColor"/>
@@ -134,7 +138,8 @@
                 lead: "Lead",
                 motor_reverse: "Motor Reverse",
                 manual_home: "Manual Home",
-                update_available: " (Update available)"
+                update_available: " (Update available)",
+                auto_home: "Auto Home"
                 ,enabled: "ENABLED"
                 ,disabled: "DISABLED"
                 ,home: "Home"
@@ -167,7 +172,8 @@
                 lead: "导程",
                 motor_reverse: "电机反向",
                 manual_home: "手动归零",
-                update_available: "（有可用更新）"
+                update_available: "（有可用更新）",
+                auto_home: "自动归零"
                 ,enabled: "已启用"
                 ,disabled: "已禁用"
                 ,home: "归零"
@@ -175,6 +181,8 @@
         };
 
         let currentLang = "zh";
+        let currentFwVersion = "";
+        let currentBoardType = "";
 
         function t(key) {
             const dict = I18N[currentLang] || I18N.en;
@@ -617,13 +625,12 @@
         function updateFwStatusText() {
             const fw = document.getElementById("fwStatus");
             if (!fw) return;
-            const text = fw.textContent || "";
-            const m = text.match(/FW:\s*([^\s]+)/i);
-            const current = m ? m[1] : "";
+            const current = currentFwVersion || "";
+            const typeLabel = currentBoardType ? ` ${currentBoardType}` : "";
             if (!current || !latestFirmware || !latestFirmware.version) return;
 
             const hasUpdate = compareVersions(latestFirmware.version, current) > 0;
-            fw.textContent = `FW: ${current}${hasUpdate ? t("update_available") : ""}`;
+            fw.textContent = `FW: ${current}${typeLabel}${hasUpdate ? t("update_available") : ""}`;
         }
 
         async function fetchArrayBuffer(path) {
@@ -872,6 +879,10 @@
             send(`SET INVERT ${i} ${axis[i].invert ? 1 : 0}`);
         }
 
+        function setAutoHome(enabled) {
+            send(`SET AUTO_HOME ${enabled ? 1 : 0}`);
+        }
+
         /* ================= SVG Update ================= */
         function updateRod(i) {
             const a = axis[i];
@@ -1022,6 +1033,13 @@
 
                 updateRod(i);
                 updateAxisUI(i);
+            }
+
+            if (cfg.auto_home != null) {
+                const autoHomeToggle = document.getElementById("autoHomeToggle");
+                if (autoHomeToggle) {
+                    autoHomeToggle.checked = Number(cfg.auto_home) === 1;
+                }
             }
         }
 
@@ -1179,17 +1197,24 @@
                 if (!evt.line.startsWith("BOARD:")) return;
                 if (evt.line.includes("Stepper")) {
                     setActiveAxisCount(6);
+                    currentBoardType = "stepper";
                 } else {
                     setActiveAxisCount(AXIS_NUM);
+                    currentBoardType = "servo";
                 }
+                updateFwStatusText();
             });
 
             addSerialListener((evt) => {
                 if (evt.direction !== "RX") return;
                 if (!evt.line.startsWith("FW:")) return;
                 const version = evt.line.slice(3).trim();
+                currentFwVersion = version || "";
                 const fw = document.getElementById("fwStatus");
-                if (fw) fw.textContent = `FW: ${version || "-"}`;
+                if (fw) {
+                    const typeLabel = currentBoardType ? ` ${currentBoardType}` : "";
+                    fw.textContent = `FW: ${version || "-"}${typeLabel}`;
+                }
                 if (!latestFirmware && !firmwareLoading) {
                     loadFirmwareList();
                 } else {

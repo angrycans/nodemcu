@@ -13,7 +13,7 @@ static const int TMC_UART2_RX = 46;
 static const uint32_t TMC_UART_BAUD = 115200;
 static const float TMC_R_SENSE = 0.10f;
 
-static const uint16_t TMC_RMS_CURRENT_MA = 800;
+static const uint16_t TMC_RMS_CURRENT_MA = 1000;
 static const uint16_t TMC_MICROSTEPS = 32; // 配合插值实现 256
 
 static HardwareSerial &TMCSerial = Serial1;

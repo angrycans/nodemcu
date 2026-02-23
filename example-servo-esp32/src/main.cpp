@@ -2,15 +2,15 @@
 #include <FastAccelStepper.h>
 #include <EEPROM.h>
 
-static const char *FW_VERSION = "0.6.0";
+static const char *FW_VERSION = "0.6.5";
 
 #define SERIAL_BAUD 115200
 
 /*************************************************
  *  驱动类型选择
  *************************************************/
- #define USE_SERVO // ← 用伺服时打开
-//#define USE_STEPPER // ← 用步进时打开
+#define USE_SERVO // ← 用伺服时打开
+// #define USE_STEPPER // ← 用步进时打开
 
 #ifdef USE_STEPPER
 #include "tmc2209.h"
@@ -131,6 +131,9 @@ float LEAD_MM_PER_REV[AXIS_NUM] = {
     5.0f,
     5.0f,
 };
+// 红蓝LED引脚定义
+const int redPin = 45;
+const int bluePin = 47;
 
 #endif
 
@@ -180,7 +183,7 @@ int HomingActiveNum = 0;
 // --- 串口协议 ---
 // FlyPT 格式建议: Y7<M1><M2><M3><M4><M5><M6><M7>!!
 const char startMark1 = 'Y';
-const char startMark2 = '7'; 
+const char startMark2 = '7';
 const char endMark1 = '!';
 const char endMark2 = '!';
 
@@ -198,11 +201,13 @@ struct EepromConfig
   uint32_t magic;
   uint16_t version;
   AxisConfig axis[AXIS_NUM];
+  bool auto_home;
 };
 
 static const uint32_t EEPROM_MAGIC = 0x46504C54; // "FPLT"
-static const uint16_t EEPROM_VERSION = 1;
+static const uint16_t EEPROM_VERSION = 3;
 EepromConfig cfg;
+bool autoHomeOnBoot = true;
 
 // ===== 函数声明 =====
 void setup();
@@ -241,12 +246,12 @@ void setup()
 
   Serial.begin(SERIAL_BAUD);
   delay(1000);
-#ifdef USE_STEPPER
+
   pinMode(redPin, OUTPUT);
   pinMode(bluePin, OUTPUT);
   digitalWrite(redPin, LOW);
   digitalWrite(bluePin, HIGH);
-#endif
+
   Serial.println("setup start...");
 
 #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
@@ -290,32 +295,48 @@ void setup()
 
   Serial.println("ESP32-S3 FlyPT 6DOF READY");
 
-  uint32_t waitStart = millis();
-  while (millis() - waitStart < 2000)
+  // uint32_t waitStart = millis();
+  // while (millis() - waitStart < 2000)
+  // {
+  //   if (!Serial.available())
+  //     continue;
+  //   String line = Serial.readStringUntil('\n');
+  //   line.trim();
+  //   if (line == "HELLO")
+  //   {
+  //     sendBoardInfo();
+  //     sendConfigJson();
+  //     testMode = true;
+  //     break;
+  //   }
+  // }
+
+  HomingActiveNum = 0;
+  if (autoHomeOnBoot)
   {
-    if (!Serial.available())
-      continue;
-    String line = Serial.readStringUntil('\n');
-    line.trim();
-    if (line == "HELLO")
+    for (int i = 0; i < AXIS_NUM; i++)
     {
-      sendBoardInfo();
-      sendConfigJson();
-      testMode = true;
-      break;
+      startHoming(i);
+    }
+  }
+  else
+  {
+    for (int i = 0; i < AXIS_NUM; i++)
+    {
+     
+
+        stepper[i]->setSpeedInHz(SPEED_HZ);
+        stepper[i]->setAcceleration(ACCEL);
+        stepper[i]->setCurrentPosition(0);
+
+        homingActive[i] = false;
+        homed[i] = true;
+        homingState[i] = HOME_HOMED;
     }
   }
 
-  HomingActiveNum = 0;
-  for (int i = 0; i < AXIS_NUM; i++)
-  {
-    startHoming(i);
-  }
-
-#ifdef USE_STEPPER
   digitalWrite(redPin, HIGH);
   digitalWrite(bluePin, LOW);
-#endif
 }
 
 void loop()
@@ -367,6 +388,8 @@ void handleSerial()
       if (!Motor_Enable[i])
         continue;
       if (!homed[i])
+        continue;
+      if (homingState[i] != HOME_HOMED)
         continue;
       stepper[i]->moveTo(targetStep[i]);
     }
@@ -455,8 +478,7 @@ void handleHoming()
       {
         stepper[i]->forceStop();
 
-        // ⭐ 机械零点
-        delay(10); // 稳定信号
+      
         stepper[i]->setCurrentPosition(motor_mins[i]);
 
         homingState[i] = HOME_BACKOFF;
@@ -492,10 +514,6 @@ void handleHoming()
     case HOME_BACKOFF:
       if (!stepper[i]->isRunning())
       {
-        homingActive[i] = false;
-        homed[i] = true;
-        homingState[i] = HOME_HOMED;
-        HomingActiveNum++;
 
         // 恢复正常速度
         stepper[i]->setSpeedInHz(SPEED_HZ);
@@ -505,7 +523,13 @@ void handleHoming()
         // ⭐ 自动到中位
         // stepper[i]->moveTo(motor_center[i]);
 
+
+        homingActive[i] = false;
+        homed[i] = true;
+        homingState[i] = HOME_HOMED;
+        HomingActiveNum++;
         Serial.printf("Axis %d homing: DONE HomingActiveNum=%d\n", i + 1, HomingActiveNum);
+
         sendHomeStatus();
       }
       break;
@@ -667,6 +691,7 @@ void syncToCfg()
     cfg.axis[i].invert = Motor_Inverted[i];
     cfg.axis[i].enable = Motor_Enable[i];
   }
+  cfg.auto_home = autoHomeOnBoot;
 }
 
 void syncFromCfg()
@@ -678,6 +703,7 @@ void syncFromCfg()
     Motor_Inverted[i] = cfg.axis[i].invert;
     Motor_Enable[i] = cfg.axis[i].enable;
   }
+  autoHomeOnBoot = cfg.auto_home;
 }
 void saveParams()
 {
@@ -771,7 +797,9 @@ void sendConfigJson()
       Serial.print(",");
     Serial.print(Motor_Enable[i] ? 1 : 0);
   }
-  Serial.println("]}");
+  Serial.print("],\"auto_home\":");
+  Serial.print(autoHomeOnBoot ? 1 : 0);
+  Serial.println("}");
 }
 
 void sendHomeStatus()
@@ -821,10 +849,13 @@ void handleCmd()
   // HELLO 自报板名
   if (line == "HELLO")
   {
+
+    printf("Received HELLO command\n");
     sendBoardInfo();
     sendFirmwareInfo();
     sendConfigJson();
     sendHomeStatus();
+    Serial.println("HELLO OK");
     return;
   }
 
@@ -845,6 +876,7 @@ void handleCmd()
         Serial.printf("AXIS %d STROKE %.3f\n", axis, stroke);
       }
     }
+    Serial.println("SET STROKE OK");
     return;
   }
 
@@ -863,6 +895,7 @@ void handleCmd()
         Serial.printf("AXIS %d LEAD %.3f\n", axis, lead);
       }
     }
+    Serial.println("SET LEAD OK");
     return;
   }
 
@@ -885,6 +918,17 @@ void handleCmd()
         Serial.printf("AXIS %d INVERT %d\n", axis, Motor_Inverted[axis] ? 1 : 0);
       }
     }
+    Serial.println("SET INVERT OK");
+    return;
+  }
+
+  if (line.startsWith("SET AUTO_HOME "))
+  {
+    int val = line.substring(14).toInt();
+    autoHomeOnBoot = (val != 0);
+    saveParams();
+    Serial.printf("AUTO_HOME %d\n", autoHomeOnBoot ? 1 : 0);
+    Serial.println("SET AUTO_HOME OK");
     return;
   }
 
@@ -900,6 +944,7 @@ void handleCmd()
         sendHomeStatus();
       }
     }
+    Serial.println("HOME AXIS OK");
     return;
   }
 
@@ -916,6 +961,7 @@ void handleCmd()
         sendHomeStatus();
       }
     }
+    Serial.println("HOME OK OK");
     return;
   }
 
@@ -930,6 +976,7 @@ void handleCmd()
     }
     Serial.println("Axis ALL homing: START");
     sendHomeStatus();
+    Serial.println("HOME ALL OK");
     return;
   }
 
@@ -943,6 +990,7 @@ void handleCmd()
       saveParams();
       Serial.printf("AXIS %d ENABLED\n", axis);
     }
+    Serial.println("ENABLE AXIS OK");
     return;
   }
 
@@ -956,6 +1004,7 @@ void handleCmd()
       stepper[axis]->forceStop();
       saveParams();
     }
+    Serial.println("DISABLE AXIS OK");
     return;
   }
 }
