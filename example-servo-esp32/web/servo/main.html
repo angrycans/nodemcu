@@ -66,6 +66,12 @@
                 </svg>
                 <span data-i18n="home_all">Home All</span>
             </button>
+            <button class="reboot-btn" onclick="restartController()">
+                <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 4V1L8 5l4 4V6a6 6 0 1 1-5.3 3.2l-1.8-1A8 8 0 1 0 12 4z" fill="currentColor"/>
+                </svg>
+                <span data-i18n="reboot_controller">Restart Controller</span>
+            </button>
         </div>
         <div class="axis-area" id="axisArea"></div>
         <div class="console-panel" id="consolePanel">
@@ -143,6 +149,10 @@
                 ,enabled: "ENABLED"
                 ,disabled: "DISABLED"
                 ,home: "Home"
+                ,reboot_controller: "Restart Controller"
+                ,reboot_confirm: "Restart controller now?"
+                ,reboot_sent: "Restart command sent"
+                ,reboot_done: "Controller restarted, please reconnect"
             },
             zh: {
                 connect: "连接串口",
@@ -177,6 +187,10 @@
                 ,enabled: "已启用"
                 ,disabled: "已禁用"
                 ,home: "归零"
+                ,reboot_controller: "控制器重启"
+                ,reboot_confirm: "确认立即重启控制器吗？"
+                ,reboot_sent: "已发送重启命令"
+                ,reboot_done: "控制器已重启，请重新连接"
             }
         };
 
@@ -246,6 +260,7 @@
         const CONSOLE_MAX_LINES = 500;
         const serialListeners = [];
         let isDisconnecting = false;
+        let rebootPending = false;
 
 
 
@@ -347,6 +362,7 @@
                 btn.classList.add("disable");
                 btn.onclick = connect;
                 document.getElementById("container").classList.add("disabled");
+                resetWebPageState();
 
                 console.log("Serial disconnected (port.close done)");
             } catch (err) {
@@ -492,8 +508,9 @@
         }
 
         async function handleSerialDisconnect(message) {
+            const toastMsg = rebootPending ? t("reboot_done") : (message || t("serial_disconnected"));
             await disconnect();
-            showToast(message || t("serial_disconnected"));
+            showToast(toastMsg);
         }
 
         let toastTimer = null;
@@ -505,6 +522,52 @@
             toastTimer = setTimeout(() => {
                 container.classList.remove("show");
             }, duration);
+        }
+
+        function resetWebPageState() {
+            currentFwVersion = "";
+            currentBoardType = "";
+            latestFirmware = null;
+            const fw = document.getElementById("fwStatus");
+            if (fw) fw.textContent = "FW: -";
+
+            setActiveAxisCount(AXIS_NUM);
+            for (let i = 0; i < AXIS_NUM; i++) {
+                axis[i].stroke = 100;
+                axis[i].lead = 5.0;
+                axis[i].invert = false;
+                axis[i].target = 0;
+                axis[i].enabled = true;
+                axis[i].homeState = HOME_IDLE;
+
+                const slider = document.getElementById(`slider${i}`);
+                const strokeInput = document.getElementById(`stroke${i}`);
+                const leadInput = document.getElementById(`lead${i}`);
+                const invertInput = document.getElementById(`invert${i}`);
+                const manualHome = document.getElementById(`manualHome${i}`);
+                const enBtn = document.getElementById(`enBtn${i}`);
+                if (slider) {
+                    slider.max = axis[i].stroke;
+                    slider.value = 0;
+                }
+                if (strokeInput) strokeInput.value = axis[i].stroke;
+                if (leadInput) leadInput.value = axis[i].lead;
+                if (invertInput) invertInput.checked = true;
+                if (manualHome) manualHome.checked = false;
+                if (enBtn) {
+                    enBtn.textContent = t("enabled");
+                    enBtn.classList.remove("disable");
+                    enBtn.classList.add("enable");
+                }
+
+                updateRod(i);
+                updateFlyptCacheForAxis(i);
+                updateAxisUI(i);
+            }
+
+            const autoHomeToggle = document.getElementById("autoHomeToggle");
+            if (autoHomeToggle) autoHomeToggle.checked = false;
+            rebootPending = false;
         }
 
         function requestFirmwareUpdate() {
@@ -883,6 +946,14 @@
             send(`SET AUTO_HOME ${enabled ? 1 : 0}`);
         }
 
+        function restartController() {
+            if (!writer) return;
+            if (!window.confirm(t("reboot_confirm"))) return;
+            rebootPending = true;
+            send("REBOOT");
+            showToast(t("reboot_sent"));
+        }
+
         /* ================= SVG Update ================= */
         function updateRod(i) {
             const a = axis[i];
@@ -1219,6 +1290,13 @@
                     loadFirmwareList();
                 } else {
                     updateFwStatusText();
+                }
+            });
+
+            addSerialListener((evt) => {
+                if (evt.direction !== "RX") return;
+                if (evt.line.startsWith("REBOOT OK")) {
+                    rebootPending = true;
                 }
             });
         }

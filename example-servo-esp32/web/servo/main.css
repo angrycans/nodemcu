@@ -331,6 +331,10 @@ input[type=range] {
     background: #1e6f8a;
 }
 
+.axis-toolbar .reboot-btn {
+    background: #8e2424;
+}
+
 .console-panel {
     margin: 16px 20px 20px;
     background: #111;

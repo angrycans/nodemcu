@@ -2,7 +2,7 @@
 #include <FastAccelStepper.h>
 #include <EEPROM.h>
 
-static const char *FW_VERSION = "0.6.6";
+static const char *FW_VERSION = "0.7.0";
 
 #define SERIAL_BAUD 115200
 
@@ -977,6 +977,19 @@ void handleCmd()
     Serial.println("Axis ALL homing: START");
     sendHomeStatus();
     Serial.println("HOME ALL OK");
+    return;
+  }
+
+  if (line == "REBOOT")
+  {
+    Serial.println("REBOOT OK");
+    Serial.flush();
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+    delay(50);
+    ESP.restart();
+#else
+    Serial.println("REBOOT UNSUPPORTED");
+#endif
     return;
   }
 
