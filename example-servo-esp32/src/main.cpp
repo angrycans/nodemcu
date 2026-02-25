@@ -2,7 +2,7 @@
 #include <FastAccelStepper.h>
 #include <EEPROM.h>
 
-static const char *FW_VERSION = "0.6.5";
+static const char *FW_VERSION = "0.6.6";
 
 #define SERIAL_BAUD 115200
 
@@ -295,21 +295,21 @@ void setup()
 
   Serial.println("ESP32-S3 FlyPT 6DOF READY");
 
-  // uint32_t waitStart = millis();
-  // while (millis() - waitStart < 2000)
-  // {
-  //   if (!Serial.available())
-  //     continue;
-  //   String line = Serial.readStringUntil('\n');
-  //   line.trim();
-  //   if (line == "HELLO")
-  //   {
-  //     sendBoardInfo();
-  //     sendConfigJson();
-  //     testMode = true;
-  //     break;
-  //   }
-  // }
+  uint32_t waitStart = millis();
+  while (millis() - waitStart < 2000)
+  {
+    if (!Serial.available())
+      continue;
+    String line = Serial.readStringUntil('\n');
+    line.trim();
+    if (line == "HELLO")
+    {
+      sendBoardInfo();
+      sendConfigJson();
+      testMode = true;
+      break;
+    }
+  }
 
   HomingActiveNum = 0;
   if (autoHomeOnBoot)
