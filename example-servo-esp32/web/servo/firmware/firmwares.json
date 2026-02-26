@@ -1,13 +1,13 @@
 {
   "firmwares": [
     {
-      "name": "0.7.0_servo_20260225_1304",
-      "version": "0.7.0_servo",
-      "date": "2026-02-25 13:04",
-      "ts": 1771995840,
-      "dir": "0.7.0_servo",
-      "bin": "0.7.0_servo_20260225_1304.bin",
-      "installManifest": "install-0.7.0_servo_20260225_1304.json"
+      "name": "0.7.1_servo_20260225_1710",
+      "version": "0.7.1_servo",
+      "date": "2026-02-25 17:10",
+      "ts": 1772010600,
+      "dir": "0.7.1_servo",
+      "bin": "0.7.1_servo_20260225_1710.bin",
+      "installManifest": "install-0.7.1_servo_20260225_1710.json"
     }
   ]
 }

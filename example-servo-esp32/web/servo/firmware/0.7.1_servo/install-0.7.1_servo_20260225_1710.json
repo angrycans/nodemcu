@@ -1,25 +1,25 @@
 {
   "name": "Acans ESP32 7Axis Firmware",
-  "version": "0.7.0_servo",
+  "version": "0.7.1_servo",
   "new_install_improv_wait_time": 0,
   "builds": [
     {
       "chipFamily": "ESP32-S3",
       "parts": [
         {
-          "path": "0.7.0_servo_20260225_1304_bootloader.bin",
+          "path": "0.7.1_servo_20260225_1710_bootloader.bin",
           "offset": 0
         },
         {
-          "path": "0.7.0_servo_20260225_1304_partitions.bin",
+          "path": "0.7.1_servo_20260225_1710_partitions.bin",
           "offset": 32768
         },
         {
-          "path": "0.7.0_servo_20260225_1304_boot_app0.bin",
+          "path": "0.7.1_servo_20260225_1710_boot_app0.bin",
           "offset": 57344
         },
         {
-          "path": "0.7.0_servo_20260225_1304.bin",
+          "path": "0.7.1_servo_20260225_1710.bin",
           "offset": 65536
         }
       ]

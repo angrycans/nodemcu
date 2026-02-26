@@ -2,7 +2,7 @@
 #include <FastAccelStepper.h>
 #include <EEPROM.h>
 
-static const char *FW_VERSION = "0.7.0";
+static const char *FW_VERSION = "0.7.1";
 
 #define SERIAL_BAUD 115200
 
@@ -57,13 +57,13 @@ const float AXIS_HOME_BACKOFF_MM[AXIS_NUM] = {2, 2, 2, 2, 2, 2};
 #define MICROSTEPS 32       // 32 细分
 
 // ===== 运动参数 =====
-#define SPEED_HZ 50000 // ↑ for 32 microsteps
-#define ACCEL 80000
+#define SPEED_HZ 200000 // 125 mm/s (~750 RPM)
+#define ACCEL 400000    // 250 mm/s²
 
 // ===== Homing 参数 =====
 #define HOME_SPEED 3000
 #define HOME_ACCEL 6000
-#define EXEC_INTERVAL_MS 10
+#define EXEC_INTERVAL_MS 2
 
 // ===== 自适应 DEADZONE（物理量）=====
 #define DEADZONE_MM_MIN 0.01f // 10μm（低速精细）
