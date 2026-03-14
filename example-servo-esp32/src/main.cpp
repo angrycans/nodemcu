@@ -2,7 +2,7 @@
 #include <FastAccelStepper.h>
 #include <EEPROM.h>
 
-static const char *FW_VERSION = "0.7.1";
+static const char *FW_VERSION = "0.7.2";
 
 #define SERIAL_BAUD 115200
 
