@@ -2,7 +2,7 @@
 #include <FastAccelStepper.h>
 #include <EEPROM.h>
 
-static const char *FW_VERSION = "0.7.2";
+static const char *FW_VERSION = "0.7.3";
 
 #define SERIAL_BAUD 115200
 
@@ -88,7 +88,7 @@ void applyTargets();
 // ===== GPIO 定义（可按你实际接线改）=====
 const uint8_t STEP_PIN[AXIS_NUM] = {5, 7, 11, 13, 19, 15, 3};
 const uint8_t DIR_PIN[AXIS_NUM] = {4, 6, 8, 12, 14, 20, 10};
-const uint8_t LIMIT_PIN[AXIS_NUM] = {35, 36, 37, 38, 39, 40, 21};
+const uint8_t LIMIT_PIN[AXIS_NUM] = {35, 36, 37, 38, 39, 40, 1};
 // 电机反向设置
 bool Motor_Inverted[AXIS_NUM] = {false, false, false, false, false, false, false};
 bool Motor_Enable[AXIS_NUM] = {true, true, true, true, true, true, true};
