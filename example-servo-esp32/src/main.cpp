@@ -2,7 +2,7 @@
 #include <FastAccelStepper.h>
 #include <EEPROM.h>
 
-static const char *FW_VERSION = "0.7.3";
+static const char *FW_VERSION = "0.7.5";
 
 #define SERIAL_BAUD 115200
 
@@ -232,6 +232,8 @@ void syncFromCfg();
 void saveParams();
 void loadParams();
 void handleCmd();
+void waitForHelloHandshake(uint32_t timeoutMs);
+void flushSerialInput();
 String getBoardName();
 void sendBoardInfo();
 void sendFirmwareInfo();
@@ -295,21 +297,7 @@ void setup()
 
   Serial.println("ESP32-S3 FlyPT 6DOF READY");
 
-  uint32_t waitStart = millis();
-  while (millis() - waitStart < 2000)
-  {
-    if (!Serial.available())
-      continue;
-    String line = Serial.readStringUntil('\n');
-    line.trim();
-    if (line == "HELLO")
-    {
-      sendBoardInfo();
-      sendConfigJson();
-      testMode = true;
-      break;
-    }
-  }
+  waitForHelloHandshake(2000);
 
   HomingActiveNum = 0;
   if (autoHomeOnBoot)
@@ -379,10 +367,18 @@ void handleSerial()
       continue;
 
 #ifdef USE_STEPPER
-    applyTargets();
+    if (!anyHomingActive())
+    {
+      applyTargets();
+    }
 #endif
 
 #ifdef USE_SERVO
+    if (anyHomingActive())
+    {
+      continue;
+    }
+
     for (int i = 0; i < AXIS_NUM; i++)
     {
       if (!Motor_Enable[i])
@@ -400,6 +396,59 @@ void handleSerial()
   if (Serial.available() > 0 && Serial.peek() != startMark1)
   {
     handleCmd();
+  }
+}
+
+void waitForHelloHandshake(uint32_t timeoutMs)
+{
+  String line;
+  uint32_t waitStart = millis();
+
+  while (millis() - waitStart < timeoutMs)
+  {
+    while (Serial.available() > 0)
+    {
+      char ch = (char)Serial.read();
+      if (ch == '\r')
+        continue;
+
+      if (ch == '\n')
+      {
+        line.trim();
+        if (line == "HELLO")
+        {
+          sendBoardInfo();
+          sendFirmwareInfo();
+          sendConfigJson();
+          sendHomeStatus();
+          Serial.println("HELLO OK");
+          testMode = true;
+          flushSerialInput();
+          return;
+        }
+        line = "";
+        continue;
+      }
+
+      if (ch >= 32 && ch <= 126)
+      {
+        line += ch;
+      }
+      else
+      {
+        line = "";
+      }
+    }
+  }
+
+  flushSerialInput();
+}
+
+void flushSerialInput()
+{
+  while (Serial.available() > 0)
+  {
+    Serial.read();
   }
 }
 
