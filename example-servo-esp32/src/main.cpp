@@ -2,7 +2,7 @@
 #include <FastAccelStepper.h>
 #include <EEPROM.h>
 
-static const char *FW_VERSION = "0.7.5";
+static const char *FW_VERSION = "0.7.6";
 
 #define SERIAL_BAUD 115200
 
@@ -234,6 +234,13 @@ void loadParams();
 void handleCmd();
 void waitForHelloHandshake(uint32_t timeoutMs);
 void flushSerialInput();
+bool motionReady();
+void resetMotionSync();
+void setNormalMotionProfile();
+void setCatchupMotionProfile();
+void beginMotionCatchup();
+void updateMotionCatchup();
+bool allEnabledAxesStopped();
 String getBoardName();
 void sendBoardInfo();
 void sendFirmwareInfo();
@@ -242,6 +249,11 @@ void sendHomeStatus();
 bool anyHomingActive();
 
 bool testMode = false;
+uint32_t motionUnlockAt = 0;
+static const uint32_t HOME_SETTLE_MS = 1000;
+bool wasHomingActive = false;
+bool motionPrimed = false;
+bool motionCatchupActive = false;
 
 void setup()
 {
@@ -321,6 +333,7 @@ void setup()
         homed[i] = true;
         homingState[i] = HOME_HOMED;
     }
+    motionUnlockAt = millis();
   }
 
   digitalWrite(redPin, HIGH);
@@ -329,11 +342,19 @@ void setup()
 
 void loop()
 {
-
-  if (anyHomingActive())
+  bool homingNow = anyHomingActive();
+  if (homingNow)
   {
     handleHoming();
   }
+
+  if (!homingNow && wasHomingActive)
+  {
+    motionUnlockAt = millis() + HOME_SETTLE_MS;
+  }
+
+  wasHomingActive = homingNow;
+  updateMotionCatchup();
   handleSerial();
 }
 
@@ -367,15 +388,26 @@ void handleSerial()
       continue;
 
 #ifdef USE_STEPPER
-    if (!anyHomingActive())
+    if (motionReady())
     {
+      if (!motionPrimed)
+      {
+        beginMotionCatchup();
+        continue;
+      }
       applyTargets();
     }
 #endif
 
 #ifdef USE_SERVO
-    if (anyHomingActive())
+    if (!motionReady())
     {
+      continue;
+    }
+
+    if (!motionPrimed)
+    {
+      beginMotionCatchup();
       continue;
     }
 
@@ -452,6 +484,91 @@ void flushSerialInput()
   }
 }
 
+bool motionReady()
+{
+  if (anyHomingActive())
+    return false;
+
+  return (int32_t)(millis() - motionUnlockAt) >= 0;
+}
+
+void resetMotionSync()
+{
+  motionPrimed = false;
+  motionCatchupActive = false;
+}
+
+void setNormalMotionProfile()
+{
+  for (int i = 0; i < AXIS_NUM; i++)
+  {
+    if (!stepper[i])
+      continue;
+    stepper[i]->setSpeedInHz(SPEED_HZ);
+    stepper[i]->setAcceleration(ACCEL);
+  }
+}
+
+void setCatchupMotionProfile()
+{
+  for (int i = 0; i < AXIS_NUM; i++)
+  {
+    if (!stepper[i])
+      continue;
+    stepper[i]->setSpeedInHz(HOME_SPEED);
+    stepper[i]->setAcceleration(HOME_ACCEL);
+  }
+}
+
+bool allEnabledAxesStopped()
+{
+  for (int i = 0; i < AXIS_NUM; i++)
+  {
+    if (!Motor_Enable[i])
+      continue;
+    if (!homed[i])
+      continue;
+    if (homingState[i] != HOME_HOMED)
+      continue;
+    if (stepper[i] && stepper[i]->isRunning())
+      return false;
+  }
+  return true;
+}
+
+void beginMotionCatchup()
+{
+  setCatchupMotionProfile();
+
+  for (int i = 0; i < AXIS_NUM; i++)
+  {
+    if (!Motor_Enable[i])
+      continue;
+    if (!homed[i])
+      continue;
+    if (homingState[i] != HOME_HOMED)
+      continue;
+
+    stepper[i]->moveTo(targetStep[i]);
+    lastTargetStep[i] = targetStep[i];
+  }
+
+  motionPrimed = true;
+  motionCatchupActive = true;
+}
+
+void updateMotionCatchup()
+{
+  if (!motionCatchupActive)
+    return;
+
+  if (!allEnabledAxesStopped())
+    return;
+
+  setNormalMotionProfile();
+  motionCatchupActive = false;
+}
+
 void startHoming(uint8_t axis)
 {
 
@@ -462,6 +579,7 @@ void startHoming(uint8_t axis)
   {
     HomingActiveNum--;
   }
+  resetMotionSync();
   homed[axis] = false;
   homingActive[axis] = true;
   homingState[axis] = HOME_PREMOVE;
