@@ -2,9 +2,10 @@
 #include <FastAccelStepper.h>
 #include <EEPROM.h>
 
-static const char *FW_VERSION = "0.7.6";
+static const char *FW_VERSION = "0.7.7";
 
 #define SERIAL_BAUD 115200
+#define ESTOP_PIN 9
 
 /*************************************************
  *  驱动类型选择
@@ -169,7 +170,8 @@ enum HomingState
 {
   HOME_IDLE = 0,
   HOME_PREMOVE, // ① 反向预退让
-  HOME_SEEK,    // ② 向限位靠近
+  HOME_RELEASE, // ② 继续脱离限位，直到信号无效
+  HOME_SEEK,    // ③ 向限位靠近
   HOME_BACKOFF, // ④ 回退
   HOME_HOMED,   // 完成且成功
   HOME_FAILED   // 完成但失败
@@ -177,6 +179,9 @@ enum HomingState
 
 HomingState homingState[AXIS_NUM];
 int32_t homingSeekTarget[AXIS_NUM];
+uint8_t homingReleaseAttempts[AXIS_NUM] = {0};
+
+static const uint8_t HOME_RELEASE_MAX_ATTEMPTS = 6;
 
 int HomingActiveNum = 0;
 
@@ -202,12 +207,22 @@ struct EepromConfig
   uint16_t version;
   AxisConfig axis[AXIS_NUM];
   bool auto_home;
+  bool home_signal_high;
+};
+
+struct EepromConfigV3
+{
+  uint32_t magic;
+  uint16_t version;
+  AxisConfig axis[AXIS_NUM];
+  bool auto_home;
 };
 
 static const uint32_t EEPROM_MAGIC = 0x46504C54; // "FPLT"
-static const uint16_t EEPROM_VERSION = 3;
+static const uint16_t EEPROM_VERSION = 4;
 EepromConfig cfg;
 bool autoHomeOnBoot = true;
+bool homeSignalHighActive = false;
 
 // ===== 函数声明 =====
 void setup();
@@ -246,7 +261,12 @@ void sendBoardInfo();
 void sendFirmwareInfo();
 void sendConfigJson();
 void sendHomeStatus();
+bool isHomeSignalTriggered(uint8_t axis);
 bool anyHomingActive();
+bool isEstopPressed();
+void updateEstop();
+void triggerEstop();
+void stopAllMotion(bool abortHoming);
 
 bool testMode = false;
 uint32_t motionUnlockAt = 0;
@@ -254,6 +274,8 @@ static const uint32_t HOME_SETTLE_MS = 1000;
 bool wasHomingActive = false;
 bool motionPrimed = false;
 bool motionCatchupActive = false;
+bool estopActive = false;
+bool estopPressedLast = false;
 
 void setup()
 {
@@ -263,6 +285,7 @@ void setup()
 
   pinMode(redPin, OUTPUT);
   pinMode(bluePin, OUTPUT);
+  pinMode(ESTOP_PIN, INPUT_PULLUP);
   digitalWrite(redPin, LOW);
   digitalWrite(bluePin, HIGH);
 
@@ -342,6 +365,13 @@ void setup()
 
 void loop()
 {
+  updateEstop();
+  if (estopActive)
+  {
+    handleSerial();
+    return;
+  }
+
   bool homingNow = anyHomingActive();
   if (homingNow)
   {
@@ -362,6 +392,11 @@ void handleSerial()
 {
   while (Serial.available() >= (2 + AXIS_NUM * 2 + 2))
   {
+    if (estopActive)
+    {
+      break;
+    }
+
     if (Serial.peek() != startMark1)
       break;
     if (Serial.read() != startMark1)
@@ -486,6 +521,9 @@ void flushSerialInput()
 
 bool motionReady()
 {
+  if (estopActive)
+    return false;
+
   if (anyHomingActive())
     return false;
 
@@ -496,6 +534,60 @@ void resetMotionSync()
 {
   motionPrimed = false;
   motionCatchupActive = false;
+}
+
+bool isEstopPressed()
+{
+  return digitalRead(ESTOP_PIN) == LOW;
+}
+
+void stopAllMotion(bool abortHoming)
+{
+  resetMotionSync();
+
+  for (int i = 0; i < AXIS_NUM; i++)
+  {
+    if (!stepper[i])
+      continue;
+
+    stepper[i]->forceStop();
+
+    if (abortHoming && homingActive[i])
+    {
+      homingActive[i] = false;
+      homed[i] = false;
+      homingState[i] = HOME_FAILED;
+    }
+  }
+}
+
+void triggerEstop()
+{
+  if (estopActive)
+    return;
+
+  estopActive = true;
+  stopAllMotion(true);
+  Serial.println("ESTOP TRIGGERED");
+  sendHomeStatus();
+}
+
+void updateEstop()
+{
+  bool pressed = isEstopPressed();
+
+  if (pressed && !estopPressedLast)
+  {
+    triggerEstop();
+  }
+  else if (!pressed && estopPressedLast && estopActive)
+  {
+    estopActive = false;
+    motionUnlockAt = millis() + HOME_SETTLE_MS;
+    Serial.println("ESTOP RELEASED");
+  }
+
+  estopPressedLast = pressed;
 }
 
 void setNormalMotionProfile()
@@ -574,6 +666,8 @@ void startHoming(uint8_t axis)
 
   if (axis >= AXIS_NUM)
     return;
+  if (estopActive)
+    return;
 
   if (homed[axis] && HomingActiveNum > 0)
   {
@@ -583,6 +677,7 @@ void startHoming(uint8_t axis)
   homed[axis] = false;
   homingActive[axis] = true;
   homingState[axis] = HOME_PREMOVE;
+  homingReleaseAttempts[axis] = 0;
 
   stepper[axis]->forceStop();
   stepper[axis]->setSpeedInHz(HOME_SPEED);
@@ -607,6 +702,9 @@ bool anyHomingActive()
 
 void handleHoming()
 {
+  if (estopActive)
+    return;
+
   for (int i = 0; i < AXIS_NUM; i++)
   {
     if (!homingActive[i])
@@ -614,34 +712,82 @@ void handleHoming()
 
     switch (homingState[i])
     {
-      // ===== ① 预退让完成 → 开始找限位 =====
+      // ===== ① 预退让完成 → 先确认已脱离限位 =====
     case HOME_PREMOVE:
       if (!stepper[i]->isRunning())
       {
-        homingState[i] = HOME_SEEK;
-
         stepper[i]->setSpeedInHz(HOME_SPEED);
         stepper[i]->setAcceleration(HOME_ACCEL);
         stepper[i]->setCurrentPosition(0);
 
-        // ⭐ 绝对 SEEK 目标（一次性）
-        homingSeekTarget[i] =
-            (motor_mins[i] - (motor_maxs[i] - motor_mins[i] + home_backoff_steps(i))) / 2;
+        if (isHomeSignalTriggered(i))
+        {
+          homingState[i] = HOME_RELEASE;
+          homingReleaseAttempts[i] = 1;
+          stepper[i]->move(home_premove_steps(i));
+          Serial.printf("Axis %d homing: RELEASE %d\n", i + 1, homingReleaseAttempts[i]);
+        }
+        else
+        {
+          homingState[i] = HOME_SEEK;
 
-        stepper[i]->moveTo(homingSeekTarget[i]);
+          // 绝对 SEEK 目标（一次性）
+          homingSeekTarget[i] =
+              (motor_mins[i] - (motor_maxs[i] - motor_mins[i] + home_backoff_steps(i))) / 2;
 
-        Serial.printf(
-            "Axis %d homing: SEEK to %ld\n",
-            i + 1,
-            homingSeekTarget[i]);
+          stepper[i]->moveTo(homingSeekTarget[i]);
+
+          Serial.printf(
+              "Axis %d homing: SEEK to %ld\n",
+              i + 1,
+              homingSeekTarget[i]);
+        }
       }
       break;
 
-      // ===== ② 找到限位 =====
+    case HOME_RELEASE:
+      if (!isHomeSignalTriggered(i))
+      {
+        homingState[i] = HOME_SEEK;
+        stepper[i]->setSpeedInHz(HOME_SPEED);
+        stepper[i]->setAcceleration(HOME_ACCEL);
+        stepper[i]->setCurrentPosition(0);
+        homingSeekTarget[i] =
+            (motor_mins[i] - (motor_maxs[i] - motor_mins[i] + home_backoff_steps(i))) / 2;
+        stepper[i]->moveTo(homingSeekTarget[i]);
+        Serial.printf(
+            "Axis %d homing: RELEASED, SEEK to %ld\n",
+            i + 1,
+            homingSeekTarget[i]);
+        break;
+      }
+
+      if (!stepper[i]->isRunning())
+      {
+        if (homingReleaseAttempts[i] >= HOME_RELEASE_MAX_ATTEMPTS)
+        {
+          homingState[i] = HOME_FAILED;
+          homingActive[i] = false;
+          homed[i] = false;
+          HomingActiveNum++;
+          Serial.printf(
+              "ERROR: Axis %d homing FAILED (limit stuck active) HomingActiveNum=%d\n",
+              i + 1, HomingActiveNum);
+          sendHomeStatus();
+          break;
+        }
+
+        homingReleaseAttempts[i]++;
+        stepper[i]->move(home_premove_steps(i));
+        Serial.printf("Axis %d homing: RELEASE %d\n", i + 1, homingReleaseAttempts[i]);
+      }
+      break;
+
+      // ===== ③ 找到限位 =====
     case HOME_SEEK:
     {
       // ===== 命中限位 =====
-      if (digitalRead(LIMIT_PIN[i]) == LOW)
+      if (isHomeSignalTriggered(i))
       {
         stepper[i]->forceStop();
 
@@ -782,6 +928,9 @@ int32_t calcAdaptiveDeadzoneSteps(
 
 void applyTargets()
 {
+  if (estopActive)
+    return;
+
   uint32_t now = millis();
   for (int i = 0; i < AXIS_NUM; i++)
   {
@@ -859,6 +1008,7 @@ void syncToCfg()
     cfg.axis[i].enable = Motor_Enable[i];
   }
   cfg.auto_home = autoHomeOnBoot;
+  cfg.home_signal_high = homeSignalHighActive;
 }
 
 void syncFromCfg()
@@ -871,6 +1021,7 @@ void syncFromCfg()
     Motor_Enable[i] = cfg.axis[i].enable;
   }
   autoHomeOnBoot = cfg.auto_home;
+  homeSignalHighActive = cfg.home_signal_high;
 }
 void saveParams()
 {
@@ -886,6 +1037,25 @@ void saveParams()
 void loadParams()
 {
   EEPROM.get(0, cfg);
+  if (cfg.magic == EEPROM_MAGIC && cfg.version == 3)
+  {
+    EepromConfigV3 oldCfg;
+    EEPROM.get(0, oldCfg);
+    cfg.magic = EEPROM_MAGIC;
+    cfg.version = EEPROM_VERSION;
+    for (int i = 0; i < AXIS_NUM; i++)
+    {
+      cfg.axis[i] = oldCfg.axis[i];
+    }
+    cfg.auto_home = oldCfg.auto_home;
+    cfg.home_signal_high = false;
+    syncFromCfg();
+    EEPROM.put(0, cfg);
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+    EEPROM.commit();
+#endif
+    return;
+  }
   if (cfg.magic != EEPROM_MAGIC || cfg.version != EEPROM_VERSION)
   {
     cfg.magic = EEPROM_MAGIC;
@@ -966,7 +1136,14 @@ void sendConfigJson()
   }
   Serial.print("],\"auto_home\":");
   Serial.print(autoHomeOnBoot ? 1 : 0);
+  Serial.print(",\"home_signal_high\":");
+  Serial.print(homeSignalHighActive ? 1 : 0);
   Serial.println("}");
+}
+
+bool isHomeSignalTriggered(uint8_t axis)
+{
+  return digitalRead(LIMIT_PIN[axis]) == (homeSignalHighActive ? HIGH : LOW);
 }
 
 void sendHomeStatus()
@@ -981,6 +1158,7 @@ void sendHomeStatus()
     switch (homingState[i])
     {
     case HOME_PREMOVE:
+    case HOME_RELEASE:
     case HOME_SEEK:
     case HOME_BACKOFF:
       state = 1; // HOMING
@@ -1023,6 +1201,19 @@ void handleCmd()
     sendConfigJson();
     sendHomeStatus();
     Serial.println("HELLO OK");
+    return;
+  }
+
+  if (line == "ESTOP")
+  {
+    triggerEstop();
+    Serial.println("ESTOP OK");
+    return;
+  }
+
+  if (line == "ESTOP STATE")
+  {
+    Serial.printf("ESTOP %d\n", estopActive ? 1 : 0);
     return;
   }
 
@@ -1099,8 +1290,24 @@ void handleCmd()
     return;
   }
 
+  if (line.startsWith("SET HOME_SIGNAL_HIGH "))
+  {
+    int val = line.substring(21).toInt();
+    homeSignalHighActive = (val != 0);
+    saveParams();
+    Serial.printf("HOME_SIGNAL_HIGH %d\n", homeSignalHighActive ? 1 : 0);
+    Serial.println("SET HOME_SIGNAL_HIGH OK");
+    return;
+  }
+
   if (line.startsWith("HOME AXIS "))
   {
+    if (estopActive)
+    {
+      Serial.println("HOME AXIS BLOCKED BY ESTOP");
+      return;
+    }
+
     int axis = line.substring(10).toInt();
     if (axis >= 0 && axis < AXIS_NUM)
     {
@@ -1117,6 +1324,12 @@ void handleCmd()
 
   if (line.startsWith("HOME OK "))
   {
+    if (estopActive)
+    {
+      Serial.println("HOME OK BLOCKED BY ESTOP");
+      return;
+    }
+
     int axis = line.substring(8).toInt();
     if (axis >= 0 && axis < AXIS_NUM)
     {
@@ -1134,6 +1347,12 @@ void handleCmd()
 
   if (line == "HOME ALL")
   {
+    if (estopActive)
+    {
+      Serial.println("HOME ALL BLOCKED BY ESTOP");
+      return;
+    }
+
     for (int i = 0; i < AXIS_NUM; i++)
     {
       if (Motor_Enable[i])

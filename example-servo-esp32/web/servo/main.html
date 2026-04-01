@@ -54,6 +54,10 @@
                 <input type="checkbox" id="autoHomeToggle" onchange="setAutoHome(this.checked)">
                 <span data-i18n="auto_home">Auto Home</span>
             </label>
+            <label class="auto-home-toggle">
+                <input type="checkbox" id="homeSignalHighToggle" onchange="setHomeSignalHigh(this.checked)">
+                <span data-i18n="home_signal_state">Home Signal State</span>
+            </label>
             <button id="consoleToggleBtn" class="console-toggle active" onclick="toggleConsole()">
                 <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M4 5h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm0 2v8h16V7H4zm3 12h10v2H7v-2z" fill="currentColor"/>
@@ -146,6 +150,7 @@
                 manual_home: "Manual Home",
                 update_available: " (Update available)",
                 auto_home: "Auto Home"
+                ,home_signal_state: "Home Signal State"
                 ,enabled: "ENABLED"
                 ,disabled: "DISABLED"
                 ,home: "Home"
@@ -184,6 +189,7 @@
                 manual_home: "手动归零",
                 update_available: "（有可用更新）",
                 auto_home: "自动归零"
+                ,home_signal_state: "归零状态"
                 ,enabled: "已启用"
                 ,disabled: "已禁用"
                 ,home: "归零"
@@ -567,6 +573,8 @@
 
             const autoHomeToggle = document.getElementById("autoHomeToggle");
             if (autoHomeToggle) autoHomeToggle.checked = false;
+            const homeSignalHighToggle = document.getElementById("homeSignalHighToggle");
+            if (homeSignalHighToggle) homeSignalHighToggle.checked = false;
             rebootPending = false;
         }
 
@@ -946,6 +954,10 @@
             send(`SET AUTO_HOME ${enabled ? 1 : 0}`);
         }
 
+        function setHomeSignalHigh(enabled) {
+            send(`SET HOME_SIGNAL_HIGH ${enabled ? 1 : 0}`);
+        }
+
         function restartController() {
             if (!writer) return;
             if (!window.confirm(t("reboot_confirm"))) return;
@@ -1110,6 +1122,12 @@
                 const autoHomeToggle = document.getElementById("autoHomeToggle");
                 if (autoHomeToggle) {
                     autoHomeToggle.checked = Number(cfg.auto_home) === 1;
+                }
+            }
+            if (cfg.home_signal_high != null) {
+                const homeSignalHighToggle = document.getElementById("homeSignalHighToggle");
+                if (homeSignalHighToggle) {
+                    homeSignalHighToggle.checked = Number(cfg.home_signal_high) === 1;
                 }
             }
         }
