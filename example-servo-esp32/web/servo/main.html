@@ -55,8 +55,12 @@
                 <span data-i18n="auto_home">Auto Home</span>
             </label>
             <label class="auto-home-toggle">
-                <input type="checkbox" id="homeSignalHighToggle" onchange="setHomeSignalHigh(this.checked)">
-                <span data-i18n="home_signal_state">Home Signal State</span>
+                <span data-i18n="speed_mode">Speed Mode</span>
+                <select id="speedModeSelect" onchange="setSpeedMode(this.value)">
+                    <option value="0" data-i18n="speed_low">Low</option>
+                    <option value="1" data-i18n="speed_medium">Medium</option>
+                    <option value="2" data-i18n="speed_high">High</option>
+                </select>
             </label>
             <button id="consoleToggleBtn" class="console-toggle active" onclick="toggleConsole()">
                 <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -150,7 +154,10 @@
                 manual_home: "Manual Home",
                 update_available: " (Update available)",
                 auto_home: "Auto Home"
-                ,home_signal_state: "Home Signal State"
+                ,speed_mode: "Speed Mode"
+                ,speed_low: "Low"
+                ,speed_medium: "Medium"
+                ,speed_high: "High"
                 ,enabled: "ENABLED"
                 ,disabled: "DISABLED"
                 ,home: "Home"
@@ -189,7 +196,10 @@
                 manual_home: "手动归零",
                 update_available: "（有可用更新）",
                 auto_home: "自动归零"
-                ,home_signal_state: "归零状态"
+                ,speed_mode: "转速设置"
+                ,speed_low: "低"
+                ,speed_medium: "中"
+                ,speed_high: "高"
                 ,enabled: "已启用"
                 ,disabled: "已禁用"
                 ,home: "归零"
@@ -573,8 +583,8 @@
 
             const autoHomeToggle = document.getElementById("autoHomeToggle");
             if (autoHomeToggle) autoHomeToggle.checked = false;
-            const homeSignalHighToggle = document.getElementById("homeSignalHighToggle");
-            if (homeSignalHighToggle) homeSignalHighToggle.checked = false;
+            const speedModeSelect = document.getElementById("speedModeSelect");
+            if (speedModeSelect) speedModeSelect.value = "2";
             rebootPending = false;
         }
 
@@ -802,10 +812,14 @@
         function normalizeRxLine(line) {
             const boardIdx = line.indexOf("BOARD:");
             const cfgIdx = line.indexOf("CFG ");
+            const homeIdx = line.indexOf("HOME {");
+            const limitIdx = line.indexOf("LIMIT {");
             let cutIdx = -1;
 
             if (boardIdx >= 0) cutIdx = boardIdx;
             if (cfgIdx >= 0 && (cutIdx === -1 || cfgIdx < cutIdx)) cutIdx = cfgIdx;
+            if (homeIdx >= 0 && (cutIdx === -1 || homeIdx < cutIdx)) cutIdx = homeIdx;
+            if (limitIdx >= 0 && (cutIdx === -1 || limitIdx < cutIdx)) cutIdx = limitIdx;
 
             if (cutIdx >= 0) {
                 return line.slice(cutIdx);
@@ -954,8 +968,8 @@
             send(`SET AUTO_HOME ${enabled ? 1 : 0}`);
         }
 
-        function setHomeSignalHigh(enabled) {
-            send(`SET HOME_SIGNAL_HIGH ${enabled ? 1 : 0}`);
+        function setSpeedMode(mode) {
+            send(`SET SPEED_MODE ${Number(mode)}`);
         }
 
         function restartController() {
@@ -1124,10 +1138,10 @@
                     autoHomeToggle.checked = Number(cfg.auto_home) === 1;
                 }
             }
-            if (cfg.home_signal_high != null) {
-                const homeSignalHighToggle = document.getElementById("homeSignalHighToggle");
-                if (homeSignalHighToggle) {
-                    homeSignalHighToggle.checked = Number(cfg.home_signal_high) === 1;
+            if (cfg.speed_mode != null) {
+                const speedModeSelect = document.getElementById("speedModeSelect");
+                if (speedModeSelect) {
+                    speedModeSelect.value = String(Number(cfg.speed_mode));
                 }
             }
         }
@@ -1163,6 +1177,7 @@
             axis[i].homeState = HOME_HOMING;
             updateAxisUI(i);
 
+            send(`MONITOR LIMIT ${i}`);
             send(`HOME AXIS ${i}`);
         }
 
@@ -1267,8 +1282,9 @@
 
             addSerialListener((evt) => {
                 if (evt.direction !== "RX") return;
-                if (!evt.line.startsWith("HOME ")) return;
-                const jsonText = extractJsonObject(evt.line.slice(5).trim());
+                const homeStart = evt.line.indexOf("HOME {");
+                if (homeStart === -1) return;
+                const jsonText = extractJsonObject(evt.line.slice(homeStart + 5).trim());
                 if (!jsonText) {
                     console.error("HOME parse failed: no JSON object found");
                     return;

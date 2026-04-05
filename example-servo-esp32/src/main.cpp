@@ -2,7 +2,7 @@
 #include <FastAccelStepper.h>
 #include <EEPROM.h>
 
-static const char *FW_VERSION = "0.7.7";
+static const char *FW_VERSION = "0.8.1";
 
 #define SERIAL_BAUD 115200
 #define ESTOP_PIN 9
@@ -115,8 +115,18 @@ const float AXIS_HOME_BACKOFF_MM[AXIS_NUM] = {2, 2, 2, 2, 2, 2, 2};
 #define MICROSTEPS 1         // 已抽象
 
 // ===== 运动参数 =====
-#define SPEED_HZ 150000 // ≈ 100mm/s
-#define ACCEL 120000
+#define SPEED_MODE_LOW 0
+#define SPEED_MODE_MEDIUM 1
+#define SPEED_MODE_HIGH 2
+#define DEFAULT_SPEED_MODE SPEED_MODE_HIGH
+
+#ifdef USE_SERVO
+const uint32_t SPEED_HZ_PRESETS[3] = {40000, 80000, 150000};
+const uint32_t ACCEL_PRESETS[3] = {30000, 60000, 120000};
+#else
+const uint32_t SPEED_HZ_PRESETS[3] = {120000, 160000, 200000};
+const uint32_t ACCEL_PRESETS[3] = {200000, 300000, 400000};
+#endif
 
 // ===== Homing 参数 =====
 #define HOME_SPEED 3000
@@ -207,22 +217,25 @@ struct EepromConfig
   uint16_t version;
   AxisConfig axis[AXIS_NUM];
   bool auto_home;
-  bool home_signal_high;
+  uint8_t speed_mode;
 };
 
-struct EepromConfigV3
+struct EepromConfigV5
 {
   uint32_t magic;
   uint16_t version;
   AxisConfig axis[AXIS_NUM];
   bool auto_home;
+  uint8_t speed_mode;
 };
 
 static const uint32_t EEPROM_MAGIC = 0x46504C54; // "FPLT"
-static const uint16_t EEPROM_VERSION = 4;
+static const uint16_t EEPROM_VERSION = 6;
 EepromConfig cfg;
 bool autoHomeOnBoot = true;
-bool homeSignalHighActive = false;
+uint8_t speedMode = DEFAULT_SPEED_MODE;
+uint32_t normalSpeedHz = SPEED_HZ_PRESETS[DEFAULT_SPEED_MODE];
+uint32_t normalAccel = ACCEL_PRESETS[DEFAULT_SPEED_MODE];
 
 // ===== 函数声明 =====
 void setup();
@@ -261,7 +274,13 @@ void sendBoardInfo();
 void sendFirmwareInfo();
 void sendConfigJson();
 void sendHomeStatus();
+void sendLimitStatus();
 bool isHomeSignalTriggered(uint8_t axis);
+void applySpeedMode(uint8_t mode);
+const char *homingStateName(HomingState state);
+void startLimitMonitor(uint8_t axis);
+void stopLimitMonitor();
+void updateLimitMonitor();
 bool anyHomingActive();
 bool isEstopPressed();
 void updateEstop();
@@ -276,6 +295,78 @@ bool motionPrimed = false;
 bool motionCatchupActive = false;
 bool estopActive = false;
 bool estopPressedLast = false;
+bool limitMonitorEnabled = false;
+int8_t limitMonitorAxis = -1;
+int8_t limitMonitorLastRaw = -1;
+int8_t limitMonitorLastTriggered = -1;
+int8_t limitMonitorLastState = -1;
+bool limitMonitorHomingSeen = false;
+uint32_t limitMonitorLastRawChangeMs = 0;
+bool limitMonitorEdgeSeen = false;
+volatile bool limitHitLatched[AXIS_NUM] = {false};
+
+void IRAM_ATTR onLimitHit(void *arg)
+{
+  const uint32_t axis = (uint32_t)(uintptr_t)arg;
+  if (axis < AXIS_NUM)
+  {
+    limitHitLatched[axis] = true;
+  }
+}
+
+void clearLimitHitLatch(uint8_t axis)
+{
+  if (axis >= AXIS_NUM)
+    return;
+
+  noInterrupts();
+  limitHitLatched[axis] = false;
+  interrupts();
+}
+
+bool isLimitLatched(uint8_t axis)
+{
+  if (axis >= AXIS_NUM)
+    return false;
+
+  return limitHitLatched[axis];
+}
+
+int readLimitRawLevel(uint8_t axis)
+{
+  if (axis >= AXIS_NUM)
+    return 1;
+
+  return digitalRead(LIMIT_PIN[axis]) == HIGH ? 1 : 0;
+}
+
+const char *homeHitSource(uint8_t axis)
+{
+  if (axis >= AXIS_NUM)
+    return "INVALID";
+
+  const bool rawLow = (readLimitRawLevel(axis) == 0);
+  const bool latched = isLimitLatched(axis);
+
+  if (rawLow && latched)
+    return "RAW+LATCH";
+  if (rawLow)
+    return "RAW";
+  if (latched)
+    return "LATCH";
+  return "NONE";
+}
+
+bool isHomeHitDetected(uint8_t axis)
+{
+  if (axis >= AXIS_NUM)
+    return false;
+
+  if (readLimitRawLevel(axis) == 0)
+    return true;
+
+  return isLimitLatched(axis);
+}
 
 void setup()
 {
@@ -305,6 +396,8 @@ void setup()
   for (int i = 0; i < AXIS_NUM; i++)
   {
     pinMode(LIMIT_PIN[i], INPUT_PULLUP);
+    clearLimitHitLatch(i);
+    attachInterruptArg(digitalPinToInterrupt(LIMIT_PIN[i]), onLimitHit, (void *)(uintptr_t)i, FALLING);
   }
 
   for (int i = 0; i < AXIS_NUM; i++)
@@ -319,8 +412,8 @@ void setup()
     stepper[i]->setDirectionPin(DIR_PIN[i], Motor_Inverted[i]);
     stepper[i]->setAutoEnable(true);
 
-    stepper[i]->setSpeedInHz(SPEED_HZ);
-    stepper[i]->setAcceleration(ACCEL);
+    stepper[i]->setSpeedInHz(normalSpeedHz);
+    stepper[i]->setAcceleration(normalAccel);
     stepper[i]->setCurrentPosition(0);
 
     homed[i] = false;
@@ -348,8 +441,8 @@ void setup()
     {
      
 
-        stepper[i]->setSpeedInHz(SPEED_HZ);
-        stepper[i]->setAcceleration(ACCEL);
+        stepper[i]->setSpeedInHz(normalSpeedHz);
+        stepper[i]->setAcceleration(normalAccel);
         stepper[i]->setCurrentPosition(0);
 
         homingActive[i] = false;
@@ -377,6 +470,8 @@ void loop()
   {
     handleHoming();
   }
+
+  updateLimitMonitor();
 
   if (!homingNow && wasHomingActive)
   {
@@ -590,14 +685,25 @@ void updateEstop()
   estopPressedLast = pressed;
 }
 
+void applySpeedMode(uint8_t mode)
+{
+  if (mode > SPEED_MODE_HIGH)
+  {
+    mode = DEFAULT_SPEED_MODE;
+  }
+  speedMode = mode;
+  normalSpeedHz = SPEED_HZ_PRESETS[speedMode];
+  normalAccel = ACCEL_PRESETS[speedMode];
+}
+
 void setNormalMotionProfile()
 {
   for (int i = 0; i < AXIS_NUM; i++)
   {
     if (!stepper[i])
       continue;
-    stepper[i]->setSpeedInHz(SPEED_HZ);
-    stepper[i]->setAcceleration(ACCEL);
+    stepper[i]->setSpeedInHz(normalSpeedHz);
+    stepper[i]->setAcceleration(normalAccel);
   }
 }
 
@@ -674,6 +780,7 @@ void startHoming(uint8_t axis)
     HomingActiveNum--;
   }
   resetMotionSync();
+  clearLimitHitLatch(axis);
   homed[axis] = false;
   homingActive[axis] = true;
   homingState[axis] = HOME_PREMOVE;
@@ -730,6 +837,7 @@ void handleHoming()
         else
         {
           homingState[i] = HOME_SEEK;
+          clearLimitHitLatch(i);
 
           // 绝对 SEEK 目标（一次性）
           homingSeekTarget[i] =
@@ -752,6 +860,7 @@ void handleHoming()
         stepper[i]->setSpeedInHz(HOME_SPEED);
         stepper[i]->setAcceleration(HOME_ACCEL);
         stepper[i]->setCurrentPosition(0);
+        clearLimitHitLatch(i);
         homingSeekTarget[i] =
             (motor_mins[i] - (motor_maxs[i] - motor_mins[i] + home_backoff_steps(i))) / 2;
         stepper[i]->moveTo(homingSeekTarget[i]);
@@ -787,9 +896,13 @@ void handleHoming()
     case HOME_SEEK:
     {
       // ===== 命中限位 =====
-      if (isHomeSignalTriggered(i))
+      if (isHomeHitDetected(i))
       {
+        const int rawBeforeStop = readLimitRawLevel(i);
+        const int latchedBeforeClear = isLimitLatched(i) ? 1 : 0;
+        const char *hitSource = homeHitSource(i);
         stepper[i]->forceStop();
+        clearLimitHitLatch(i);
 
       
         stepper[i]->setCurrentPosition(motor_mins[i]);
@@ -798,7 +911,12 @@ void handleHoming()
 
         stepper[i]->moveTo(motor_mins[i] + home_backoff_steps(i));
 
-        Serial.printf("Axis %d homing: HIT LIMIT\n", i + 1);
+        Serial.printf("Axis %d homing: HIT LIMIT source=%s raw=%d latched=%d pos=%ld\n",
+                      i + 1,
+                      hitSource,
+                      rawBeforeStop,
+                      latchedBeforeClear,
+                      (long)stepper[i]->getCurrentPosition());
 
         break; // ⭐ 必须立即退出
       }
@@ -829,8 +947,8 @@ void handleHoming()
       {
 
         // 恢复正常速度
-        stepper[i]->setSpeedInHz(SPEED_HZ);
-        stepper[i]->setAcceleration(ACCEL);
+        stepper[i]->setSpeedInHz(normalSpeedHz);
+        stepper[i]->setAcceleration(normalAccel);
         stepper[i]->setCurrentPosition(0);
 
         // ⭐ 自动到中位
@@ -1008,7 +1126,7 @@ void syncToCfg()
     cfg.axis[i].enable = Motor_Enable[i];
   }
   cfg.auto_home = autoHomeOnBoot;
-  cfg.home_signal_high = homeSignalHighActive;
+  cfg.speed_mode = speedMode;
 }
 
 void syncFromCfg()
@@ -1021,7 +1139,7 @@ void syncFromCfg()
     Motor_Enable[i] = cfg.axis[i].enable;
   }
   autoHomeOnBoot = cfg.auto_home;
-  homeSignalHighActive = cfg.home_signal_high;
+  applySpeedMode(cfg.speed_mode);
 }
 void saveParams()
 {
@@ -1037,9 +1155,9 @@ void saveParams()
 void loadParams()
 {
   EEPROM.get(0, cfg);
-  if (cfg.magic == EEPROM_MAGIC && cfg.version == 3)
+  if (cfg.magic == EEPROM_MAGIC && cfg.version == 5)
   {
-    EepromConfigV3 oldCfg;
+    EepromConfigV5 oldCfg;
     EEPROM.get(0, oldCfg);
     cfg.magic = EEPROM_MAGIC;
     cfg.version = EEPROM_VERSION;
@@ -1048,7 +1166,7 @@ void loadParams()
       cfg.axis[i] = oldCfg.axis[i];
     }
     cfg.auto_home = oldCfg.auto_home;
-    cfg.home_signal_high = false;
+    cfg.speed_mode = oldCfg.speed_mode <= SPEED_MODE_HIGH ? oldCfg.speed_mode : DEFAULT_SPEED_MODE;
     syncFromCfg();
     EEPROM.put(0, cfg);
 #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
@@ -1060,6 +1178,7 @@ void loadParams()
   {
     cfg.magic = EEPROM_MAGIC;
     cfg.version = EEPROM_VERSION;
+    applySpeedMode(DEFAULT_SPEED_MODE);
     syncToCfg();
     EEPROM.put(0, cfg);
 #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
@@ -1136,24 +1255,23 @@ void sendConfigJson()
   }
   Serial.print("],\"auto_home\":");
   Serial.print(autoHomeOnBoot ? 1 : 0);
-  Serial.print(",\"home_signal_high\":");
-  Serial.print(homeSignalHighActive ? 1 : 0);
+  Serial.print(",\"speed_mode\":");
+  Serial.print(speedMode);
   Serial.println("}");
 }
 
 bool isHomeSignalTriggered(uint8_t axis)
 {
-  return digitalRead(LIMIT_PIN[axis]) == (homeSignalHighActive ? HIGH : LOW);
+  return digitalRead(LIMIT_PIN[axis]) == LOW;
 }
 
 void sendHomeStatus()
 {
-  Serial.print("HOME ");
-  Serial.print("{\"state\":[");
+  String payload = "HOME {\"state\":[";
   for (int i = 0; i < AXIS_NUM; i++)
   {
     if (i)
-      Serial.print(",");
+      payload += ",";
     int state = 0;
     switch (homingState[i])
     {
@@ -1174,9 +1292,159 @@ void sendHomeStatus()
       state = 0; // IDLE
       break;
     }
-    Serial.print(state);
+    payload += String(state);
   }
-  Serial.println("]}");
+  payload += "]}";
+  Serial.println(payload);
+}
+
+const char *homingStateName(HomingState state)
+{
+  switch (state)
+  {
+  case HOME_PREMOVE:
+    return "PREMOVE";
+  case HOME_RELEASE:
+    return "RELEASE";
+  case HOME_SEEK:
+    return "SEEK";
+  case HOME_BACKOFF:
+    return "BACKOFF";
+  case HOME_HOMED:
+    return "HOMED";
+  case HOME_FAILED:
+    return "FAILED";
+  case HOME_IDLE:
+  default:
+    return "IDLE";
+  }
+}
+
+void startLimitMonitor(uint8_t axis)
+{
+  if (axis >= AXIS_NUM)
+    return;
+
+  limitMonitorEnabled = true;
+  limitMonitorAxis = axis;
+  limitMonitorLastRaw = -1;
+  limitMonitorLastTriggered = -1;
+  limitMonitorLastState = -1;
+  limitMonitorHomingSeen = false;
+  limitMonitorLastRawChangeMs = millis();
+  limitMonitorEdgeSeen = false;
+  updateLimitMonitor();
+}
+
+void stopLimitMonitor()
+{
+  limitMonitorEnabled = false;
+  limitMonitorAxis = -1;
+  limitMonitorLastRaw = -1;
+  limitMonitorLastTriggered = -1;
+  limitMonitorLastState = -1;
+  limitMonitorHomingSeen = false;
+  limitMonitorLastRawChangeMs = 0;
+  limitMonitorEdgeSeen = false;
+}
+
+void updateLimitMonitor()
+{
+  if (!limitMonitorEnabled || limitMonitorAxis < 0 || limitMonitorAxis >= AXIS_NUM)
+    return;
+
+  const uint8_t axis = (uint8_t)limitMonitorAxis;
+  const int raw = readLimitRawLevel(axis);
+  const int triggered = isHomeSignalTriggered(axis) ? 1 : 0;
+  const int latched = isLimitLatched(axis) ? 1 : 0;
+  const int state = (int)homingState[axis];
+  const uint32_t now = millis();
+  const bool rawChanged = (limitMonitorLastRaw != -1 && raw != limitMonitorLastRaw);
+
+  if (homingActive[axis] || state == (int)HOME_PREMOVE || state == (int)HOME_RELEASE ||
+      state == (int)HOME_SEEK || state == (int)HOME_BACKOFF)
+  {
+    limitMonitorHomingSeen = true;
+  }
+
+  if (raw == limitMonitorLastRaw &&
+      triggered == limitMonitorLastTriggered &&
+      state == limitMonitorLastState)
+  {
+    return;
+  }
+
+  if (rawChanged)
+  {
+    limitMonitorEdgeSeen = true;
+    Serial.printf("LIMIT MON AXIS %d EDGE raw=%d triggered=%d latched=%d dt_ms=%lu state=%s source=%s\n",
+                  axis + 1,
+                  raw,
+                  triggered,
+                  latched,
+                  (unsigned long)(now - limitMonitorLastRawChangeMs),
+                  homingStateName(homingState[axis]),
+                  homeHitSource(axis));
+    limitMonitorLastRawChangeMs = now;
+  }
+  else if (limitMonitorLastRaw == -1)
+  {
+    limitMonitorLastRawChangeMs = now;
+  }
+
+  limitMonitorLastRaw = raw;
+  limitMonitorLastTriggered = triggered;
+  limitMonitorLastState = state;
+
+  Serial.printf("LIMIT MON AXIS %d raw=%d triggered=%d latched=%d state=%s source=%s\n",
+                axis + 1,
+                raw,
+                triggered,
+                latched,
+                homingStateName(homingState[axis]),
+                homeHitSource(axis));
+
+  if (limitMonitorHomingSeen &&
+      !homingActive[axis] &&
+      (homingState[axis] == HOME_HOMED || homingState[axis] == HOME_FAILED))
+  {
+    if (!limitMonitorEdgeSeen)
+    {
+      Serial.printf("LIMIT MON AXIS %d NO LIMIT SIGNAL CHANGE DETECTED latched=%d source=%s\n",
+                    axis + 1,
+                    latched,
+                    homeHitSource(axis));
+    }
+    Serial.printf("LIMIT MON AXIS %d STOP\n", axis + 1);
+    stopLimitMonitor();
+  }
+}
+
+void sendLimitStatus()
+{
+  Serial.print("LIMIT ");
+  Serial.print("{\"raw\":[");
+  for (int i = 0; i < AXIS_NUM; i++)
+  {
+    if (i)
+      Serial.print(",");
+    Serial.print(readLimitRawLevel(i));
+  }
+  Serial.print("],\"triggered\":[");
+  for (int i = 0; i < AXIS_NUM; i++)
+  {
+    if (i)
+      Serial.print(",");
+    Serial.print(isHomeSignalTriggered(i) ? 1 : 0);
+  }
+  Serial.print("],\"latched\":[");
+  for (int i = 0; i < AXIS_NUM; i++)
+  {
+    if (i)
+      Serial.print(",");
+    Serial.print(isLimitLatched(i) ? 1 : 0);
+  }
+  Serial.println("}");
 }
 
 void handleCmd()
@@ -1214,6 +1482,31 @@ void handleCmd()
   if (line == "ESTOP STATE")
   {
     Serial.printf("ESTOP %d\n", estopActive ? 1 : 0);
+    return;
+  }
+
+  if (line == "LIMIT STATE")
+  {
+    sendLimitStatus();
+    Serial.println("LIMIT STATE OK");
+    return;
+  }
+
+  if (line == "MONITOR LIMIT STOP")
+  {
+    stopLimitMonitor();
+    Serial.println("MONITOR LIMIT STOP OK");
+    return;
+  }
+
+  if (line.startsWith("MONITOR LIMIT "))
+  {
+    int axis = line.substring(14).toInt();
+    if (axis >= 0 && axis < AXIS_NUM)
+    {
+      startLimitMonitor((uint8_t)axis);
+      Serial.printf("MONITOR LIMIT %d OK\n", axis);
+    }
     return;
   }
 
@@ -1290,13 +1583,14 @@ void handleCmd()
     return;
   }
 
-  if (line.startsWith("SET HOME_SIGNAL_HIGH "))
+  if (line.startsWith("SET SPEED_MODE "))
   {
-    int val = line.substring(21).toInt();
-    homeSignalHighActive = (val != 0);
+    int val = line.substring(15).toInt();
+    applySpeedMode((uint8_t)val);
+    setNormalMotionProfile();
     saveParams();
-    Serial.printf("HOME_SIGNAL_HIGH %d\n", homeSignalHighActive ? 1 : 0);
-    Serial.println("SET HOME_SIGNAL_HIGH OK");
+    Serial.printf("SPEED_MODE %d\n", speedMode);
+    Serial.println("SET SPEED_MODE OK");
     return;
   }
 

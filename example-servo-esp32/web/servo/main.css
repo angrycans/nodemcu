@@ -313,6 +313,15 @@ input[type=range] {
     accent-color: #1e6f8a;
 }
 
+.axis-toolbar .auto-home-toggle select {
+    height: 30px;
+    background: #222;
+    color: #eee;
+    border: 1px solid #3a3a3a;
+    border-radius: 6px;
+    padding: 0 8px;
+}
+
 /* 下面 axis 区 */
 .axis-area {
     display: flex;

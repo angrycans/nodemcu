@@ -8,9 +8,11 @@
 
 void setup()
 {
+    
+    delay(3000);
     Serial.begin(115200);
-    pinMode(LED_RUN, OUTPUT);
-    delay(1000);
+   // pinMode(LED_RUN, OUTPUT);
+    delay(3000);
     Serial.println("setup ...");
     gui_start();
 }

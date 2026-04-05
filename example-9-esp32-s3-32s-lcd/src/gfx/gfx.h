@@ -6,19 +6,19 @@
 
 /// 独自の設定を行うクラスを、LGFX_Deviceから派生して作成します。
 
-#define TFT_SDA 13 // SDA
-#define TFT_SCL 14 // SCL
-#define TFT_DC 9
-#define TFT_CS 10
-#define TFT_RST 3
-#define TFT_BCK_LT 46
+#define TFT_SDA 41 // SDA
+#define TFT_SCL 42 // SCL
+#define TFT_DC 17
+#define TFT_CS 18
+#define TFT_RST 46
+#define TFT_BCK_LT 16
 
 #define TFT_WIDTH 240
 #define TFT_HEIGHT 320
 
 #define CTP_INT 45
-#define CTP_SDA 47
-#define CTP_SCL 48
+#define CTP_SDA 1
+#define CTP_SCL 2
 
 class LGFX : public lgfx::LGFX_Device
 {
