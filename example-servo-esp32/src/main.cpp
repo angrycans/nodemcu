@@ -2,7 +2,7 @@
 #include <FastAccelStepper.h>
 #include <EEPROM.h>
 
-static const char *FW_VERSION = "0.8.4";
+static const char *FW_VERSION = "0.8.5";
 
 #define SERIAL_BAUD 115200
 #define ESTOP_PIN 9
@@ -121,8 +121,8 @@ const float AXIS_HOME_BACKOFF_MM[AXIS_NUM] = {2, 2, 2, 2, 2, 2, 2};
 #define DEFAULT_SPEED_MODE SPEED_MODE_HIGH
 
 #ifdef USE_SERVO
-const uint32_t SPEED_HZ_PRESETS[3] = {40000, 80000, 130000};
-const uint32_t ACCEL_PRESETS[3] = {30000, 60000, 100000};
+const uint32_t SPEED_HZ_PRESETS[3] = {40000, 100000, 130000};
+const uint32_t ACCEL_PRESETS[3] = {30000, 80000, 100000};
 #else
 const uint32_t SPEED_HZ_PRESETS[3] = {120000, 160000, 200000};
 const uint32_t ACCEL_PRESETS[3] = {200000, 300000, 400000};
