@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>ACANS 7-Axis Servo Motion Controller Product Specification</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <h1 id="acans-7-axis-servo-motion-controller-product-specification">ACANS 7-Axis Servo Motion Controller Product Specification</h1>
+<p><img src="file:////Users/acans/Documents/github/nodemcu/example-servo-esp32/docs/acans-esc_main.png" alt="Product Main Image"></p>
+<h2 id="1-overview">1. Overview</h2>
+<p>The ACANS 7-Axis Servo Motion Controller is a professional-grade solution designed specifically for high-end motion simulators. It precisely drives up to 7 servo motors, providing ultimate dynamic feedback and attitude simulation for Sim Racing and Flight Simulation.</p>
+<h3 id="key-advantages">Key Advantages</h3>
+<ul>
+<li><strong>Multi-Axis Linkage</strong>: Native support for 7-axis output, compatible with 2DOF to 6DOF systems plus additional axes (e.g., seatbelt tensioners, surge, etc.).</li>
+<li><strong>Software Ecosystem</strong>: Seamlessly compatible with industry-standard motion software including FlyPT Mover, SimTools, and SimHub.</li>
+<li><strong>Industrial Interface</strong>: Utilizes RJ45 outputs for clean wiring, easily adaptable to various mainstream servo drives via standard adapter cables.</li>
+</ul>
+<hr>
+<h2 id="2-hardware-connectivity">2. Hardware Connectivity</h2>
+<h3 id="wiring-definition-rj45-to-db25">Wiring Definition (RJ45 to DB25)</h3>
+<p>The controller uses standard RJ45 ports for signal output, ensuring easy maintenance and reliable connections. Recommended RJ45 to DB25 (common servo interface) wiring definition:</p>
+<table>
+<thead>
+<tr>
+<th>Crystal Pin</th>
+<th>Wire Color</th>
+<th>Function</th>
+<th>DB25 Pin</th>
+<th>Color</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3</td>
+<td>White-Green</td>
+<td>Pulse +</td>
+<td>3</td>
+<td>Brown</td>
+</tr>
+<tr>
+<td>5</td>
+<td>White-Blue</td>
+<td>Direction +</td>
+<td>4</td>
+<td>Yellow</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Green</td>
+<td>Direction -</td>
+<td>5</td>
+<td>White</td>
+</tr>
+<tr>
+<td>7</td>
+<td>White-Brown</td>
+<td>Enable</td>
+<td>6</td>
+<td>Gray</td>
+</tr>
+<tr>
+<td>1</td>
+<td>White-Orange</td>
+<td>+5V</td>
+<td>9</td>
+<td>Red</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Brown</td>
+<td>0V (GND)</td>
+<td>10</td>
+<td>Black</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Blue</td>
+<td>Pulse -</td>
+<td>14</td>
+<td>Green</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Orange</td>
+<td>Torque Reached</td>
+<td>23</td>
+<td>Orange</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="3-software-control-dashboard">3. Software Control Dashboard</h2>
+<p>The controller features an intuitive built-in web-based management interface, allowing for parameter configuration and status monitoring without any additional software installation.</p>
+<p><img src="file:////Users/acans/Documents/github/nodemcu/example-servo-esp32/docs/ui_en.png" alt="Web Interface"></p>
+<h3 id="core-features">Core Features</h3>
+<ul>
+<li><strong>Axis Configuration</strong>: Independent settings for Stroke, Lead, and Motor Direction for each axis.</li>
+<li><strong>Real-time Motion Control</strong>: Supports slider-based debugging, manual homing, and one-click &quot;Home All&quot; functionality.</li>
+<li><strong>Performance Modes</strong>: Selectable High, Medium, and Low speed modes to suit different simulation requirements.</li>
+<li><strong>System Diagnostics</strong>: Real-time TX/RX raw data console for protocol analysis and troubleshooting.</li>
+</ul>
+<hr>
+<h2 id="4-quick-start-guide">4. Quick Start Guide</h2>
+<ol>
+<li><strong>Power &amp; Network</strong>: Ensure the controller is powered and connected to your local network.</li>
+<li><strong>Access Dashboard</strong>: Open a browser and navigate to the dashboard (default: <code>servo.marslife.top</code> or the device IP).</li>
+<li><strong>Mechanical Calibration</strong>: Enter the Stroke and Lead parameters corresponding to your physical platform.</li>
+<li><strong>Initial Homing</strong>: Click &quot;Home All&quot; to calibrate mechanical zero points.</li>
+<li><strong>Software Linkage</strong>: Configure the output protocol in FlyPT Mover or SimTools to begin your simulation experience.</li>
+</ol>
+<hr>
+<h2 id="5-technical-specifications">5. Technical Specifications</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Parameter</th>
+<th style="text-align:left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">Number of Axes</td>
+<td style="text-align:left">7 Axes (Axis 1 - Axis 7)</td>
+</tr>
+<tr>
+<td style="text-align:left">Signal Type</td>
+<td style="text-align:left">Pulse + Direction</td>
+</tr>
+<tr>
+<td style="text-align:left">Output Interface</td>
+<td style="text-align:left">7 x RJ45</td>
+</tr>
+<tr>
+<td style="text-align:left">Communication</td>
+<td style="text-align:left">Compatible with FlyPT / SimTools / SimHub standards</td>
+</tr>
+<tr>
+<td style="text-align:left">Configuration</td>
+<td style="text-align:left">Cross-platform Web UI</td>
+</tr>
+<tr>
+<td style="text-align:left">Extras</td>
+<td style="text-align:left">Supports OTA Firmware Updates</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>© 2026 ACANS Motion Control. All rights reserved.</em></p>
+
+            
+            
+        </body>
+        </html>

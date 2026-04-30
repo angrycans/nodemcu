@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>ACANS 7&#x8f74;&#x4f3a;&#x670d;&#x8fd0;&#x52a8;&#x63a7;&#x5236;&#x5668;&#x4ea7;&#x54c1;&#x529f;&#x80fd;&#x4e66;</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <h1 id="acans-7轴伺服运动控制器产品功能书">ACANS 7轴伺服运动控制器产品功能书</h1>
+<p><img src="file:////Users/acans/Documents/github/nodemcu/example-servo-esp32/docs/acans-esc_main.png" alt="产品主图"></p>
+<h2 id="1-产品概述">1. 产品概述</h2>
+<p>ACANS 7轴伺服运动控制器是一款专为高阶模拟器设计的专业级控制器。它能够精准驱动多达 7 路伺服电机，为赛车模拟器（Sim Racing）和飞行模拟器（Flight Sim）提供极致的动态反馈与姿态模拟。</p>
+<h3 id="核心优势">核心优势</h3>
+<ul>
+<li><strong>多轴联动</strong>：原生支持 7 轴输出，适配 2DOF 至 6DOF 及附加轴（如安全带张紧、横摆等）系统。</li>
+<li><strong>软件生态</strong>：完美兼容 FlyPT Mover、SimTools、SimHub 等主流运动控制软件。</li>
+<li><strong>工业级接口</strong>：采用 RJ45 接口输出，通过标准转接线可适配各类主流伺服驱动器。</li>
+</ul>
+<hr>
+<h2 id="2-硬件连接说明">2. 硬件连接说明</h2>
+<h3 id="接线定义-rj45-to-db25">接线定义 (RJ45 to DB25)</h3>
+<p>控制器使用标准的 RJ45 接口进行信号输出，便于布线与维护。以下为推荐的 RJ45 转 DB25（常用伺服接口）接线定义：</p>
+<p><img src="file:////Users/acans/Documents/github/nodemcu/example-servo-esp32/docs/rj45-db25.png" alt="接线图"></p>
+<p><em>注：请根据您使用的伺服驱动器手册确认具体引脚定义，确保脉冲（PULSE）与方向（DIRECTION）信号正确连接。</em></p>
+<hr>
+<h2 id="3-软件控制界面">3. 软件控制界面</h2>
+<p>控制器内置了直观的 Web 端管理界面，用户无需安装额外软件即可进行参数配置与状态监控。</p>
+<p><img src="file:////Users/acans/Documents/github/nodemcu/example-servo-esp32/docs/ui_zh.png" alt="中文界面"></p>
+<h3 id="主要功能列表">主要功能列表</h3>
+<ul>
+<li><strong>轴参数配置</strong>：独立设置每个轴的行程 (Stroke)、导程 (Lead) 及电机方向。</li>
+<li><strong>实时运动控制</strong>：支持滑块调试、手动归零及一键自动归零。</li>
+<li><strong>运行模式切换</strong>：支持高、中、低三档转速模式，适应不同场景需求。</li>
+<li><strong>系统监控台</strong>：实时显示 TX/RX 原始通信数据，方便协议分析与排障。</li>
+</ul>
+<hr>
+<h2 id="4-快速上手指南">4. 快速上手指南</h2>
+<ol>
+<li><strong>连接电源与网络</strong>：确保控制器正常供电并连接至您的局域网。</li>
+<li><strong>访问后台</strong>：在浏览器中访问控制台地址（默认为 <code>servo.marslife.top</code> 或设备 IP）。</li>
+<li><strong>参数匹配</strong>：根据您模拟器平台的物理结构，在界面中填入各轴的行程与导程。</li>
+<li><strong>归零校准</strong>：点击“归零全部”确保机械零点正确。</li>
+<li><strong>联动软件</strong>：在 FlyPT Mover 或 SimTools 中配置对应的输出协议，开始模拟体验。</li>
+</ol>
+<hr>
+<h2 id="5-技术规格">5. 技术规格</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">参数项目</th>
+<th style="text-align:left">规格描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">控制轴数</td>
+<td style="text-align:left">7 轴 (Axis 1 - Axis 7)</td>
+</tr>
+<tr>
+<td style="text-align:left">信号类型</td>
+<td style="text-align:left">脉冲 + 方向 (Pulse / Direction)</td>
+</tr>
+<tr>
+<td style="text-align:left">输出接口</td>
+<td style="text-align:left">7 x RJ45</td>
+</tr>
+<tr>
+<td style="text-align:left">通信协议</td>
+<td style="text-align:left">兼容 FlyPT / SimTools / SimHub 标准协议</td>
+</tr>
+<tr>
+<td style="text-align:left">配置方式</td>
+<td style="text-align:left">Web 网页跨平台配置</td>
+</tr>
+<tr>
+<td style="text-align:left">扩展功能</td>
+<td style="text-align:left">支持固件在线更新 (OTA)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>© 2026 ACANS Motion Control. All rights reserved.</em></p>
+
+            
+            
+        </body>
+        </html>

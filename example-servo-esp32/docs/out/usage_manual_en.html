@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>ESP32 7-Axis Servo Motion Controller User Manual</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <h1 id="esp32-7-axis-servo-motion-controller-user-manual">ESP32 7-Axis Servo Motion Controller User Manual</h1>
+<p>This project is a high-performance <strong>7-axis servo controller</strong> designed specifically for motion cockpit control in Sim Racing and Flight Simulation. It provides high-precision motion synchronization when paired with leading motion software.</p>
+<h2 id="1-overview">1. Overview</h2>
+<p>The web-based dashboard provides real-time interaction with the ESP32 firmware, allowing for precise position control of 7 servo axes, mechanical parameter configuration, and system-level diagnostics.</p>
+<h3 id="software-compatibility">Software Compatibility</h3>
+<p>The controller natively supports the following industry-standard motion software:</p>
+<ul>
+<li><strong>FlyPT Mover</strong></li>
+<li><strong>SimTools</strong></li>
+<li><strong>SimHub</strong></li>
+</ul>
+<p>Ideal for 2DOF, 3DOF, 6DOF, and custom multi-axis motion platform applications.</p>
+<h2 id="2-features">2. Features</h2>
+<h3 id="axis-control--configuration-axis-1---axis-7">Axis Control &amp; Configuration (Axis 1 - Axis 7)</h3>
+<p>Each axis features an independent control panel with the following capabilities:</p>
+<ul>
+<li><strong>Status Indicator</strong>: Shows if the axis is &quot;ENABLED&quot; and displays current position percentage.</li>
+<li><strong>Position Control</strong>: Adjust axis position via slider or direct numerical input (in mm).</li>
+<li><strong>Stroke Setting</strong>: Configure the maximum travel range (mm).</li>
+<li><strong>Lead Setting</strong>: Set the screw lead or distance per revolution (mm/rev).</li>
+<li><strong>Motor Reverse</strong>: Toggle the motor direction checkbox for quick orientation adjustment.</li>
+<li><strong>Homing Functions</strong>:
+<ul>
+<li><strong>Home Button</strong>: Triggers the automated homing sequence for the axis.</li>
+<li><strong>Manual Home</strong>: Calibrates the current position as the zero point manually.</li>
+</ul>
+</li>
+</ul>
+<h3 id="global-controls">Global Controls</h3>
+<ul>
+<li><strong>Connection Management</strong>: Displays &quot;Connected&quot; status and allows for manual &quot;Disconnect/Connect&quot;.</li>
+<li><strong>Auto Home</strong>: Global toggle to enable automatic homing under specific conditions.</li>
+<li><strong>Speed Mode</strong>: Select between High, Medium, or Low speed presets for global movement.</li>
+<li><strong>Home All</strong>: One-click command to home all axes simultaneously.</li>
+<li><strong>Restart Controller</strong>: Remotely trigger an ESP32 hardware reset.</li>
+<li><strong>Firmware Update</strong>: Check for and upload new firmware versions.</li>
+</ul>
+<h3 id="system-diagnostics">System Diagnostics</h3>
+<ul>
+<li><strong>Console Output</strong>: Real-time display of raw communication data (TX/RX) for protocol analysis and troubleshooting.</li>
+<li><strong>Clear Logs</strong>: Instantly clear the console output window.</li>
+<li><strong>Language Support</strong>: Switch between English (EN) and Chinese (CN).</li>
+</ul>
+<h2 id="3-quick-start">3. Quick Start</h2>
+<ol>
+<li>Ensure the ESP32 is powered and connected to your network.</li>
+<li>Access the dashboard via browser (e.g., <code>servo.marslife.top</code>).</li>
+<li>Verify the &quot;Connected&quot; status in the top-left corner.</li>
+<li>Configure &quot;Stroke&quot; and &quot;Lead&quot; parameters according to your mechanical setup.</li>
+<li>Click &quot;Home All&quot; to initialize axis positions.</li>
+<li>You are now ready to control the axes via the UI or compatible motion software.</li>
+</ol>
+
+            
+            
+        </body>
+        </html>

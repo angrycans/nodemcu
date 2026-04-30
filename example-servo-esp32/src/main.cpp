@@ -2,10 +2,12 @@
 #include <FastAccelStepper.h>
 #include <EEPROM.h>
 
-static const char *FW_VERSION = "0.8.5";
+static const char *FW_VERSION = "0.8.6";
 
 #define SERIAL_BAUD 115200
 #define ESTOP_PIN 9
+#define ESTOP_ACTIVE_LEVEL LOW
+#define ESTOP_DEBOUNCE_MS 80
 
 /*************************************************
  *  驱动类型选择
@@ -295,6 +297,9 @@ bool motionPrimed = false;
 bool motionCatchupActive = false;
 bool estopActive = false;
 bool estopPressedLast = false;
+bool estopStablePressed = false;
+bool estopRawLast = false;
+uint32_t estopRawChangedAt = 0;
 bool limitMonitorEnabled = false;
 int8_t limitMonitorAxis = -1;
 int8_t limitMonitorLastRaw = -1;
@@ -633,7 +638,7 @@ void resetMotionSync()
 
 bool isEstopPressed()
 {
-  return digitalRead(ESTOP_PIN) == LOW;
+  return digitalRead(ESTOP_PIN) == ESTOP_ACTIVE_LEVEL;
 }
 
 void stopAllMotion(bool abortHoming)
@@ -669,7 +674,20 @@ void triggerEstop()
 
 void updateEstop()
 {
-  bool pressed = isEstopPressed();
+  bool rawPressed = isEstopPressed();
+
+  if (rawPressed != estopRawLast)
+  {
+    estopRawLast = rawPressed;
+    estopRawChangedAt = millis();
+  }
+
+  if ((uint32_t)(millis() - estopRawChangedAt) >= ESTOP_DEBOUNCE_MS)
+  {
+    estopStablePressed = rawPressed;
+  }
+
+  bool pressed = estopStablePressed;
 
   if (pressed && !estopPressedLast)
   {
@@ -1482,6 +1500,16 @@ void handleCmd()
   if (line == "ESTOP STATE")
   {
     Serial.printf("ESTOP %d\n", estopActive ? 1 : 0);
+    return;
+  }
+
+  if (line == "ESTOP RAW")
+  {
+    Serial.printf("ESTOP RAW pin=%d raw=%d pressed=%d active=%d\n",
+                  ESTOP_PIN,
+                  digitalRead(ESTOP_PIN),
+                  isEstopPressed() ? 1 : 0,
+                  estopActive ? 1 : 0);
     return;
   }
 
