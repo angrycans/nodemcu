@@ -42,6 +42,24 @@ The controller features an intuitive built-in web-based management interface, al
 - **Performance Modes**: Selectable High, Medium, and Low speed modes to suit different simulation requirements.
 - **System Diagnostics**: Real-time TX/RX raw data console for protocol analysis and troubleshooting.
 
+### Software Compatibility & Configuration
+The controller natively supports various motion simulation software. Please follow the instructions below to configure the communication protocols:
+
+#### 1. FlyPT Mover Configuration
+In the FlyPT Mover Serial output module, use the following connection string:
+`flypt:Y7<Axis1a><Axis2a><Axis3a><Axis4a><Axis5a><Axis6a>00!!`
+
+#### 2. SimHub Configuration
+In SimHub "ShakeIt For Controllers" -> "Custom Protocol", configure the serial port and command as shown below:
+
+![SimHub Configuration](simhub_serial_config.png)
+
+**Key Configuration Points:**
+- **Baudrate**: 115200
+- **DTR / RTS**: Both Enabled
+- **Bit Range**: 16 bit
+- **Command Content**: `Y7<Axis1b><Axis2b><Axis3b><Axis4b><Axis5b><Axis6b><Axis7b>!!`
+
 ---
 
 ## 4. Quick Start Guide

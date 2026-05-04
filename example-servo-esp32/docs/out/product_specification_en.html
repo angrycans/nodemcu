@@ -232,6 +232,21 @@
 <li><strong>Performance Modes</strong>: Selectable High, Medium, and Low speed modes to suit different simulation requirements.</li>
 <li><strong>System Diagnostics</strong>: Real-time TX/RX raw data console for protocol analysis and troubleshooting.</li>
 </ul>
+<h3 id="software-compatibility--configuration">Software Compatibility &amp; Configuration</h3>
+<p>The controller natively supports various motion simulation software. Please follow the instructions below to configure the communication protocols:</p>
+<h4 id="1-flypt-mover-configuration">1. FlyPT Mover Configuration</h4>
+<p>In the FlyPT Mover Serial output module, use the following connection string:
+<code>flypt:Y7&lt;Axis1a&gt;&lt;Axis2a&gt;&lt;Axis3a&gt;&lt;Axis4a&gt;&lt;Axis5a&gt;&lt;Axis6a&gt;00!!</code></p>
+<h4 id="2-simhub-configuration">2. SimHub Configuration</h4>
+<p>In SimHub &quot;ShakeIt For Controllers&quot; -&gt; &quot;Custom Protocol&quot;, configure the serial port and command as shown below:</p>
+<p><img src="file:////Users/acans/Documents/github/nodemcu/example-servo-esp32/docs/simhub_serial_config.png" alt="SimHub Configuration"></p>
+<p><strong>Key Configuration Points:</strong></p>
+<ul>
+<li><strong>Baudrate</strong>: 115200</li>
+<li><strong>DTR / RTS</strong>: Both Enabled</li>
+<li><strong>Bit Range</strong>: 16 bit</li>
+<li><strong>Command Content</strong>: <code>Y7&lt;Axis1b&gt;&lt;Axis2b&gt;&lt;Axis3b&gt;&lt;Axis4b&gt;&lt;Axis5b&gt;&lt;Axis6b&gt;&lt;Axis7b&gt;!!</code></li>
+</ul>
 <hr>
 <h2 id="4-quick-start-guide">4. Quick Start Guide</h2>
 <ol>

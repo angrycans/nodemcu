@@ -16,6 +16,23 @@
 .vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
 	display: none;
 }
+/* 强制所有元素使用中文字体，防止 PDF 导出时中文消失 */
+* {
+    font-family: "PingFang SC", "Microsoft YaHei", "Source Han Sans CN", sans-serif !important;
+}
+ 
+@media print {
+    /* 解决打印时图片丢失或页面内容错位 */
+    img {
+        max-width: 100% !important;
+        display: block;
+    }
+    /* 强制显示背景图形（如表格颜色） */
+    body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}
 
 </style>
             
@@ -164,6 +181,21 @@
 <li><strong>实时运动控制</strong>：支持滑块调试、手动归零及一键自动归零。</li>
 <li><strong>运行模式切换</strong>：支持高、中、低三档转速模式，适应不同场景需求。</li>
 <li><strong>系统监控台</strong>：实时显示 TX/RX 原始通信数据，方便协议分析与排障。</li>
+</ul>
+<h3 id="软件兼容性与配置">软件兼容性与配置</h3>
+<p>控制器原生支持多种模拟运动软件。请根据以下说明配置通信协议：</p>
+<h4 id="1-flypt-mover-配置">1. FlyPT Mover 配置</h4>
+<p>在 FlyPT Mover 的 Serial 输出模块中，使用以下连接字符串：
+<code>flypt:Y7&lt;Axis1a&gt;&lt;Axis2a&gt;&lt;Axis3a&gt;&lt;Axis4a&gt;&lt;Axis5a&gt;&lt;Axis6a&gt;00!!</code></p>
+<h4 id="2-simhub-配置">2. SimHub 配置</h4>
+<p>在 SimHub 的 &quot;ShakeIt For Controllers&quot; -&gt; &quot;Custom Protocol&quot; 中，按下图进行串口与指令配置：</p>
+<p><img src="file:////Users/acans/Documents/github/nodemcu/example-servo-esp32/docs/simhub_serial_config.png" alt="SimHub 配置"></p>
+<p><strong>配置要点：</strong></p>
+<ul>
+<li><strong>Baudrate</strong>: 115200</li>
+<li><strong>DTR / RTS</strong>: 全部开启 (Enable)</li>
+<li><strong>Bit Range</strong>: 16 bit</li>
+<li><strong>指令内容</strong>: <code>Y7&lt;Axis1b&gt;&lt;Axis2b&gt;&lt;Axis3b&gt;&lt;Axis4b&gt;&lt;Axis5b&gt;&lt;Axis6b&gt;&lt;Axis7b&gt;!!</code></li>
 </ul>
 <hr>
 <h2 id="4-快速上手指南">4. 快速上手指南</h2>
