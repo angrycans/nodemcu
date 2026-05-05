@@ -39,6 +39,12 @@
             </svg>
             <span data-i18n="contact">Contact</span>
         </button>
+        <button id="downloadBtn" class="contact-btn" onclick="downloadManual()">
+            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z" fill="currentColor"/>
+            </svg>
+            <span data-i18n="download_manual">Manual</span>
+        </button>
         <button id="langToggleBtn" class="contact-btn" onclick="toggleLang()">
             <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 2a10 10 0 1 0 0 20a10 10 0 0 0 0-20zm6.5 10a8.5 8.5 0 0 1-1.6 4.9h-3a17.6 17.6 0 0 0 .8-4.9h3.8zm-5.1 0a15.6 15.6 0 0 1-1.4 6.2A15.6 15.6 0 0 1 10.6 12h2.8zM12 4.1c.8 1.1 1.5 3 1.8 5.9h-3.6c.3-2.9 1-4.8 1.8-5.9zM7.1 7.1A8.5 8.5 0 0 1 10 4.1a17.6 17.6 0 0 0-.8 5.9H5.5a8.5 8.5 0 0 1 1.6-2.9zM5.5 12h3.8a17.6 17.6 0 0 0 .8 4.9h-3A8.5 8.5 0 0 1 5.5 12zm5.1 0a15.6 15.6 0 0 1 1.4-6.2A15.6 15.6 0 0 1 13.4 12h-2.8zm3.4 6.9a8.5 8.5 0 0 1-2.9 2.9a17.6 17.6 0 0 0 .8-5.9h3a8.5 8.5 0 0 1-.9 3zM18.5 10h-3.8a17.6 17.6 0 0 0-.8-5.9a8.5 8.5 0 0 1 4.6 5.9z" fill="currentColor"/>
@@ -166,6 +172,7 @@
                 ,reboot_confirm: "Restart controller now?"
                 ,reboot_sent: "Restart command sent"
                 ,reboot_done: "Controller restarted, please reconnect"
+                ,download_manual: "Manual"
             },
             zh: {
                 connect: "连接串口",
@@ -208,6 +215,7 @@
                 ,reboot_confirm: "确认立即重启控制器吗？"
                 ,reboot_sent: "已发送重启命令"
                 ,reboot_done: "控制器已重启，请重新连接"
+                ,download_manual: "产品说明书"
             }
         };
 
@@ -768,6 +776,19 @@
         function closeContact() {
             const overlay = document.getElementById("contactOverlay");
             if (overlay) overlay.classList.add("hidden");
+        }
+
+        function downloadManual() {
+            const fileName = currentLang === "zh" 
+                ? "ACANS 7轴伺服运动控制器产品功能书.pdf" 
+                : "ACANS 7-Axis Servo Motion Controller Product Specification.pdf";
+            
+            const link = document.createElement("a");
+            link.href = encodeURIComponent(fileName);
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         async function startSerialRead() {

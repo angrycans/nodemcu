@@ -1008,7 +1008,11 @@ uint32_t cmap_uint32(uint32_t x,
 
 uint32_t mapToRangeX(uint8_t axis, uint16_t pos)
 {
-  return cmap_uint32(pos, POS_HOME, POS_MAXI, motor_mins[axis] + RANGE_DZ(axis), motor_maxs[axis] - RANGE_DZ(axis));
+  // 1. 先将 0-65535 映射为 0 - Stroke 的物理毫米数
+  float targetMM = (float)pos * AXIS_STROKE_MM[axis] / 65535.0f;
+  
+  // 2. 将毫米数转换为步数，并加上安全边界
+  return (uint32_t)(targetMM * STEPS_PER_MM(axis) + RANGE_DZ(axis));
 }
 
 void testMoveMinus100mm(uint8_t axis)
@@ -1549,8 +1553,7 @@ void handleCmd()
       if (axis >= 0 && axis < AXIS_NUM)
       {
         AXIS_STROKE_MM[axis] = stroke;
-        motor_maxs[axis] = (int32_t)(AXIS_STROKE_MM[axis] * STEPS_PER_MM(axis));
-        motor_center[axis] = (motor_mins[axis] + motor_maxs[axis]) / 2;
+        initAxisRange(); // 统一调用重算函数
         saveParams();
         Serial.printf("AXIS %d STROKE %.3f\n", axis, stroke);
       }
@@ -1570,6 +1573,7 @@ void handleCmd()
       if (axis >= 0 && axis < AXIS_NUM)
       {
         LEAD_MM_PER_REV[axis] = lead;
+        initAxisRange(); // 关键：立即重新计算所有轴的步数范围
         saveParams();
         Serial.printf("AXIS %d LEAD %.3f\n", axis, lead);
       }
