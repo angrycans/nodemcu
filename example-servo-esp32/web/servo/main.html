@@ -63,11 +63,12 @@
             </label>
             <label class="auto-home-toggle">
                 <span data-i18n="speed_mode">Speed Mode</span>
-                <select id="speedModeSelect" onchange="setSpeedMode(this.value)">
-                    <option value="0" data-i18n="speed_low">Low</option>
-                    <option value="1" data-i18n="speed_medium">Medium</option>
-                    <option value="2" data-i18n="speed_high">High</option>
-                </select>
+                <div class="speed-modes">
+                    <button onclick="setSpeedMode(0)" id="speed0" data-i18n="speed_low">Low</button>
+                    <button onclick="setSpeedMode(1)" id="speed1" data-i18n="speed_medium">Medium</button>
+                    <button onclick="setSpeedMode(2)" id="speed2" data-i18n="speed_high">High</button>
+                    <button onclick="setSpeedMode(3)" id="speed3" data-i18n="speed_ultra">Ultra</button>
+                </div>
             </label>
             <button id="consoleToggleBtn" class="console-toggle active" onclick="toggleConsole()">
                 <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -165,6 +166,7 @@
                 ,speed_low: "Low"
                 ,speed_medium: "Medium"
                 ,speed_high: "High"
+                ,speed_ultra: "Ultra"
                 ,enabled: "ENABLED"
                 ,disabled: "DISABLED"
                 ,home: "Home"
@@ -173,6 +175,7 @@
                 ,reboot_sent: "Restart command sent"
                 ,reboot_done: "Controller restarted, please reconnect"
                 ,download_manual: "Manual"
+                ,spr: "Steps Per Rev"
             },
             zh: {
                 connect: "连接串口",
@@ -208,6 +211,7 @@
                 ,speed_low: "低"
                 ,speed_medium: "中"
                 ,speed_high: "高"
+                ,speed_ultra: "极速"
                 ,enabled: "已启用"
                 ,disabled: "已禁用"
                 ,home: "归零"
@@ -216,6 +220,7 @@
                 ,reboot_sent: "已发送重启命令"
                 ,reboot_done: "控制器已重启，请重新连接"
                 ,download_manual: "产品说明书"
+                ,spr: "每圈脉冲"
             }
         };
 
@@ -917,6 +922,11 @@
       id="stroke${i}"
       onchange="setStroke(${i}, this.value)"> mm<br>
 
+    <label data-i18n="spr">${t("spr")}</label><br>
+    <input type="number" value="1000"
+      id="spr${i}"
+      onchange="setSPR(${i}, this.value)"> PPR<br>
+
     <label data-i18n="lead">${t("lead")}</label><br>
     <input type="number" step="0.1" value="${a.lead}"
       id="lead${i}"
@@ -978,6 +988,10 @@
         function setLead(i, v) {
             axis[i].lead = Number(v);
             send(`SET LEAD ${i} ${v}`);
+        }
+
+        function setSPR(i, v) {
+            send(`SET SPR ${v}`);
         }
 
         function setInvert(i, v) {
@@ -1122,10 +1136,12 @@
 
                 const slider = document.getElementById(`slider${i}`);
                 const strokeInput = document.getElementById(`stroke${i}`);
+                const sprInput = document.getElementById(`spr${i}`);
                 const leadInput = document.getElementById(`lead${i}`);
                 const invertInput = document.getElementById(`invert${i}`);
 
                 if (strokeInput) strokeInput.value = axis[i].stroke;
+                if (sprInput && cfg.spr) sprInput.value = cfg.spr;
                 if (leadInput) leadInput.value = axis[i].lead;
                 if (invertInput) invertInput.checked = !axis[i].invert;
 

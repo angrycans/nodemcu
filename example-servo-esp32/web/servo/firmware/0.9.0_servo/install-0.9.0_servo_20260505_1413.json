@@ -7,19 +7,19 @@
       "chipFamily": "ESP32-S3",
       "parts": [
         {
-          "path": "0.9.0_servo_20260505_1356_bootloader.bin",
+          "path": "0.9.0_servo_20260505_1413_bootloader.bin",
           "offset": 0
         },
         {
-          "path": "0.9.0_servo_20260505_1356_partitions.bin",
+          "path": "0.9.0_servo_20260505_1413_partitions.bin",
           "offset": 32768
         },
         {
-          "path": "0.9.0_servo_20260505_1356_boot_app0.bin",
+          "path": "0.9.0_servo_20260505_1413_boot_app0.bin",
           "offset": 57344
         },
         {
-          "path": "0.9.0_servo_20260505_1356.bin",
+          "path": "0.9.0_servo_20260505_1413.bin",
           "offset": 65536
         }
       ]

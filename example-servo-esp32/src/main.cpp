@@ -2,7 +2,7 @@
 #include <FastAccelStepper.h>
 #include <EEPROM.h>
 
-static const char *FW_VERSION = "0.9.0";
+static const char *FW_VERSION = "0.9.1";
 
 #define SERIAL_BAUD 115200
 #define ESTOP_PIN 9
@@ -113,21 +113,22 @@ const float AXIS_HOME_PREMOVE_MM[AXIS_NUM] = {10, 10, 10, 10, 10, 10, 10};
 const float AXIS_HOME_BACKOFF_MM[AXIS_NUM] = {2, 2, 2, 2, 2, 2, 2};
 
 // false = 默认方向, true = 软件反向
-#define MOTOR_STEPS_REV 1000 // 等效电子齿轮
+uint32_t MOTOR_STEPS_REV = 1000; // 等效电子齿轮
 #define MICROSTEPS 1         // 已抽象
 
 // ===== 运动参数 =====
 #define SPEED_MODE_LOW 0
 #define SPEED_MODE_MEDIUM 1
 #define SPEED_MODE_HIGH 2
+#define SPEED_MODE_ULTRA 3
 #define DEFAULT_SPEED_MODE SPEED_MODE_HIGH
 
 #ifdef USE_SERVO
-const uint32_t SPEED_HZ_PRESETS[3] = {40000, 100000, 130000};
-const uint32_t ACCEL_PRESETS[3] = {30000, 80000, 100000};
+const uint32_t SPEED_HZ_PRESETS[4] = {40000, 100000, 130000, 180000};
+const uint32_t ACCEL_PRESETS[4] = {30000, 80000, 100000, 200000};
 #else
-const uint32_t SPEED_HZ_PRESETS[3] = {120000, 160000, 200000};
-const uint32_t ACCEL_PRESETS[3] = {200000, 300000, 400000};
+const uint32_t SPEED_HZ_PRESETS[4] = {120000, 160000, 200000, 250000};
+const uint32_t ACCEL_PRESETS[4] = {200000, 300000, 400000, 500000};
 #endif
 
 // ===== Homing 参数 =====
@@ -220,6 +221,7 @@ struct EepromConfig
   AxisConfig axis[AXIS_NUM];
   bool auto_home;
   uint8_t speed_mode;
+  uint32_t steps_per_rev; // 新增：每圈脉冲数
 };
 
 struct EepromConfigV5
@@ -705,13 +707,11 @@ void updateEstop()
 
 void applySpeedMode(uint8_t mode)
 {
-  if (mode > SPEED_MODE_HIGH)
-  {
-    mode = DEFAULT_SPEED_MODE;
-  }
+  if (mode > SPEED_MODE_ULTRA)
+    mode = SPEED_MODE_ULTRA;
   speedMode = mode;
-  normalSpeedHz = SPEED_HZ_PRESETS[speedMode];
-  normalAccel = ACCEL_PRESETS[speedMode];
+  normalSpeedHz = SPEED_HZ_PRESETS[mode];
+  normalAccel = ACCEL_PRESETS[mode];
 }
 
 void setNormalMotionProfile()
@@ -1008,11 +1008,19 @@ uint32_t cmap_uint32(uint32_t x,
 
 uint32_t mapToRangeX(uint8_t axis, uint16_t pos)
 {
-  // 1. 先将 0-65535 映射为 0 - Stroke 的物理毫米数
+  if (axis >= AXIS_NUM) return 0;
+
+  // 1. 强行重新获取实时比例，防止任何形式的缓存
+  float currentStepsPerMM = (float)MOTOR_STEPS_REV / LEAD_MM_PER_REV[axis];
+  
+  // 2. 计算物理毫米目标 (0 - Stroke)
   float targetMM = (float)pos * AXIS_STROKE_MM[axis] / 65535.0f;
   
-  // 2. 将毫米数转换为步数，并加上安全边界
-  return (uint32_t)(targetMM * STEPS_PER_MM(axis) + RANGE_DZ(axis));
+  // 3. 计算实时死区步数
+  uint32_t dzSteps = (uint32_t)(RANGE_DZ_MM * currentStepsPerMM);
+
+  // 4. 最终步数 = 物理位移步数 + 死区起始偏置
+  return (uint32_t)(targetMM * currentStepsPerMM + dzSteps);
 }
 
 void testMoveMinus100mm(uint8_t axis)
@@ -1149,6 +1157,7 @@ void syncToCfg()
   }
   cfg.auto_home = autoHomeOnBoot;
   cfg.speed_mode = speedMode;
+  cfg.steps_per_rev = MOTOR_STEPS_REV;
 }
 
 void syncFromCfg()
@@ -1162,6 +1171,10 @@ void syncFromCfg()
   }
   autoHomeOnBoot = cfg.auto_home;
   applySpeedMode(cfg.speed_mode);
+  if (cfg.steps_per_rev >= 100 && cfg.steps_per_rev <= 1000000)
+  {
+    MOTOR_STEPS_REV = cfg.steps_per_rev;
+  }
 }
 void saveParams()
 {
@@ -1279,6 +1292,8 @@ void sendConfigJson()
   Serial.print(autoHomeOnBoot ? 1 : 0);
   Serial.print(",\"speed_mode\":");
   Serial.print(speedMode);
+  Serial.print(",\"spr\":");
+  Serial.print(MOTOR_STEPS_REV);
   Serial.println("}");
 }
 
@@ -1559,6 +1574,20 @@ void handleCmd()
       }
     }
     Serial.println("SET STROKE OK");
+    return;
+  }
+
+  if (line.startsWith("SET SPR "))
+  {
+    uint32_t val = line.substring(8).toInt();
+    if (val >= 100 && val <= 1000000)
+    {
+      MOTOR_STEPS_REV = val;
+      initAxisRange(); // 关键：立即重新计算所有轴的步数范围
+      saveParams();
+      Serial.printf("STEPS_PER_REV %lu\n", MOTOR_STEPS_REV);
+    }
+    Serial.println("SET SPR OK");
     return;
   }
 
