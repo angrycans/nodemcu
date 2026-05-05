@@ -62,7 +62,13 @@ In SimHub "ShakeIt For Controllers" -> "Custom Protocol", configure the serial p
 
 ---
 
-## 4. Quick Start Guide
+## 4. Servo Settings
+
+![Servo Drive Parameters](s2_config_en.png)
+
+---
+
+## 5. Quick Start Guide
 
 1. **Power & Network**: Ensure the controller is powered and connected to your local network.
 2. **Access Dashboard**: Open a browser and navigate to the dashboard (default: `servo.marslife.top` or the device IP).
