@@ -1,22 +1,13 @@
 {
   "firmwares": [
     {
-      "name": "0.9.0_servo_20260505_1248",
+      "name": "0.9.0_servo_20260505_1356",
       "version": "0.9.0_servo",
-      "date": "2026-05-05 12:48",
-      "ts": 1777956480,
+      "date": "2026-05-05 13:56",
+      "ts": 1777960560,
       "dir": "0.9.0_servo",
-      "bin": "0.9.0_servo_20260505_1248.bin",
-      "installManifest": "install-0.9.0_servo_20260505_1248.json"
-    },
-    {
-      "name": "0.8.6_servo_20260430_1209",
-      "version": "0.8.6_servo",
-      "date": "2026-04-30 12:09",
-      "ts": 1777522140,
-      "dir": "0.8.6_servo",
-      "bin": "0.8.6_servo_20260430_1209.bin",
-      "installManifest": "install-0.8.6_servo_20260430_1209.json"
+      "bin": "0.9.0_servo_20260505_1356.bin",
+      "installManifest": "install-0.9.0_servo_20260505_1356.json"
     },
     {
       "name": "0.7.6_servo_20260325_0923",
