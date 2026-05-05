@@ -63,12 +63,12 @@
             </label>
             <label class="auto-home-toggle">
                 <span data-i18n="speed_mode">Speed Mode</span>
-                <div class="speed-modes">
-                    <button onclick="setSpeedMode(0)" id="speed0" data-i18n="speed_low">Low</button>
-                    <button onclick="setSpeedMode(1)" id="speed1" data-i18n="speed_medium">Medium</button>
-                    <button onclick="setSpeedMode(2)" id="speed2" data-i18n="speed_high">High</button>
-                    <button onclick="setSpeedMode(3)" id="speed3" data-i18n="speed_ultra">Ultra</button>
-                </div>
+                <select id="speedModeSelect" onchange="setSpeedMode(this.value)" style="background: #222; color: #fff; border: 1px solid #444; padding: 2px 5px; border-radius: 4px; cursor: pointer;">
+                    <option value="0" data-i18n="speed_low">Low</option>
+                    <option value="1" data-i18n="speed_medium">Medium</option>
+                    <option value="2" data-i18n="speed_high">High</option>
+                    <option value="3" data-i18n="speed_ultra">Ultra</option>
+                </select>
             </label>
             <button id="consoleToggleBtn" class="console-toggle active" onclick="toggleConsole()">
                 <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -1005,7 +1005,7 @@
         }
 
         function setSpeedMode(mode) {
-            send(`SET SPEED_MODE ${Number(mode)}`);
+            send(`SET SPEED_MODE ${mode}`);
         }
 
         function restartController() {
