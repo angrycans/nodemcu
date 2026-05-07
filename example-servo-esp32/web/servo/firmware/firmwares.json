@@ -1,6 +1,15 @@
 {
   "firmwares": [
     {
+      "name": "0.9.2_servo_20260505_2214",
+      "version": "0.9.2_servo",
+      "date": "2026-05-05 22:14",
+      "ts": 1777990440,
+      "dir": "0.9.2_servo",
+      "bin": "0.9.2_servo_20260505_2214.bin",
+      "installManifest": "install-0.9.2_servo_20260505_2214.json"
+    },
+    {
       "name": "0.9.1_servo_20260505_2140",
       "version": "0.9.1_servo",
       "date": "2026-05-05 21:40",

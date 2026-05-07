@@ -2,7 +2,7 @@
 #include <FastAccelStepper.h>
 #include <EEPROM.h>
 
-static const char *FW_VERSION = "0.9.1";
+static const char *FW_VERSION = "0.9.2";
 
 #define SERIAL_BAUD 115200
 #define ESTOP_PIN 9
@@ -125,7 +125,7 @@ uint32_t MOTOR_STEPS_REV = 1000; // 等效电子齿轮
 
 #ifdef USE_SERVO
 const uint32_t SPEED_HZ_PRESETS[4] = {40000, 100000, 130000, 180000};
-const uint32_t ACCEL_PRESETS[4] = {30000, 80000, 100000, 200000};
+const uint32_t ACCEL_PRESETS[4] = {30000, 80000, 100000, 400000};
 #else
 const uint32_t SPEED_HZ_PRESETS[4] = {120000, 160000, 200000, 250000};
 const uint32_t ACCEL_PRESETS[4] = {200000, 300000, 400000, 500000};
