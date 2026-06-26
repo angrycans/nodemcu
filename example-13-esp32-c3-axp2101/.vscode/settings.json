@@ -1,0 +1,11 @@
+{
+    "cmake.configureOnOpen": false,
+    "chat.tools.terminal.autoApprove": {
+        "/^python -c \"import sys,site; print\\('executable:', sys\\.executable\\); print\\('site:', getattr\\(site,'getsitepackages',lambda:None\\)\\(\\)\\)\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "screen": true,
+        "true": true
+    }
+}
