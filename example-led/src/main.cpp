@@ -176,12 +176,12 @@ void refreshTotals() {
   }
 }
 
-void flashOk() {
+void flashPass() {
   disp2.clearDisplay();
   disp3.clearDisplay();
   disp1.setDecodeMode(0x00);
   for (uint8_t i = 0; i < 2; ++i) {
-    disp1.displayString("OK");
+    disp1.displayString("PASS");
     delay(500);
     disp1.clearDisplay();
     delay(250);
@@ -189,26 +189,46 @@ void flashOk() {
   disp1.setDecodeMode(0xFF);
 }
 
+const char *const PARAMETER_NAMES[24] = {
+  "显示值", "小数点", "单位", "屏蔽值", "采样频率", "RC滤波系数",
+  "485设备地址", "波特率", "串口校验", "模拟输出低位显示值", "模拟输出高位显示值",
+  "校准点1期望值", "校准点2期望值", "校准点3期望值", "校准点4期望值", "校准点5期望值",
+  "校准点数", "去皮", "模拟输出低位校正值", "模拟输出高位校正值", "零点跟踪范围",
+  "零点跟踪时间", "清零", "输入极性"
+};
+
 void printParameters(const uint16_t *parameters) {
-  Serial.println("--- BSQ-DG-V2 parameters ---");
+  uint16_t scale = parameters[1] == 0 ? 1 : parameters[1] == 1 ? 10 : parameters[1] == 2 ? 100 : 1000;
+  Serial.println("========== BSQ-DG-V2 参数 ==========");
   for (uint8_t i = 0; i < 24; ++i) {
-    Serial.print("400");
-    if (i + 1 < 10) Serial.print('0');
-    Serial.print(i + 1);
-    Serial.print(": 0x");
-    Serial.println(parameters[i], HEX);
+    Serial.print("400"); if (i + 1 < 10) Serial.print('0'); Serial.print(i + 1);
+    Serial.print(" "); Serial.print(PARAMETER_NAMES[i]);
+    Serial.print(" | raw=0x"); if (parameters[i] < 0x1000) Serial.print('0');
+    if (parameters[i] < 0x0100) Serial.print('0');
+    if (parameters[i] < 0x0010) Serial.print('0');
+    Serial.print(parameters[i], HEX); Serial.print(" | ");
+    switch (i) {
+      case 0: Serial.print("显示="); Serial.println((int16_t)parameters[0] / (float)scale, parameters[1]); break;
+      case 1: Serial.print(parameters[i]); Serial.println(" 位小数"); break;
+      case 2: Serial.println(parameters[i] == 1 ? "MPa" : parameters[i] == 2 ? "kg" : parameters[i] == 3 ? "T" : parameters[i] == 4 ? "g" : parameters[i] == 5 ? "N" : parameters[i] == 6 ? "kN" : "未知单位"); break;
+      case 4: Serial.println(parameters[i] == 1 ? "600 Hz" : parameters[i] == 2 ? "300 Hz" : parameters[i] == 3 ? "150 Hz" : parameters[i] == 4 ? "75 Hz" : parameters[i] == 5 ? "37.5 Hz" : parameters[i] == 6 ? "18.75 Hz" : parameters[i] == 7 ? "10 Hz" : "未知"); break;
+      case 5: Serial.println(parameters[i] == 1 ? "无滤波" : parameters[i] == 2 ? "0.8" : parameters[i] == 3 ? "0.6" : parameters[i] == 4 ? "0.4" : parameters[i] == 5 ? "0.2" : parameters[i] == 6 ? "0.1" : "未知"); break;
+      case 7: Serial.println(parameters[i] == 0 ? "1200" : parameters[i] == 1 ? "2400" : parameters[i] == 2 ? "4800" : parameters[i] == 3 ? "9600" : parameters[i] == 4 ? "19200" : parameters[i] == 5 ? "38400" : parameters[i] == 6 ? "115200" : "未知"); break;
+      case 8: Serial.println(parameters[i] == 0 ? "N-8-1" : parameters[i] == 1 ? "N-8-2" : parameters[i] == 2 ? "ODD-8-1" : parameters[i] == 3 ? "EVEN-8-1" : "未知"); break;
+      case 17: Serial.println(parameters[i] == 1 ? "去皮" : parameters[i] == 2 ? "清除去皮" : "无操作"); break;
+      case 22: Serial.println(parameters[i] == CLEAR_ZERO_VALUE ? "清零命令" : "无操作"); break;
+      case 23: Serial.println(parameters[i] == 1 ? "单极性" : parameters[i] == 2 ? "双极性" : "未知"); break;
+      default: Serial.println(parameters[i]); break;
+    }
   }
-  Serial.print("Current: "); Serial.println((int16_t)parameters[0] / 10.0f, 1);
-  Serial.print("Decimals: "); Serial.println(parameters[1]);
-  Serial.print("Unit: "); Serial.println(parameters[2] == 2 ? "kg" : "unexpected");
+  Serial.println("=====================================");
 }
 
 bool initializeScale() {
   uint16_t parameters[24];
   Serial.println("Reading all scale parameters");
   if (!readHoldingRegisters(REG_WEIGHT, 24, parameters)) return false;
-  printParameters(parameters);
-  flashOk();
+  flashPass();
 
   if (!writeHoldingRegister(REG_DECIMALS, 1) || !writeHoldingRegister(REG_UNIT, 2) ||
       !writeHoldingRegister(REG_INPUT_POLARITY, 2) ||
@@ -220,6 +240,7 @@ bool initializeScale() {
     Serial.println("Scale configuration verification failed");
     return false;
   }
+  printParameters(verification);
   totalWeightTenthsKg = 0;
   count = 0;
   consecutiveReadFailures = 0;
