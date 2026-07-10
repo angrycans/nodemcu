@@ -221,9 +221,11 @@ uint8_t MAX7221::asciiToSegments(char c) {
         case 'L': case 'l': return 0b00111000;
         case 'N': case 'n': return 0b01010100;
         case 'O': case 'o': return 0b00111111;
-        case 'P': case 'p': return 0b01110011;
+        // This board swaps the left/right vertical segment pairs; use mirrored
+        // source glyphs so the physical display reads P and S correctly.
+        case 'P': case 'p': return 0b01100111;
         case 'R': case 'r': return 0b01010000;
-        case 'S': case 's': return 0b01101101;
+        case 'S': case 's': return 0b01011011;
         case 'T': case 't': return 0b01111000;
         case 'U': case 'u': return 0b00111110;
         case 'Y': case 'y': return 0b01101110;

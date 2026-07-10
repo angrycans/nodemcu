@@ -12,6 +12,7 @@
 #define PIN_RS485_DE 7
 #define PIN_ZERO_BUTTON 2
 #define PIN_COUNT_BUTTON 42
+#define PIN_PASS_BUTTON 41
 
 #define MODBUS_DEVICE_ADDR 0x01
 #define MODBUS_BAUDRATE 9600
@@ -43,6 +44,7 @@ struct Button {
 
 Button zeroButton{PIN_ZERO_BUTTON};
 Button countButton{PIN_COUNT_BUTTON};
+Button passButton{PIN_PASS_BUTTON};
 int32_t totalWeightTenthsKg = 0;
 uint32_t count = 0;
 uint8_t consecutiveReadFailures = 0;
@@ -189,6 +191,13 @@ void flashPass() {
   disp1.setDecodeMode(0xFF);
 }
 
+void showPassForTest() {
+  disp1.setDecodeMode(0x00);
+  disp1.displayString("PASS");
+  delay(2000);
+  disp1.setDecodeMode(0xFF);
+}
+
 const char *const PARAMETER_NAMES[24] = {
   "显示值", "小数点", "单位", "屏蔽值", "采样频率", "RC滤波系数",
   "485设备地址", "波特率", "串口校验", "模拟输出低位显示值", "模拟输出高位显示值",
@@ -323,6 +332,7 @@ void setup() {
   Serial1.begin(MODBUS_BAUDRATE, SERIAL_8N1, PIN_RS485_RX, PIN_RS485_TX);
   pinMode(PIN_ZERO_BUTTON, INPUT_PULLUP);
   pinMode(PIN_COUNT_BUTTON, INPUT_PULLUP);
+  pinMode(PIN_PASS_BUTTON, INPUT_PULLUP);
 
   disp1.begin();
   disp2.begin();
@@ -349,6 +359,7 @@ void loop() {
   }
   if (pressed(zeroButton)) clearAll();
   if (pressed(countButton)) addCount();
+  if (pressed(passButton)) showPassForTest();
   now = millis();
   if (now - lastPollAt >= POLL_INTERVAL_MS) {
     lastPollAt = now;
