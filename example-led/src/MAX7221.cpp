@@ -217,6 +217,7 @@ uint8_t MAX7221::asciiToSegments(char c) {
         case 'H': case 'h': return 0b01110110;
         case 'I': case 'i': return 0b00000110;
         case 'J': case 'j': return 0b00001110;
+        case 'K': case 'k': return 0b01110110;
         case 'L': case 'l': return 0b00111000;
         case 'N': case 'n': return 0b01010100;
         case 'O': case 'o': return 0b00111111;
