@@ -23,10 +23,7 @@
 #define BUTTON_DEBOUNCE_MS 50
 
 constexpr uint16_t REG_WEIGHT = 0x0000;
-constexpr uint16_t REG_DECIMALS = 0x0001;
-constexpr uint16_t REG_UNIT = 0x0002;
 constexpr uint16_t REG_CLEAR_ZERO = 0x0016;
-constexpr uint16_t REG_INPUT_POLARITY = 0x0017;
 constexpr uint16_t CLEAR_ZERO_VALUE = 0x0011;
 
 MAX7221 disp1(PIN_DIN, PIN_CLK, PIN_CS1);
@@ -173,7 +170,7 @@ void refreshTotals() {
     Serial.println("Display count overflow");
   } else {
     char text[6];
-    snprintf(text, sizeof(text), "%03lu00", (unsigned long)count);
+    snprintf(text, sizeof(text), "%03lu  ", (unsigned long)count);
     disp3.displayString(text);
   }
 }
@@ -237,24 +234,22 @@ bool initializeScale() {
   uint16_t parameters[24];
   Serial.println("Reading all scale parameters");
   if (!readHoldingRegisters(REG_WEIGHT, 24, parameters)) return false;
+  printParameters(parameters);
   flashPass();
 
-  if (!writeHoldingRegister(REG_DECIMALS, 1) || !writeHoldingRegister(REG_UNIT, 2) ||
-      !writeHoldingRegister(REG_INPUT_POLARITY, 2) ||
-      !writeHoldingRegister(REG_CLEAR_ZERO, CLEAR_ZERO_VALUE)) return false;
-
-  uint16_t verification[24];
-  if (!readHoldingRegisters(REG_WEIGHT, 24, verification) || verification[1] != 1 || verification[2] != 2 ||
-      verification[23] != 2) {
-    Serial.println("Scale configuration verification failed");
+  if (parameters[1] != 1 || parameters[2] != 2 || (parameters[23] != 1 && parameters[23] != 2)) {
+    Serial.println("Scale configuration mismatch: expected 1 decimal, kg, polarity 1 or 2");
     return false;
   }
-  printParameters(verification);
+  if (!writeHoldingRegister(REG_CLEAR_ZERO, CLEAR_ZERO_VALUE)) return false;
+
+  uint16_t zeroedWeight;
+  if (!readHoldingRegisters(REG_WEIGHT, 1, &zeroedWeight)) return false;
   totalWeightTenthsKg = 0;
   count = 0;
   consecutiveReadFailures = 0;
   communicationErrorShown = false;
-  showWeight(disp1, (int16_t)verification[0]);
+  showWeight(disp1, (int16_t)zeroedWeight);
   refreshTotals();
   Serial.println("Scale ready");
   return true;
@@ -288,11 +283,11 @@ void addCount() {
   totalWeightTenthsKg += weight;
   ++count;
   refreshTotals();
-  if (!writeHoldingRegister(REG_CLEAR_ZERO, CLEAR_ZERO_VALUE)) {
-    Serial.println("Counted successfully, but scale clear failed");
-    showCommunicationError();
-    return;
-  }
+  // if (!writeHoldingRegister(REG_CLEAR_ZERO, CLEAR_ZERO_VALUE)) {
+  //   Serial.println("Counted successfully, but scale clear failed");
+  //   showCommunicationError();
+  //   return;
+  // }
   showWeight(disp1, 0);
   Serial.println("Weight added and scale cleared");
 }
